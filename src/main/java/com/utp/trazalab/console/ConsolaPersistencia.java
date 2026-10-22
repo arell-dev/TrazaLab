@@ -13,14 +13,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 @Order(2)
-@ConditionalOnProperty(name = "trazalab.persistencia.console.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "trazalab.console.enabled", havingValue = "true", matchIfMissing = true)
 public class ConsolaPersistencia implements CommandLineRunner {
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(ZoneId.of("America/Lima"));

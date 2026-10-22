@@ -15,11 +15,9 @@ import java.util.StringJoiner;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 public class IncidenciaController {
     private final RegistroIncidenciaPersistenteServicio servicio;
     private final Validator validador;

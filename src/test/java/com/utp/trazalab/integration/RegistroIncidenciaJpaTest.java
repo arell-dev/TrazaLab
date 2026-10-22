@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +29,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(properties = {
-        "trazalab.persistencia.console.enabled=false",
-        "trazalab.persistencia.seed.enabled=false",
+        "trazalab.console.enabled=false",
+        "trazalab.seed.enabled=false",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "logging.file.name="
 })
-@ActiveProfiles("persistencia")
 @Testcontainers(disabledWithoutDocker = true)
 @Transactional
 class RegistroIncidenciaJpaTest {

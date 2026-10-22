@@ -14,12 +14,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Profile("persistencia")
 public class RegistroIncidenciaPersistenteServicio {
     private final UsuarioJpaRepositorio usuarios;
     private final ComputadoraJpaRepositorio computadoras;

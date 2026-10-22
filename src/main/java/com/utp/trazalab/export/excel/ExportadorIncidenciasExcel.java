@@ -23,11 +23,9 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
     private static final String[] ENCABEZADOS = {
             "ID incidencia", "ID usuario", "Reportante", "Código QR", "Descripción", "Fecha de registro", "Estado"

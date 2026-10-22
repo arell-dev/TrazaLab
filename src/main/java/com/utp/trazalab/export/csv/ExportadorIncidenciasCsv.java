@@ -14,11 +14,9 @@ import java.time.Instant;
 import java.util.List;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 public class ExportadorIncidenciasCsv implements ExportadorIncidencias {
     private static final String[] ENCABEZADOS = {
             "ID incidencia", "ID usuario", "Reportante", "Código QR", "Descripción", "Fecha de registro", "Estado"

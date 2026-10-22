@@ -11,14 +11,12 @@ import com.utp.trazalab.repository.UbicacionJpaRepositorio;
 import com.utp.trazalab.repository.UsuarioJpaRepositorio;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 @Order(1)
-@ConditionalOnProperty(name = "trazalab.persistencia.seed.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "trazalab.seed.enabled", havingValue = "true", matchIfMissing = true)
 public class DatosInicialesPersistencia implements CommandLineRunner {
     private final RolJpaRepositorio roles;
     private final UsuarioJpaRepositorio usuarios;
