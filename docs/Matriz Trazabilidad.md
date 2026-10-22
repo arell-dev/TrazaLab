@@ -42,7 +42,7 @@ RF-05
   → PostgreSQL
 ```
 
-La evidencia automatizada del registro está en `src/test/java/com/utp/trazalab/integration/RegistroIncidenciaJpaTest.java`. Las consultas del menú todavía requieren evidencia de ejecución y pruebas específicas. Para evidenciar la corrida manual, iniciar la app con `database/run-persistencia.ps1`, registrar la incidencia y conservar el log junto con la consulta SQL indicada en el README.
+La evidencia automatizada del registro está en `src/test/java/com/utp/trazalab/integration/RegistroIncidenciaJpaTest.java`. Las consultas del menú todavía requieren evidencia de ejecución y pruebas específicas. Para evidenciar la corrida manual, iniciar la app con `database/run.ps1`, registrar la incidencia y conservar el log junto con la consulta SQL indicada en el README.
 
 ## Interpretación de la matriz S10
 

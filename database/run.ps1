@@ -16,5 +16,5 @@ foreach ($line in [System.IO.File]::ReadAllLines($envPath)) {
 }
 
 Set-Location -LiteralPath $projectRoot
-& (Join-Path $projectRoot "mvnw.cmd") spring-boot:run "-Dspring-boot.run.profiles=persistencia"
+& (Join-Path $projectRoot "mvnw.cmd") spring-boot:run
 exit $LASTEXITCODE
