@@ -15,11 +15,9 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 public class ExportacionIncidenciasController {
     private final RegistroIncidenciaPersistenteServicio servicio;
     private final Map<FormatoExportacion, ExportadorIncidencias> exportadores;
@@ -32,7 +30,7 @@ public class ExportacionIncidenciasController {
             List<ExportadorIncidencias> exportadores,
             LoggingAplicacion logging,
             Clock reloj,
-            @Value("${trazalab.export.directory:evidencias}") String directorioEvidencias) {
+            @Value("${TRAZALAB_EXPORT_DIRECTORY:evidencias}") String directorioEvidencias) {
         this.servicio = servicio;
         this.logging = logging;
         this.reloj = reloj;

@@ -17,11 +17,9 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("persistencia")
 public class ExportadorIncidenciasPdf implements ExportadorIncidencias {
     private static final float MARGEN = 40;
     private static final float MARGEN_INFERIOR = 40;

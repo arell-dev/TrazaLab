@@ -78,7 +78,7 @@ Los módulos `web` e `integration.collector` son extensiones futuras. La recepci
 - `.env` contiene credenciales locales y está excluido de Git.
 - Flyway no está instalado; puede añadirse cuando se requiera migración versionada del esquema.
 
-`spring.main.web-application-type=none` mantiene el arranque actual en consola. El perfil `persistencia` usa las variables de entorno para conectar con PostgreSQL.
+`spring.main.web-application-type=none` mantiene el arranque actual en consola. La configuración de Spring Boot carga las variables de conexión y conecta con PostgreSQL.
 
 ## Trazabilidad y evidencia
 

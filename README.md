@@ -48,7 +48,7 @@ El controlador actual no expone rutas HTTP ni requiere una interfaz web. La apli
 ├── database/
 │   ├── 01_trazalab_schema.sql       # Esquema, restricciones y datos iniciales
 │   ├── compose.yaml                # Servicio PostgreSQL para desarrollo
-│   └── run-persistencia.ps1        # Carga variables y ejecuta el perfil persistente
+│   └── run.ps1                     # Carga variables y ejecuta TrazaLab
 ├── docs/
 │   ├── Arquitectura.md
 │   ├── Matriz Trazabilidad.md
@@ -104,13 +104,13 @@ El proyecto también incluye Spring Validation para validar los DTO y Spring Sec
 4. Ejecuta TrazaLab:
 
    ```powershell
-   .\database\run-persistencia.ps1
+   .\database\run.ps1
    ```
 
-También puedes arrancar el perfil persistente directamente con Maven:
+También puedes arrancar TrazaLab directamente con Maven:
 
 ```powershell
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=persistencia"
+.\mvnw.cmd spring-boot:run
 ```
 
 Al iniciar, la consola mantiene abierto el menú hasta seleccionar `0. Salir`:
