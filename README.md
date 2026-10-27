@@ -36,8 +36,8 @@ IncidenciaController y ExportacionIncidenciasController → LoggingAplicacion �
 | `database` | Agrupa convertidores y detalles específicos de JPA. Hibernate valida las entidades frente al esquema SQL. |
 | `export` | Define el contrato de exportación y genera archivos en PDF, Excel y CSV. |
 | `logging` | Define el contrato de logging de aplicación y su adaptador actual. |
-| `integration.collector` | Espacio previsto para la integración futura con la aplicación recolectora. |
-| `web` | Espacio previsto para un adaptador web futuro. |
+| Integración con recolector | Adaptador previsto para recibir datos de la aplicación C++; aún no existe código de producción. |
+| Interfaz web | Adaptador previsto para el panel; aún no existe código de producción. |
 
 El controlador actual no expone rutas HTTP ni requiere una interfaz web. La aplicación recolectora de computadoras será un segundo sistema; el contrato de intercambio entre ambos aún está pendiente de definición.
 
@@ -69,7 +69,7 @@ El controlador actual no expone rutas HTTP ni requiere una interfaz web. La apli
 | Tecnología | Uso |
 | :--- | :--- |
 | Java 21 | Plataforma de ejecución. |
-| Spring Boot 4.1.1 | Configuración y ciclo de vida de la aplicación. |
+| Spring Boot 4.1.2 | Configuración y ciclo de vida de la aplicación. |
 | Spring Data JPA e Hibernate | Repositorios, mapeo objeto-relacional y validación del esquema. |
 | PostgreSQL 16 | Persistencia relacional. |
 | Docker Compose | Ejecución local de PostgreSQL. |
@@ -77,6 +77,7 @@ El controlador actual no expone rutas HTTP ni requiere una interfaz web. La apli
 | Apache POI 5.5.1 | Generación del libro Excel. |
 | Apache Commons CSV 1.14.1 | Escritura del archivo CSV. |
 | JUnit y Testcontainers | Pruebas de integración con PostgreSQL temporal. |
+| SLF4J y Logback | Registro de eventos funcionales mediante `LoggingAplicacion`. |
 
 El proyecto también incluye Spring Validation para validar los DTO y Spring Security como dependencia preparada para una etapa posterior. La consola actual no implementa autenticación. Las dependencias y versiones efectivas se declaran en [`pom.xml`](pom.xml).
 
@@ -141,7 +142,7 @@ Los eventos funcionales se escriben en `logs/trazalab-app.log`. `APP_EVENT` regi
 .\mvnw.cmd test
 ```
 
-Maven guarda los resultados de prueba en `target/surefire-reports`.
+Maven guarda los resultados de prueba en `target/surefire-reports`. En la verificación del 27/10/2026 se ejecutaron las dos pruebas de `RegistroIncidenciaJpaTest` con PostgreSQL temporal: 2 aprobadas, 0 fallidas, 0 errores y 0 omitidas. Este resultado corresponde a esa ejecución; debe repetirse para demostrar una versión posterior.
 
 Otros comandos de desarrollo disponibles desde la raíz:
 
@@ -155,11 +156,16 @@ Otros comandos de desarrollo disponibles desde la raíz:
 
 La versión actual implementa registro, consulta e historial de incidencias, y exportación de esos registros. La aplicación funciona por consola y usa PostgreSQL. La interfaz web, autenticación de usuarios, gestión de mantenimientos y componentes, análisis de fallas recurrentes y comunicación con la aplicación recolectora C++ son etapas posteriores.
 
+La consulta de historial muestra la ficha básica y las incidencias del equipo; todavía no reúne mantenimientos, fallas clasificadas ni componentes. El QR se escribe como texto. La exportación genera el listado de incidencias, no un análisis de fallas recurrentes. La base local consultada el 27/10/2026 tenía 14 tablas y 4 vistas; esa observación no acredita el piloto de 15 a 20 equipos definido en APF01.
+
 ## Documentación técnica
 
 - [Arquitectura](docs/Arquitectura.md)
 - [Matriz de trazabilidad](docs/Matriz%20Trazabilidad.md)
+- [Matriz S10 de trazabilidad y transferencia](docs/S10_Matriz_Trazabilidad_y_Transferencia.xlsx)
 - [Seguridad y límites](docs/Seguridad%20y%20Limites.md)
 - [Versiones y fuentes](docs/Versiones%20y%20Fuente.md)
 - [Diagrama de arquitectura y trazabilidad](docs/TrazaLab_Arquitectura_Trazabilidad.drawio)
 - [Uso de PostgreSQL](database/README.md)
+
+Los entregables académicos actualizados están en `APF01/`, `APF02/` y `APF03/` respecto de la carpeta `ProyectoFinal`. En particular, `APF03/Matriz de Transferencia y Trazabilidad.xlsx`, `APF03/Arquitectura.xlsx` y `APF03/Control de Versiones.xlsx` distinguen implementación, diseño y evidencia ejecutada.
