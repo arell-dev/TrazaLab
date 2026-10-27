@@ -1,5 +1,11 @@
 # TrazaLab
 
+## Integrantes
+- Barrutia Ojeda Mauricio
+- Guevara Guerrero Ashley
+- Jimenez Chinchay Mateo Sebastian
+- Mendoza Sacsa Zamira Luana
+
 TrazaLab registra y consulta la trazabilidad técnica de las computadoras de los laboratorios. La versión actual ofrece una interfaz de consola, persiste la información en PostgreSQL y permite generar archivos PDF, Excel y CSV con las incidencias registradas.
 
 ## Capacidades
