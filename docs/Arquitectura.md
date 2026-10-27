@@ -39,17 +39,16 @@ com.utp.trazalab
 │   ├── csv                Generador CSV UTF-8
 │   ├── excel              Libro XLSX con filtros y formato
 │   └── pdf                Reporte A4 apaisado y paginado
-├── integration            Adaptadores externos
-│   └── collector          Reservado para recibir datos de la app C++
 ├── logging                Contrato LoggingAplicacion y adaptador actual SLF4J
 ├── model                  Entidades y estados del sistema
 ├── repository             Repositorios Spring Data JPA; capa DAO
 ├── service                Reglas de negocio y transacciones
-├── web                    Reservado para la futura interfaz web
 └── TrazalabApplication.java
 ```
 
 `src/test/java/com/utp/trazalab/integration` contiene pruebas de integración, separadas del código de producción. `database/` en la raíz del proyecto conserva el `compose.yaml`, el esquema SQL y los comandos de operación; el paquete Java `database` contiene solo integración de persistencia propia de la aplicación.
+
+Los paquetes `web` e `integration.collector` se crearán cuando se implementen sus adaptadores. No forman parte del código de producción actual.
 
 ## Límites entre capas
 
@@ -63,10 +62,10 @@ com.utp.trazalab
 | `database` | Convertidores de estados para el esquema PostgreSQL | Implementado |
 | `logging` | Eventos de operaciones exitosas, rechazadas o fallidas mediante `LoggingAplicacion` | Implementado; salida actual a archivo |
 | `export` | Producir reportes PDF, Excel y CSV desde datos consultados por los casos de uso | Implementado para el listado de incidencias |
-| `web` | Adaptador HTTP/panel para reutilizar casos de uso | Reservado; pendiente |
-| `integration.collector` | Validar y recibir el contrato de la aplicación C++ | Reservado; protocolo pendiente |
+| `web` | Adaptador HTTP/panel para reutilizar casos de uso | Diseñado; paquete aún no implementado |
+| `integration.collector` | Validar y recibir el contrato de la aplicación C++ | Diseñado; paquete y protocolo pendientes |
 
-Los módulos `web` e `integration.collector` son extensiones futuras. La recepción desde C++ deberá definir formato, autenticación, validación, reintentos y control de duplicados antes de implementarse. Los exportadores reciben DTO de aplicación y no consultan tablas directamente.
+La recepción desde C++ deberá definir formato, autenticación, validación, reintentos y control de duplicados antes de implementarse. Los exportadores reciben DTO de aplicación y no consultan tablas directamente.
 
 ## Persistencia
 
@@ -84,13 +83,13 @@ Los módulos `web` e `integration.collector` son extensiones futuras. La recepci
 
 | Elemento | Correspondencia | Estado |
 |---|---|---|
-| RF-05 | Registro de incidencia vinculada a computadora y usuario | Implementado con PostgreSQL |
-| RF-01 / RF-02 | Ficha e historial de incidencias por QR | Implementado; historial de componentes pendiente |
+| RF-05 | Registro de incidencia vinculada a computadora y usuario | Núcleo persistente implementado; requisito integral parcial por falta de autenticación |
+| RF-01 / RF-02 | Ficha e historial de incidencias por QR escrito como texto | Parcial; lector físico, fallas clasificadas, mantenimientos y componentes pendientes |
 | `ConsolaPersistencia` | Interfaz actual | Implementada |
 | `IncidenciaController` | Controlador de aplicación que recibe DTO | Implementado; no HTTP |
 | `RegistroIncidenciaPersistenteServicio` | Reglas y transacción | Implementado |
 | `*JpaRepositorio` | Consultas y escritura / capa DAO | Implementado |
-| `RegistroIncidenciaJpaTest` | Persistencia y validación con PostgreSQL temporal | Prueba existente; verificar resultado Maven al presentar |
+| `RegistroIncidenciaJpaTest` | Persistencia y validación con PostgreSQL temporal | 2 pruebas aprobadas, 0 fallos y 0 omisiones el 27/10/2026; repetir en nuevas versiones |
 | Exportación del listado de incidencias | `ExportacionIncidenciasController` y generadores por formato | Implementada; conservar los archivos de salida como evidencia |
 | Panel web y aplicación C++ | Adaptadores futuros sobre los casos de uso | Pendientes; el protocolo de integración no está definido |
 

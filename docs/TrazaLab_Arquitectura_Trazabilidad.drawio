@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e" pages="3">
     <diagram id="architecture" name="01_Arquitectura">
-        <mxGraphModel dx="1450" dy="1289" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1490" pageHeight="700" math="0" shadow="0">
+        <mxGraphModel dx="1454" dy="885" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1490" pageHeight="700" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -68,7 +68,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="trace" name="02_Flujo_Principal">
-        <mxGraphModel dx="1338" dy="1190" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="700" math="0" shadow="0">
+        <mxGraphModel dx="1326" dy="807" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="700" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -118,7 +118,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="tdd" name="03_Ciclo_TDD">
-        <mxGraphModel dx="1186" dy="1055" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="700" math="0" shadow="0">
+        <mxGraphModel dx="1181" dy="719" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="700" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
