@@ -11,7 +11,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Component;
@@ -28,7 +27,11 @@ public class ExportadorIncidenciasCsv implements ExportadorIncidencias {
     }
 
     @Override
-    public Path exportar(List<IncidenciaRegistradaDto> incidencias, Path directorio, Instant generadoEn) throws IOException {
+    public Path exportar(
+            Iterable<IncidenciaRegistradaDto> incidencias,
+            long totalIncidencias,
+            Path directorio,
+            Instant generadoEn) throws IOException {
         Path archivo = RutaReporte.crear(directorio, formato(), generadoEn);
         try (BufferedWriter writer = Files.newBufferedWriter(archivo, StandardCharsets.UTF_8)) {
             writer.write('\uFEFF');

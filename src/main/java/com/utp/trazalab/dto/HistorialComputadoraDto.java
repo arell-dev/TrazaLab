@@ -1,6 +1,6 @@
 package com.utp.trazalab.dto;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public record HistorialComputadoraDto(
         Integer computadoraId,
@@ -10,5 +10,5 @@ public record HistorialComputadoraDto(
         String modelo,
         String ubicacion,
         String estado,
-        List<IncidenciaRegistradaDto> incidencias) {
+        Page<IncidenciaRegistradaDto> incidencias) {
 }

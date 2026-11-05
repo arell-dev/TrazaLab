@@ -1,14 +1,24 @@
 package com.utp.trazalab.repository;
 
 import com.utp.trazalab.model.IncidenciaEntidad;
-import java.util.List;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface IncidenciaJpaRepositorio extends JpaRepository<IncidenciaEntidad, Integer> {
     @EntityGraph(attributePaths = {"usuario", "computadora"})
-    List<IncidenciaEntidad> findAllByOrderByFechaRegistroDesc();
+    Page<IncidenciaEntidad> findAllByOrderByFechaRegistroDescIdDesc(Pageable pageable);
 
     @EntityGraph(attributePaths = {"usuario", "computadora"})
-    List<IncidenciaEntidad> findAllByComputadora_IdOrderByFechaRegistroAsc(Integer computadoraId);
+    Page<IncidenciaEntidad> findAllByIdLessThanEqualOrderByFechaRegistroDescIdDesc(Integer limiteId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"usuario", "computadora"})
+    Page<IncidenciaEntidad> findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(Integer computadoraId, Pageable pageable);
+
+    long countByIdLessThanEqual(Integer limiteId);
+
+    @Query("select max(incidencia.id) from IncidenciaEntidad incidencia")
+    Integer obtenerMaximoId();
 }

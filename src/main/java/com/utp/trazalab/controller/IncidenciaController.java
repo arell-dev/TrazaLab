@@ -15,6 +15,8 @@ import java.util.StringJoiner;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -41,9 +43,9 @@ public class IncidenciaController {
         }, incidencia -> "id=" + incidencia.id(), incidencia -> null);
     }
 
-    public List<IncidenciaRegistradaDto> consultarIncidencias() {
-        return ejecutar("incidencia.listar", "incidencia", servicio::consultarIncidencias,
-                incidencias -> null, List::size);
+    public Page<IncidenciaRegistradaDto> consultarIncidencias(Pageable pageable) {
+        return ejecutar("incidencia.listar", "incidencia", () -> servicio.consultarIncidencias(pageable),
+                incidencias -> null, Page::getNumberOfElements);
     }
 
     public List<UsuarioResumenDto> consultarUsuarios() {
@@ -51,9 +53,9 @@ public class IncidenciaController {
                 usuarios -> null, List::size);
     }
 
-    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr) {
-        return ejecutar("computadora.historial", "computadora", () -> servicio.consultarHistorialComputadora(codigoQr),
-                historial -> "id=" + historial.computadoraId(), historial -> historial.incidencias().size());
+    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr, Pageable pageable) {
+        return ejecutar("computadora.historial", "computadora", () -> servicio.consultarHistorialComputadora(codigoQr, pageable),
+                historial -> "id=" + historial.computadoraId(), historial -> historial.incidencias().getNumberOfElements());
     }
 
     private <T> T ejecutar(String accion, String recurso, Supplier<T> operacion, Function<T, String> referencia, Function<T, Integer> cantidad) {
