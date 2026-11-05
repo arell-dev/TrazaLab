@@ -1,30 +1,44 @@
 package com.utp.trazalab.service;
 
-import com.utp.trazalab.model.EstadoIncidencia;
+import com.utp.trazalab.dto.HistorialComputadoraDto;
+import com.utp.trazalab.dto.IncidenciaRegistradaDto;
+import com.utp.trazalab.dto.IncidenciasExportacionDto;
+import com.utp.trazalab.dto.UsuarioResumenDto;
 import com.utp.trazalab.model.ComputadoraEntidad;
+import com.utp.trazalab.model.EstadoIncidencia;
 import com.utp.trazalab.model.IncidenciaEntidad;
 import com.utp.trazalab.model.UsuarioEntidad;
 import com.utp.trazalab.repository.ComputadoraJpaRepositorio;
 import com.utp.trazalab.repository.IncidenciaJpaRepositorio;
 import com.utp.trazalab.repository.UsuarioJpaRepositorio;
-import com.utp.trazalab.dto.HistorialComputadoraDto;
-import com.utp.trazalab.dto.IncidenciaRegistradaDto;
-import com.utp.trazalab.dto.UsuarioResumenDto;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RegistroIncidenciaPersistenteServicio {
+    private static final int TAMANO_LOTE_EXPORTACION = 250;
+    private static final int TAMANO_PAGINA_MAXIMO = 100;
+
     private final UsuarioJpaRepositorio usuarios;
     private final ComputadoraJpaRepositorio computadoras;
     private final IncidenciaJpaRepositorio incidencias;
     private final Clock reloj;
 
-    public RegistroIncidenciaPersistenteServicio(UsuarioJpaRepositorio usuarios, ComputadoraJpaRepositorio computadoras, IncidenciaJpaRepositorio incidencias, Clock reloj) {
+    public RegistroIncidenciaPersistenteServicio(
+            UsuarioJpaRepositorio usuarios,
+            ComputadoraJpaRepositorio computadoras,
+            IncidenciaJpaRepositorio incidencias,
+            Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.incidencias = incidencias;
@@ -59,10 +73,59 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     @Transactional(readOnly = true)
-    public List<IncidenciaRegistradaDto> consultarIncidencias() {
-        return incidencias.findAllByOrderByFechaRegistroDesc().stream()
-                .map(this::convertirIncidencia)
-                .toList();
+    public Page<IncidenciaRegistradaDto> consultarIncidencias(Pageable pageable) {
+        Pageable ordenado = PageRequest.of(
+                numeroPagina(pageable),
+                limitarTamanoPagina(pageable),
+                Sort.by(Sort.Order.desc("fechaRegistro"), Sort.Order.desc("id")));
+
+        return incidencias.findAllByOrderByFechaRegistroDescIdDesc(ordenado)
+                .map(this::convertirIncidencia);
+    }
+
+    @Transactional(readOnly = true)
+    public IncidenciasExportacionDto prepararExportacionIncidencias() {
+        Integer limiteId = incidencias.obtenerMaximoId();
+        if (limiteId == null) {
+            return new IncidenciasExportacionDto(0, List.of());
+        }
+
+        long total = incidencias.countByIdLessThanEqual(limiteId);
+        return new IncidenciasExportacionDto(total, iterarIncidenciasHasta(limiteId));
+    }
+
+    private Iterable<IncidenciaRegistradaDto> iterarIncidenciasHasta(Integer limiteId) {
+        return () -> new Iterator<>() {
+            private int numeroPagina;
+            private Iterator<IncidenciaRegistradaDto> incidenciasActuales = List.<IncidenciaRegistradaDto>of().iterator();
+            private boolean ultimaPagina;
+
+            @Override
+            public boolean hasNext() {
+                while (!incidenciasActuales.hasNext() && !ultimaPagina) {
+                    Pageable pageable = PageRequest.of(
+                            numeroPagina++,
+                            TAMANO_LOTE_EXPORTACION,
+                            Sort.by(Sort.Order.desc("fechaRegistro"), Sort.Order.desc("id")));
+                    Page<IncidenciaRegistradaDto> pagina = incidencias
+                            .findAllByIdLessThanEqualOrderByFechaRegistroDescIdDesc(limiteId, pageable)
+                            .map(RegistroIncidenciaPersistenteServicio.this::convertirIncidencia);
+                    incidenciasActuales = pagina.iterator();
+                    ultimaPagina = pagina.isLast();
+                }
+
+                return incidenciasActuales.hasNext();
+            }
+
+            @Override
+            public IncidenciaRegistradaDto next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException("No hay más incidencias para exportar.");
+                }
+
+                return incidenciasActuales.next();
+            }
+        };
     }
 
     @Transactional(readOnly = true)
@@ -78,17 +141,20 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     @Transactional(readOnly = true)
-    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr) {
+    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr, Pageable pageable) {
         if (codigoQr == null || codigoQr.isBlank()) {
             throw new IllegalArgumentException("Ingresa el código QR de la computadora.");
         }
 
         ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
                 .orElseThrow(() -> new IllegalArgumentException("No existe una computadora con ese código QR."));
-        List<IncidenciaRegistradaDto> historial = incidencias
-                .findAllByComputadora_IdOrderByFechaRegistroAsc(computadora.getId()).stream()
-                .map(this::convertirIncidencia)
-                .toList();
+        Pageable ordenado = PageRequest.of(
+                numeroPagina(pageable),
+                limitarTamanoPagina(pageable),
+                Sort.by(Sort.Order.asc("fechaRegistro"), Sort.Order.asc("id")));
+        Page<IncidenciaRegistradaDto> historial = incidencias
+                .findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(computadora.getId(), ordenado)
+                .map(this::convertirIncidencia);
         String ubicacion = computadora.getUbicacion().getNombre();
         String detalle = computadora.getUbicacion().getDetalle();
         if (detalle != null && !detalle.isBlank()) {
@@ -121,5 +187,17 @@ public class RegistroIncidenciaPersistenteServicio {
         String normalizado = nombreRol.toLowerCase(Locale.ROOT);
         return normalizado.equals("docente") || normalizado.equals("responsable")
                 || normalizado.equals("técnico de soporte") || normalizado.equals("técnico de laboratorio");
+    }
+
+    private int limitarTamanoPagina(Pageable pageable) {
+        if (pageable.isUnpaged()) {
+            return TAMANO_PAGINA_MAXIMO;
+        }
+
+        return Math.max(1, Math.min(pageable.getPageSize(), TAMANO_PAGINA_MAXIMO));
+    }
+
+    private int numeroPagina(Pageable pageable) {
+        return pageable.isPaged() ? pageable.getPageNumber() : 0;
     }
 }

@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Component;
 @Order(2)
 @ConditionalOnProperty(name = "trazalab.console.enabled", havingValue = "true", matchIfMissing = true)
 public class ConsolaPersistencia implements CommandLineRunner {
+    private static final int TAMANO_PAGINA = 25;
+
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(ZoneId.of("America/Lima"));
 
@@ -73,14 +77,19 @@ public class ConsolaPersistencia implements CommandLineRunner {
     }
 
     private void consultarIncidencias() {
-        var incidencias = controlador.consultarIncidencias();
-        if (incidencias.isEmpty()) {
-            System.out.println("No hay incidencias registradas.");
-            return;
-        }
-
         System.out.println("Incidencias (de la más reciente a la más antigua):");
-        incidencias.forEach(this::mostrarIncidencia);
+        int numeroPagina = 0;
+        Page<IncidenciaRegistradaDto> pagina;
+        do {
+            pagina = controlador.consultarIncidencias(PageRequest.of(numeroPagina, TAMANO_PAGINA));
+            if (pagina.isEmpty() && numeroPagina == 0) {
+                System.out.println("No hay incidencias registradas.");
+                return;
+            }
+
+            pagina.getContent().forEach(this::mostrarIncidencia);
+            numeroPagina++;
+        } while (!pagina.isLast());
     }
 
     private void registrarIncidencia(Scanner entrada) {
@@ -117,17 +126,29 @@ public class ConsolaPersistencia implements CommandLineRunner {
         if (codigoQr == null) {
             return;
         }
-        HistorialComputadoraDto historial = controlador.consultarHistorialComputadora(codigoQr);
-        System.out.println(historial.codigoQr() + " | Serie: " + historial.numeroSerie());
-        System.out.println(historial.marca() + " " + historial.modelo() + " | " + historial.ubicacion());
-        System.out.println("Estado: " + historial.estado());
-        if (historial.incidencias().isEmpty()) {
-            System.out.println("La computadora todavía no tiene incidencias registradas.");
-            return;
-        }
+        int numeroPagina = 0;
+        HistorialComputadoraDto historial;
+        Page<IncidenciaRegistradaDto> pagina;
+        do {
+            historial = controlador.consultarHistorialComputadora(codigoQr, PageRequest.of(numeroPagina, TAMANO_PAGINA));
+            pagina = historial.incidencias();
+            if (numeroPagina == 0) {
+                System.out.println(historial.codigoQr() + " | Serie: " + historial.numeroSerie());
+                System.out.println(historial.marca() + " " + historial.modelo() + " | " + historial.ubicacion());
+                System.out.println("Estado: " + historial.estado());
+                if (pagina.isEmpty()) {
+                    System.out.println("La computadora todavía no tiene incidencias registradas.");
+                    return;
+                }
+            }
 
-        System.out.println("Historial técnico (del más antiguo al más reciente):");
-        historial.incidencias().forEach(this::mostrarIncidencia);
+            if (numeroPagina == 0) {
+                System.out.println("Historial técnico (del más antiguo al más reciente):");
+            }
+
+            pagina.getContent().forEach(this::mostrarIncidencia);
+            numeroPagina++;
+        } while (!pagina.isLast());
     }
 
     private void mostrarIncidencia(IncidenciaRegistradaDto incidencia) {

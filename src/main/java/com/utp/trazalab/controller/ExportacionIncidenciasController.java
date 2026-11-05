@@ -49,23 +49,29 @@ public class ExportacionIncidenciasController {
             throw new IllegalArgumentException("Selecciona un formato de exportación.");
         }
 
-        List<IncidenciaRegistradaDto> incidencias = servicio.consultarIncidencias();
+        var datosExportacion = servicio.prepararExportacionIncidencias();
+        long totalIncidencias = datosExportacion.total();
+        Iterable<IncidenciaRegistradaDto> incidencias = datosExportacion.incidencias();
         ExportadorIncidencias exportador = exportadores.get(formato);
         if (exportador == null) {
             throw new IllegalStateException("No hay un exportador configurado para " + formato.etiqueta() + ".");
         }
 
         try {
-            Path archivo = exportador.exportar(incidencias, directorioEvidencias, reloj.instant());
+            Path archivo = exportador.exportar(
+                    incidencias,
+                    totalIncidencias,
+                    directorioEvidencias,
+                    reloj.instant());
             logging.registrar(new EventoAplicacion(
                     "incidencia.exportar", "incidencia", ResultadoEvento.EXITOSO,
-                    formato.name() + ":" + archivo.getFileName(), incidencias.size(), null));
+                    formato.name() + ":" + archivo.getFileName(), Math.toIntExact(totalIncidencias), null));
             return new ArchivoExportadoDto(
-                    formato.etiqueta(), archivo.toString(), archivo.getFileName().toString(), incidencias.size());
+                    formato.etiqueta(), archivo.toString(), archivo.getFileName().toString(), Math.toIntExact(totalIncidencias));
         } catch (IOException | RuntimeException error) {
             logging.registrar(new EventoAplicacion(
                     "incidencia.exportar", "incidencia", ResultadoEvento.ERROR,
-                    formato.name(), incidencias.size(), error.getClass().getSimpleName()));
+                    formato.name(), Math.toIntExact(totalIncidencias), error.getClass().getSimpleName()));
             throw new IllegalStateException("No se pudo generar el reporte " + formato.etiqueta() + ".", error);
         }
     }

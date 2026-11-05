@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -38,23 +40,46 @@ public class ExportadorIncidenciasPdf implements ExportadorIncidencias {
     }
 
     @Override
-    public Path exportar(List<IncidenciaRegistradaDto> incidencias, Path directorio, Instant generadoEn) throws IOException {
+    public Path exportar(
+            Iterable<IncidenciaRegistradaDto> incidencias,
+            long totalIncidencias,
+            Path directorio,
+            Instant generadoEn) throws IOException {
         Path archivo = RutaReporte.crear(directorio, formato(), generadoEn);
-        List<FilaPdf> filas = incidencias.stream().map(this::crearFila).toList();
-        List<List<FilaPdf>> paginas = dividirEnPaginas(filas);
         PDRectangle tamanoPagina = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
 
-        try (PDDocument documento = new PDDocument()) {
+        try (PDDocument documento = new PDDocument(IOUtils.createTempFileOnlyStreamCache())) {
             documento.getDocumentInformation().setTitle("TrazaLab - Reporte de incidencias");
             documento.getDocumentInformation().setAuthor("TrazaLab");
-            for (int indice = 0; indice < paginas.size(); indice++) {
+            Iterator<IncidenciaRegistradaDto> iterador = incidencias.iterator();
+            FilaPdf pendiente = iterador.hasNext() ? crearFila(iterador.next()) : null;
+            boolean primeraPagina = true;
+
+            while (pendiente != null || primeraPagina) {
+                primeraPagina = false;
                 PDPage pagina = new PDPage(tamanoPagina);
                 documento.addPage(pagina);
                 try (PDPageContentStream contenido = new PDPageContentStream(documento, pagina)) {
-                    dibujarPagina(contenido, paginas.get(indice), incidencias.size(), generadoEn,
-                            indice + 1, paginas.size(), tamanoPagina.getWidth(), tamanoPagina.getHeight());
+                    dibujarEncabezado(contenido, totalIncidencias, generadoEn, tamanoPagina.getHeight());
+                    float y = tamanoPagina.getHeight() - 106;
+                    float yMinimo = MARGEN_INFERIOR + 18;
+
+                    if (pendiente == null) {
+                        escribirTexto(contenido, "No hay incidencias registradas.", MARGEN + 4, y,
+                                FUENTE, TAMANO_TEXTO);
+                    }
+
+                    while (pendiente != null
+                            && (y - pendiente.alto() >= yMinimo || y == tamanoPagina.getHeight() - 106)) {
+                        dibujarFila(contenido, pendiente, y);
+                        y -= pendiente.alto();
+                        pendiente = iterador.hasNext() ? crearFila(iterador.next()) : null;
+                    }
+
                 }
             }
+
+            agregarNumeracionPaginas(documento, tamanoPagina.getWidth());
             documento.save(archivo.toFile());
         }
         return archivo;
@@ -79,34 +104,10 @@ public class ExportadorIncidenciasPdf implements ExportadorIncidencias {
         return new FilaPdf(celdas, cantidadLineas * ALTO_LINEA + 8);
     }
 
-    private List<List<FilaPdf>> dividirEnPaginas(List<FilaPdf> filas) {
-        float espacioDisponible = PDRectangle.A4.getWidth() - 106 - MARGEN_INFERIOR;
-        List<List<FilaPdf>> paginas = new ArrayList<>();
-        List<FilaPdf> paginaActual = new ArrayList<>();
-        float altoUsado = 0;
-        for (FilaPdf fila : filas) {
-            if (!paginaActual.isEmpty() && altoUsado + fila.alto() > espacioDisponible) {
-                paginas.add(paginaActual);
-                paginaActual = new ArrayList<>();
-                altoUsado = 0;
-            }
-            paginaActual.add(fila);
-            altoUsado += fila.alto();
-        }
-        if (!paginaActual.isEmpty() || paginas.isEmpty()) {
-            paginas.add(paginaActual);
-        }
-        return paginas;
-    }
-
-    private void dibujarPagina(
+    private void dibujarEncabezado(
             PDPageContentStream contenido,
-            List<FilaPdf> filas,
-            int total,
+            long total,
             Instant generadoEn,
-            int numeroPagina,
-            int totalPaginas,
-            float anchoPagina,
             float altoPagina) throws IOException {
         escribirTexto(contenido, "TrazaLab | Reporte de incidencias", MARGEN, altoPagina - 38, FUENTE_NEGRITA, 15);
         escribirTexto(contenido, "Generado: " + FechaReporte.formatear(generadoEn), MARGEN, altoPagina - 55, FUENTE, 9);
@@ -122,16 +123,24 @@ public class ExportadorIncidenciasPdf implements ExportadorIncidencias {
         }
         float y = inicioTabla - 24;
         dibujarLinea(contenido, MARGEN, y, MARGEN + totalAnchoTabla(), y);
+    }
 
-        if (filas.isEmpty()) {
-            escribirTexto(contenido, "No hay incidencias registradas.", MARGEN + 4, y - 16, FUENTE, TAMANO_TEXTO);
+    private void agregarNumeracionPaginas(PDDocument documento, float anchoPagina) throws IOException {
+        int totalPaginas = documento.getNumberOfPages();
+        for (int indice = 0; indice < totalPaginas; indice++) {
+            PDPage pagina = documento.getPage(indice);
+            try (PDPageContentStream contenido = new PDPageContentStream(
+                    documento,
+                    pagina,
+                    PDPageContentStream.AppendMode.APPEND,
+                    true,
+                    true)) {
+                dibujarPie(contenido, anchoPagina, indice + 1, totalPaginas);
+            }
         }
+    }
 
-        for (FilaPdf fila : filas) {
-            dibujarFila(contenido, fila, y);
-            y -= fila.alto();
-        }
-        dibujarLinea(contenido, MARGEN, y, MARGEN + totalAnchoTabla(), y);
+    private void dibujarPie(PDPageContentStream contenido, float anchoPagina, int numeroPagina, int totalPaginas) throws IOException {
         dibujarLinea(contenido, MARGEN, MARGEN_INFERIOR, anchoPagina - MARGEN, MARGEN_INFERIOR);
         escribirTexto(contenido, "TrazaLab", MARGEN, 25, FUENTE, 7);
         escribirTexto(contenido, "Página " + numeroPagina + " de " + totalPaginas,

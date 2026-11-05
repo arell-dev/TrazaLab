@@ -10,7 +10,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -19,10 +18,12 @@ import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.PageMargin;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,6 +32,7 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
             "ID incidencia", "ID usuario", "Reportante", "Código QR", "Descripción", "Fecha de registro", "Estado"
     };
     private static final int FILA_ENCABEZADOS = 4;
+    private static final long MAXIMO_FILAS_EXCEL = 1_048_571;
 
     @Override
     public FormatoExportacion formato() {
@@ -38,21 +40,38 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
     }
 
     @Override
-    public Path exportar(List<IncidenciaRegistradaDto> incidencias, Path directorio, Instant generadoEn) throws IOException {
+    public Path exportar(
+            Iterable<IncidenciaRegistradaDto> incidencias,
+            long totalIncidencias,
+            Path directorio,
+            Instant generadoEn) throws IOException {
+        if (totalIncidencias > MAXIMO_FILAS_EXCEL) {
+            throw new IllegalArgumentException(
+                    "El formato Excel admite hasta " + MAXIMO_FILAS_EXCEL + " incidencias por archivo.");
+        }
+
         Path archivo = RutaReporte.crear(directorio, formato(), generadoEn);
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            XSSFSheet hoja = workbook.createSheet("Incidencias");
-            estilos(workbook, hoja, incidencias, generadoEn);
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        workbook.setCompressTempFiles(true);
+        try {
+            SXSSFSheet hoja = workbook.createSheet("Incidencias");
+            estilos(workbook, hoja, totalIncidencias, generadoEn);
             escribirFilas(hoja, incidencias);
-            configurarHoja(hoja, incidencias.size());
+            configurarHoja(hoja, Math.toIntExact(totalIncidencias));
             try (OutputStream salida = Files.newOutputStream(archivo)) {
                 workbook.write(salida);
+            }
+        } finally {
+            try {
+                workbook.close();
+            } finally {
+                workbook.dispose();
             }
         }
         return archivo;
     }
 
-    private void estilos(XSSFWorkbook workbook, XSSFSheet hoja, List<IncidenciaRegistradaDto> incidencias, Instant generadoEn) {
+    private void estilos(Workbook workbook, Sheet hoja, long totalIncidencias, Instant generadoEn) {
         Font fuenteNormal = workbook.createFont();
         fuenteNormal.setFontName("Arial");
         fuenteNormal.setColor(IndexedColors.BLACK.getIndex());
@@ -78,7 +97,7 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
         crearCelda(hoja.createRow(0), 0, "TrazaLab | Reporte de incidencias", titulo);
         hoja.getRow(0).setHeightInPoints(26);
         crearCelda(hoja.createRow(1), 0, "Generado: " + FechaReporte.formatear(generadoEn), metadato);
-        crearCelda(hoja.createRow(2), 0, "Total de incidencias: " + incidencias.size(), metadato);
+        crearCelda(hoja.createRow(2), 0, "Total de incidencias: " + totalIncidencias, metadato);
         hoja.addMergedRegion(new CellRangeAddress(0, 0, 0, ENCABEZADOS.length - 1));
         hoja.addMergedRegion(new CellRangeAddress(1, 1, 0, ENCABEZADOS.length - 1));
         hoja.addMergedRegion(new CellRangeAddress(2, 2, 0, ENCABEZADOS.length - 1));
@@ -100,7 +119,7 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
         hoja.setRepeatingRows(CellRangeAddress.valueOf("1:5"));
     }
 
-    private CellStyle estiloCelda(XSSFWorkbook workbook, Font fuente, boolean bordes) {
+    private CellStyle estiloCelda(Workbook workbook, Font fuente, boolean bordes) {
         CellStyle estilo = workbook.createCellStyle();
         estilo.setFont(fuente);
         estilo.setFillForegroundColor(IndexedColors.WHITE.getIndex());
@@ -115,11 +134,11 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
         return estilo;
     }
 
-    private void escribirFilas(XSSFSheet hoja, List<IncidenciaRegistradaDto> incidencias) {
+    private void escribirFilas(Sheet hoja, Iterable<IncidenciaRegistradaDto> incidencias) {
         Font fuenteCuerpo = hoja.getWorkbook().createFont();
         fuenteCuerpo.setFontName("Arial");
         fuenteCuerpo.setColor(IndexedColors.BLACK.getIndex());
-        CellStyle estiloCuerpo = estiloCelda((XSSFWorkbook) hoja.getWorkbook(), fuenteCuerpo, true);
+        CellStyle estiloCuerpo = estiloCelda(hoja.getWorkbook(), fuenteCuerpo, true);
         estiloCuerpo.setWrapText(true);
 
         int numeroFila = FILA_ENCABEZADOS + 1;
@@ -154,7 +173,7 @@ public class ExportadorIncidenciasExcel implements ExportadorIncidencias {
         return Math.min(lineas, 10) * 15.0f + 6.0f;
     }
 
-    private void configurarHoja(XSSFSheet hoja, int cantidad) {
+    private void configurarHoja(Sheet hoja, int cantidad) {
         if (cantidad > 0) {
             hoja.setAutoFilter(new CellRangeAddress(FILA_ENCABEZADOS, FILA_ENCABEZADOS + cantidad, 0, ENCABEZADOS.length - 1));
         }
