@@ -36,4 +36,4 @@ La primera compilación tras mover las entidades detectó imports faltantes de `
 
 - Código: [`src/main/java/com/utp/trazalab/controller`](../../src/main/java/com/utp/trazalab/controller), [`src/main/java/com/utp/trazalab/persistence/jpa`](../../src/main/java/com/utp/trazalab/persistence/jpa) y [`src/main/resources/templates`](../../src/main/resources/templates).
 - Pruebas: [`RegistroIncidenciaJpaTest`](../../src/test/java/com/utp/trazalab/integration/RegistroIncidenciaJpaTest.java).
-- Rama y PR: se completarán al publicar la revisión en GitHub.
+- Rama y PR: [`refactor/arquitectura-opalina` · PR #5](https://github.com/arell-dev/TrazaLab/pull/5).
