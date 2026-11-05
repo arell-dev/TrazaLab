@@ -128,7 +128,7 @@ Al iniciar, la consola mantiene abierto el menú hasta seleccionar `0. Salir`:
 4. Exportar incidencias a PDF, Excel o CSV.
 0. Salir.
 
-El esquema de [`database/01_trazalab_schema.sql`](database/01_trazalab_schema.sql) se aplica al crear el volumen por primera vez. Hibernate usa `spring.jpa.hibernate.ddl-auto=validate`: comprueba compatibilidad entre entidades y esquema, sin crear ni modificar tablas. Los registros iniciales de laboratorio se insertan en PostgreSQL de manera idempotente.
+Flyway aplica las migraciones de `src/main/resources/db/migration` al iniciar la aplicación. Hibernate usa `spring.jpa.hibernate.ddl-auto=validate`: comprueba compatibilidad entre entidades y esquema, sin crear ni modificar tablas. Los registros iniciales de laboratorio se insertan en PostgreSQL de manera idempotente. Para un volumen anterior a Flyway, sigue primero la guía de [migraciones existentes](database/README.md#migraciones-y-volumenes-existentes); no elimines el volumen.
 
 ## Exportación
 
