@@ -18,14 +18,14 @@ Inventario contrastado con el proyecto local el 27/10/2026. Las bibliotecas sin 
 | Google Guava | No declarada | Pendiente respecto de la rúbrica; no se le atribuye uso |
 | Maven Wrapper | Según [configuración del wrapper](../.mvn/wrapper/maven-wrapper.properties) | Ejecución reproducible de Maven |
 | JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | Dos pruebas de integración con PostgreSQL temporal |
-| Flyway | No instalado | Las migraciones versionadas quedan para una etapa posterior |
+| Flyway | Administrado por Spring Boot 4.1.2, con módulo PostgreSQL | `src/main/resources/db/migration`; `V1` contiene el esquema inicial |
 
 ## Fuentes académicas
 
 - Requisitos y alcance: `APF01/Requerimientos.xlsx` y `APF01/Project Charter, WBS, Gantt.xlsx`.
 - Trazabilidad inicial y prototipo: `APF01/Trazabilidad, Prototipo inicial.xlsx`.
 - Proceso, pantallas y modelo relacional: `APF02/BPM.xlsx`, `APF02/Pantallas UI UX.xlsx` y `APF02/DiseñoDB, Relaciones, Entidades.xlsx`.
-- Script SQL sincronizado con el esquema de desarrollo: `APF02/Scripts/PostgreSQL Script.sql` y [`01_trazalab_schema.sql`](../database/01_trazalab_schema.sql).
+- Esquema de referencia inicial: `APF02/Scripts/PostgreSQL Script.sql` y [`01_trazalab_schema.sql`](../database/01_trazalab_schema.sql). La fuente ejecutable son las migraciones inmutables de `src/main/resources/db/migration`.
 - Estado de implementación, arquitectura, pruebas diseñadas y control de versiones: `APF03/Matriz de Transferencia y Trazabilidad.xlsx`, `APF03/Arquitectura.xlsx` y `APF03/Control de Versiones.xlsx`. La [copia S10](S10_Matriz_Trazabilidad_y_Transferencia.xlsx) conserva la matriz de APF03 dentro del proyecto.
 
 Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFinal`, que contiene `Proyecto/trazalab`. El código verificable está bajo [`src/main/java`](../src/main/java) y las pruebas bajo [`src/test/java`](../src/test/java). `IncidenciaController` coordina la aplicación de consola; todavía no es un controlador HTTP.

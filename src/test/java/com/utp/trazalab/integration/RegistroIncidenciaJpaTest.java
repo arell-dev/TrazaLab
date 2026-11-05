@@ -31,7 +31,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest(properties = {
         "trazalab.console.enabled=false",
         "trazalab.seed.enabled=false",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "logging.file.name="
 })
 @Testcontainers(disabledWithoutDocker = true)
@@ -59,7 +59,8 @@ class RegistroIncidenciaJpaTest {
 
     @BeforeEach
     void prepararDatos() {
-        RolEntidad rol = roles.saveAndFlush(new RolEntidad("Docente", "Reporta incidencias del laboratorio."));
+        RolEntidad rol = roles.findByNombreIgnoreCase("Docente")
+                .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Docente", "Reporta incidencias del laboratorio.")));
         reportante = usuarios.saveAndFlush(new UsuarioEntidad(rol, "Ana", "Torres", "ana@pruebas.local", "activo"));
         UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración"));
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));

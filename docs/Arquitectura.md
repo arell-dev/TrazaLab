@@ -72,10 +72,10 @@ La recepción desde C++ deberá definir formato, autenticación, validación, re
 - PostgreSQL es el almacenamiento de ejecución; no hay repositorio en memoria.
 - `repository` contiene interfaces Spring Data JPA y representa la capa DAO solicitada.
 - Hibernate es el proveedor ORM de JPA.
-- El esquema fuente es [`../database/01_trazalab_schema.sql`](../database/01_trazalab_schema.sql), aplicado por Docker al crear el volumen inicial.
+- Flyway ejecuta las migraciones SQL inmutables desde `src/main/resources/db/migration` al iniciar la aplicación.
 - `spring.jpa.hibernate.ddl-auto=validate` compara el mapeo con el esquema y no lo crea ni modifica.
 - `.env` contiene credenciales locales y está excluido de Git.
-- Flyway no está instalado; puede añadirse cuando se requiera migración versionada del esquema.
+- La línea base de un volumen existente se registra después de verificar el esquema y generar un respaldo; no se activa `baseline-on-migrate` de forma general.
 
 `spring.main.web-application-type=none` mantiene el arranque actual en consola. La configuración de Spring Boot carga las variables de conexión y conecta con PostgreSQL.
 
