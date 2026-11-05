@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <aside th:fragment="sidebar(activo)" class="app-sidebar">
+        <a class="app-brand" th:href="@{/incidencias}">
+            <span class="app-brand__mark" aria-hidden="true">U</span>
+            <span>
+                <strong class="d-block">UTP</strong>
+                <small>Lab Traceability</small>
+            </span>
+        </a>
+
+        <nav class="nav flex-column app-navigation" aria-label="Navegación principal">
+            <a class="nav-link" th:classappend="${activo == 'incidencias'} ? 'active'"
+                th:href="@{/incidencias}" th:aria-current="${activo == 'incidencias'} ? 'page' : null">
+                Incidencias
+            </a>
+            <a class="nav-link" th:classappend="${activo == 'mantenimientos'} ? 'active'"
+                th:href="@{/mantenimientos}" th:aria-current="${activo == 'mantenimientos'} ? 'page' : null">
+                Mantenimientos
+            </a>
+            <a class="nav-link" th:classappend="${activo == 'reportes'} ? 'active'"
+                th:href="@{/reportes}" th:aria-current="${activo == 'reportes'} ? 'page' : null">
+                Reportes
+            </a>
+        </nav>
+
+        <div class="app-sidebar__footer">
+            <span class="badge text-bg-success">Base de datos conectada</span>
+            <small>Entorno de demostración</small>
+        </div>
+    </aside>
+</body>
+
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/sidebar :: sidebar(${seccion})}"></div>
+
+        <div class="app-main">
+            <div th:replace="~{fragments/header :: header}"></div>
+
+            <main class="container-fluid app-content app-content--narrow">
+                <div class="page-heading">
+                    <div>
+                        <p class="page-overline">Módulo de TrazaLab</p>
+                        <h1 th:text="${titulo}">Módulo</h1>
+                        <p class="text-body-secondary mb-0">Este flujo se habilitará en la siguiente etapa de implementación.</p>
+                    </div>
+                </div>
+                <section class="card app-card">
+                    <div class="card-body p-4">
+                        <p class="mb-3" th:text="${descripcion}">Descripción del módulo.</p>
+                        <a class="btn btn-primary" th:href="@{/incidencias}">Ir a incidencias</a>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>

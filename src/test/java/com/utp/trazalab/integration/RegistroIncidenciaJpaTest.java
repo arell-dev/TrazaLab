@@ -4,24 +4,30 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.export.csv.ExportadorIncidenciasCsv;
 import com.utp.trazalab.export.excel.ExportadorIncidenciasExcel;
 import com.utp.trazalab.export.pdf.ExportadorIncidenciasPdf;
-import com.utp.trazalab.model.ComputadoraEntidad;
-import com.utp.trazalab.model.EstadoComputadora;
-import com.utp.trazalab.model.EstadoIncidencia;
-import com.utp.trazalab.model.IncidenciaEntidad;
-import com.utp.trazalab.model.RolEntidad;
-import com.utp.trazalab.model.UbicacionEntidad;
-import com.utp.trazalab.model.UsuarioEntidad;
-import com.utp.trazalab.repository.ComputadoraJpaRepositorio;
-import com.utp.trazalab.repository.IncidenciaJpaRepositorio;
-import com.utp.trazalab.repository.RolJpaRepositorio;
-import com.utp.trazalab.repository.UbicacionJpaRepositorio;
-import com.utp.trazalab.repository.UsuarioJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
+import com.utp.trazalab.domain.enums.EstadoComputadora;
+import com.utp.trazalab.domain.enums.EstadoIncidencia;
+import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.RolEntidad;
+import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
+import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
+import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.IncidenciaJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.RolJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import com.utp.trazalab.service.RegistroIncidenciaPersistenteServicio;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +48,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,17 +56,18 @@ import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(properties = {
-        "trazalab.console.enabled=false",
         "trazalab.seed.enabled=false",
         "spring.jpa.hibernate.ddl-auto=validate",
         "logging.file.name="
 })
+@AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 @Transactional
 class RegistroIncidenciaJpaTest {
@@ -84,6 +92,7 @@ class RegistroIncidenciaJpaTest {
     @Autowired private ExportadorIncidenciasPdf exportadorPdf;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private MockMvc mockMvc;
 
     @TempDir
     private Path directorioTemporal;
@@ -95,7 +104,8 @@ class RegistroIncidenciaJpaTest {
     void prepararDatos() {
         RolEntidad rol = roles.findByNombreIgnoreCase("Docente")
                 .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Docente", "Reporta incidencias del laboratorio.")));
-        reportante = usuarios.saveAndFlush(new UsuarioEntidad(rol, "Ana", "Torres", "ana@pruebas.local", "activo"));
+        reportante = usuarios.saveAndFlush(new UsuarioEntidad(
+                rol, "Ana", "Torres", "ana.torres.demo@trazalab.local", "activo"));
         UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración"));
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));
     }
@@ -118,6 +128,58 @@ class RegistroIncidenciaJpaTest {
     void rechazaDescripcionVaciaSinGuardar() {
         assertThrows(IllegalArgumentException.class, () -> servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "  "));
         assertEquals(0, incidencias.count());
+    }
+
+    @Test
+    void renderizaElFormularioWebConIdentidadDeDemostracion() throws Exception {
+        mockMvc.perform(get("/incidencias/nueva"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Modo de demostración")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ana Torres")));
+    }
+
+    @Test
+    void renderizaElListadoYLosPanelesProvisionales() throws Exception {
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "La pantalla no enciende.");
+
+        mockMvc.perform(get("/incidencias"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Historial de reportes")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("La pantalla no enciende.")));
+
+        mockMvc.perform(get("/mantenimientos"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Mantenimientos")));
+
+        mockMvc.perform(get("/reportes"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Reportes")));
+    }
+
+    @Test
+    void registraLaIncidenciaConUsuarioFijadoPorElServidor() throws Exception {
+        mockMvc.perform(post("/incidencias")
+                        .with(csrf())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("descripcion", "La pantalla no enciende.")
+                        .param("usuarioId", "9999"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/incidencias"));
+
+        List<IncidenciaEntidad> guardadas = incidencias.findAll();
+        assertEquals(1, guardadas.size());
+        assertEquals(reportante.getId(), guardadas.getFirst().getUsuario().getId());
+    }
+
+    @Test
+    void mantieneElFormularioYValidaLosCamposObligatorios() throws Exception {
+        mockMvc.perform(post("/incidencias")
+                        .with(csrf())
+                        .param("codigoQr", " ")
+                        .param("descripcion", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ingresa el código QR del equipo.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("La descripción de la falla es obligatoria.")));
     }
 
     @Test

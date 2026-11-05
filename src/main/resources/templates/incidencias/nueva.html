@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Registrar incidencia')}"></head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/sidebar :: sidebar('incidencias')}"></div>
+
+        <div class="app-main">
+            <div th:replace="~{fragments/header :: header}"></div>
+
+            <main class="container-fluid app-content app-content--narrow">
+                <div class="page-heading">
+                    <div>
+                        <p class="page-overline">Trazabilidad técnica</p>
+                        <h1>Registrar incidencia</h1>
+                        <p class="text-body-secondary mb-0">Describe el problema y registra manualmente el código QR del equipo.</p>
+                    </div>
+                    <a class="btn btn-outline-secondary" th:href="@{/incidencias}">Volver a incidencias</a>
+                </div>
+
+                <section class="alert alert-warning" aria-label="Modo de demostración">
+                    <strong>Modo de demostración sin inicio de sesión.</strong>
+                    <span>El reporte se asociará a </span>
+                    <span class="fw-semibold" th:text="|${usuarioDemostracion.nombres} ${usuarioDemostracion.apellidos}|">Usuario de demostración</span>
+                    <span> y el servidor fija esa identidad para este flujo.</span>
+                </section>
+
+                <div th:replace="~{fragments/mensajes :: mensajes}"></div>
+
+                <section class="card app-card">
+                    <div class="card-body p-4 p-lg-5">
+                        <form th:action="@{/incidencias}" th:object="${registroIncidencia}" method="post" novalidate>
+                            <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                                <p class="mb-1" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Error</p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label" for="codigoQr">Código QR del equipo</label>
+                                <input class="form-control" id="codigoQr" type="text" th:field="*{codigoQr}"
+                                    maxlength="100" autocomplete="off" placeholder="Ejemplo: PC-001"
+                                    th:classappend="${#fields.hasErrors('codigoQr')} ? 'is-invalid'" required>
+                                <div class="form-text">Escribe el código impreso en la etiqueta del equipo; esta versión no usa cámara.</div>
+                                <div class="invalid-feedback" th:errors="*{codigoQr}">Código QR inválido</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label" for="descripcion">Descripción de la falla</label>
+                                <textarea class="form-control" id="descripcion" th:field="*{descripcion}"
+                                    rows="6" maxlength="500" data-caracteres-maximos="500"
+                                    placeholder="Indica qué ocurrió y qué comportamiento observaste."
+                                    th:classappend="${#fields.hasErrors('descripcion')} ? 'is-invalid'" required></textarea>
+                                <div class="d-flex justify-content-between gap-3 mt-1">
+                                    <div class="form-text">La descripción queda asociada al equipo y al usuario de demostración.</div>
+                                    <div class="form-text text-nowrap"><span data-conteo-caracteres>0</span>/500</div>
+                                </div>
+                                <div class="invalid-feedback" th:errors="*{descripcion}">Descripción inválida</div>
+                            </div>
+
+                            <div class="d-flex flex-wrap justify-content-end gap-2 pt-3 border-top">
+                                <a class="btn btn-outline-secondary" th:href="@{/incidencias}">Cancelar</a>
+                                <button class="btn btn-primary" type="submit">Guardar incidencia</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>

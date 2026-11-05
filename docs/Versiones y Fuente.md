@@ -1,14 +1,17 @@
 # Versiones y fuentes de TrazaLab
 
-Inventario contrastado con el proyecto local el 27/10/2026. Las bibliotecas sin versión directa son administradas por el parent de Spring Boot; para conocer la versión resuelta se consulta el árbol de dependencias de Maven.
+Inventario contrastado con el proyecto local el 05/11/2026. Las bibliotecas sin versión directa son administradas por Spring Boot; para conocer la versión resuelta se consulta el árbol de dependencias de Maven.
 
 | Componente | Versión o estado declarado | Fuente y uso |
 |---|---|---|
 | Java | 21 | [`pom.xml`](../pom.xml), propiedad `java.version` |
-| Spring Boot parent | 4.1.2 | [`pom.xml`](../pom.xml); arranque de consola |
-| Spring Data JPA e Hibernate ORM | Administrados por Spring Boot 4.1.2 | Repositorios, mapeo de entidades y validación del esquema |
-| Spring Security | Dependencia declarada; autenticación no configurada | [`pom.xml`](../pom.xml); acceso de usuario final pendiente |
-| Spring Validation | Administrado por Spring Boot 4.1.2 | Validación del DTO de registro |
+| Spring Boot parent | 4.1.2 | [`pom.xml`](../pom.xml); aplicación Spring MVC |
+| Spring MVC | Administrado por Spring Boot 4.1.2 | `spring-boot-starter-webmvc`; rutas HTTP y formularios |
+| Thymeleaf | Administrado por Spring Boot 4.1.2 | `spring-boot-starter-thymeleaf`; vistas y fragmentos |
+| Bootstrap | 5.3.8 | CSS y JS referenciados por `templates/fragments/head.html` y `scripts.html` |
+| Spring Data JPA e Hibernate ORM | Administrados por Spring Boot 4.1.2 | Repositorios, entidades y validación del esquema |
+| Spring Security | Administrado por Spring Boot 4.1.2 | CSRF habilitado; rutas permitidas sin login en etapa demo |
+| Spring Validation | Administrado por Spring Boot 4.1.2 | Validación del formulario de registro de incidencias |
 | SLF4J y Logback | Administrados por Spring Boot 4.1.2 | `LoggingAplicacion` y [`logback-spring.xml`](../src/main/resources/logback-spring.xml) |
 | Driver JDBC PostgreSQL | Administrado por Spring Boot 4.1.2 | Persistencia JPA sobre PostgreSQL |
 | PostgreSQL | Imagen `postgres:16` | [`compose.yaml`](../database/compose.yaml); instancia local de desarrollo |
@@ -17,7 +20,7 @@ Inventario contrastado con el proyecto local el 27/10/2026. Las bibliotecas sin 
 | Apache Commons CSV | 1.14.1 | CSV de incidencias |
 | Google Guava | No declarada | Pendiente respecto de la rúbrica; no se le atribuye uso |
 | Maven Wrapper | Según [configuración del wrapper](../.mvn/wrapper/maven-wrapper.properties) | Ejecución reproducible de Maven |
-| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | Dos pruebas de integración con PostgreSQL temporal |
+| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 11 pruebas con PostgreSQL temporal en la ejecución del 05/11/2026 |
 | Flyway | Administrado por Spring Boot 4.1.2, con módulo PostgreSQL | `src/main/resources/db/migration`; `V1` contiene el esquema inicial |
 
 ## Fuentes académicas
@@ -27,23 +30,26 @@ Inventario contrastado con el proyecto local el 27/10/2026. Las bibliotecas sin 
 - Proceso, pantallas y modelo relacional: `APF02/BPM.xlsx`, `APF02/Pantallas UI UX.xlsx` y `APF02/DiseñoDB, Relaciones, Entidades.xlsx`.
 - Esquema de referencia inicial: `APF02/Scripts/PostgreSQL Script.sql` y [`01_trazalab_schema.sql`](../database/01_trazalab_schema.sql). La fuente ejecutable son las migraciones inmutables de `src/main/resources/db/migration`.
 - Estado de implementación, arquitectura, pruebas diseñadas y control de versiones: `APF03/Matriz de Transferencia y Trazabilidad.xlsx`, `APF03/Arquitectura.xlsx` y `APF03/Control de Versiones.xlsx`. La [copia S10](S10_Matriz_Trazabilidad_y_Transferencia.xlsx) conserva la matriz de APF03 dentro del proyecto.
+- La estructura de JPA y las plantillas web toma como referencia el proyecto ilustrativo Opalina; se mantiene independiente del código fuente de TrazaLab.
 
-Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFinal`, que contiene `Proyecto/trazalab`. El código verificable está bajo [`src/main/java`](../src/main/java) y las pruebas bajo [`src/test/java`](../src/test/java). `IncidenciaController` coordina la aplicación de consola; todavía no es un controlador HTTP.
+Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFinal`, que contiene `Proyecto/trazalab`. El código verificable está bajo [`src/main/java`](../src/main/java) y las pruebas bajo [`src/test/java`](../src/test/java). Los controladores HTTP están en `controller`; `service` conserva reglas y transacciones.
 
 ## Evidencia observada
 
-- El 27/10/2026, `.\mvnw.cmd -q -DskipTests compile` concluyó correctamente.
-- El 27/10/2026, `.\mvnw.cmd -q test` ejecutó las dos pruebas de `RegistroIncidenciaJpaTest` con PostgreSQL temporal: 2 ejecutadas, 0 fallidas, 0 errores y 0 omitidas. Los resultados de esa ejecución se guardan en `target/surefire-reports`.
-- Una consulta de solo lectura al PostgreSQL local el 27/10/2026 mostró 14 tablas, 4 vistas, 6 incidencias y 1 computadora. Es una observación puntual del entorno local, no el resultado del piloto.
+- El 05/11/2026, `./mvnw.cmd -q test` ejecutó 11 pruebas con PostgreSQL temporal: 11 aprobadas, 0 fallidas, 0 errores y 0 omitidas. La suite incluye render y envío de formularios MVC.
+- La misma suite verificó registro en PostgreSQL, validación, consultas paginadas, exportaciones CSV/XLSX/PDF y una comparación de carga completa frente a lectura por lotes.
+- Las pruebas corren contra una base PostgreSQL creada por Testcontainers; no certifican por sí solas un piloto real ni los paneles pendientes.
+- La verificación local del esquema y la línea base Flyway se documentaron en la PR #3; la base de datos preexistente conserva sus filas.
 
 ## Referencias técnicas
 
 - [Java SE 21](https://docs.oracle.com/en/java/javase/21/)
 - [Spring Boot](https://docs.spring.io/spring-boot/index.html)
+- [Bootstrap 5.3](https://getbootstrap.com/docs/5.3/)
 - [PostgreSQL JDBC Driver](https://jdbc.postgresql.org/)
 - [Apache PDFBox](https://pdfbox.apache.org/)
 - [Apache POI](https://poi.apache.org/)
 - [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/)
 - [Testcontainers for Java](https://java.testcontainers.org/)
 
-La exportación PDF, XLSX y CSV ya está implementada para el listado de incidencias. El análisis de fallas recurrentes y sus reportes siguen pendientes.
+La exportación PDF, XLSX y CSV está disponible desde el listado de incidencias. El análisis de fallas recurrentes y los reportes filtrables siguen pendientes.

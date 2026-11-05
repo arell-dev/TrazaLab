@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Incidencias')}"></head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/sidebar :: sidebar('incidencias')}"></div>
+
+        <div class="app-main">
+            <div th:replace="~{fragments/header :: header}"></div>
+
+            <main class="container-fluid app-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="page-overline">Trazabilidad técnica</p>
+                        <h1>Incidencias</h1>
+                        <p class="text-body-secondary mb-0">Consulta los reportes y registra una falla observada en un equipo.</p>
+                    </div>
+                    <a class="btn btn-primary" th:href="@{/incidencias/nueva}">Registrar incidencia</a>
+                </div>
+
+                <div th:replace="~{fragments/mensajes :: mensajes}"></div>
+
+                <section class="card app-card" aria-labelledby="titulo-lista-incidencias">
+                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h2 class="h5 mb-1" id="titulo-lista-incidencias">Historial de reportes</h2>
+                            <p class="small text-body-secondary mb-0" th:text="|${incidencias.totalElements} incidencias registradas|">Incidencias</p>
+                        </div>
+                        <div class="btn-group" role="group" aria-label="Exportar incidencias">
+                            <a class="btn btn-outline-secondary btn-sm" th:href="@{/incidencias/exportar/CSV}">CSV</a>
+                            <a class="btn btn-outline-secondary btn-sm" th:href="@{/incidencias/exportar/EXCEL}">Excel</a>
+                            <a class="btn btn-outline-secondary btn-sm" th:href="@{/incidencias/exportar/PDF}">PDF</a>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Fecha</th>
+                                    <th scope="col">Equipo</th>
+                                    <th scope="col">Descripción</th>
+                                    <th scope="col">Reportante</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="incidencia : ${incidencias.content}">
+                                    <td class="text-nowrap" th:text="${#temporals.format(incidencia.fechaRegistro, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                                    <td class="fw-semibold" th:text="${incidencia.codigoQr}">PC-001</td>
+                                    <td class="incidencia-descripcion" th:text="${incidencia.descripcion}">Descripción</td>
+                                    <td th:text="${incidencia.reportante}">Reportante</td>
+                                    <td><span class="badge text-bg-light border" th:text="${incidencia.estado}">registrada</span></td>
+                                </tr>
+                                <tr th:if="${incidencias.empty}">
+                                    <td colspan="5" class="empty-state">Todavía no hay incidencias registradas.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card-footer d-flex justify-content-between align-items-center" th:if="${incidencias.totalPages > 1}">
+                        <a class="btn btn-outline-secondary btn-sm" th:classappend="${incidencias.first} ? 'disabled'"
+                            th:href="@{/incidencias(pagina=${incidencias.number - 1})}" aria-label="Página anterior">Anterior</a>
+                        <span class="small text-body-secondary" th:text="|Página ${incidencias.number + 1} de ${incidencias.totalPages}|">Página</span>
+                        <a class="btn btn-outline-secondary btn-sm" th:classappend="${incidencias.last} ? 'disabled'"
+                            th:href="@{/incidencias(pagina=${incidencias.number + 1})}" aria-label="Página siguiente">Siguiente</a>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>

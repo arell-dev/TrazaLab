@@ -4,13 +4,13 @@ import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.IncidenciasExportacionDto;
 import com.utp.trazalab.dto.UsuarioResumenDto;
-import com.utp.trazalab.model.ComputadoraEntidad;
-import com.utp.trazalab.model.EstadoIncidencia;
-import com.utp.trazalab.model.IncidenciaEntidad;
-import com.utp.trazalab.model.UsuarioEntidad;
-import com.utp.trazalab.repository.ComputadoraJpaRepositorio;
-import com.utp.trazalab.repository.IncidenciaJpaRepositorio;
-import com.utp.trazalab.repository.UsuarioJpaRepositorio;
+import com.utp.trazalab.domain.enums.EstadoIncidencia;
+import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
+import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
+import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.IncidenciaJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Iterator;
@@ -131,13 +131,26 @@ public class RegistroIncidenciaPersistenteServicio {
     @Transactional(readOnly = true)
     public List<UsuarioResumenDto> consultarUsuarios() {
         return usuarios.findAll().stream()
-                .map(usuario -> new UsuarioResumenDto(
-                        usuario.getId(),
-                        usuario.getNombres(),
-                        usuario.getApellidos(),
-                        usuario.getRol().getNombre(),
-                        usuario.getEstado()))
+                .map(this::convertirUsuario)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public UsuarioResumenDto consultarUsuarioDemostracion(String correo) {
+        if (correo == null || correo.isBlank()) {
+            throw new IllegalStateException("Configura un correo para el usuario de demostración.");
+        }
+
+        UsuarioEntidad usuario = usuarios.findByCorreoIgnoreCase(correo.trim())
+                .orElseThrow(() -> new IllegalStateException(
+                        "No existe el usuario de demostración configurado en la base de datos."));
+        if (!"activo".equalsIgnoreCase(usuario.getEstado())
+                || !rolPuedeReportar(usuario.getRol().getNombre())) {
+            throw new IllegalStateException(
+                    "El usuario de demostración debe estar activo y tener un rol que pueda reportar incidencias.");
+        }
+
+        return convertirUsuario(usuario);
     }
 
     @Transactional(readOnly = true)
@@ -181,6 +194,15 @@ public class RegistroIncidenciaPersistenteServicio {
                 incidencia.getDescripcion(),
                 incidencia.getFechaRegistro(),
                 incidencia.getEstado().name().toLowerCase(Locale.ROOT));
+    }
+
+    private UsuarioResumenDto convertirUsuario(UsuarioEntidad usuario) {
+        return new UsuarioResumenDto(
+                usuario.getId(),
+                usuario.getNombres(),
+                usuario.getApellidos(),
+                usuario.getRol().getNombre(),
+                usuario.getEstado());
     }
 
     private boolean rolPuedeReportar(String nombreRol) {

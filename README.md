@@ -1,91 +1,71 @@
 # TrazaLab
 
 ## Integrantes
+
 - Barrutia Ojeda Mauricio
 - Guevara Guerrero Ashley
 - Jimenez Chinchay Mateo Sebastian
 - Mendoza Sacsa Zamira Luana
 
-TrazaLab registra y consulta la trazabilidad técnica de las computadoras de los laboratorios. La versión actual ofrece una interfaz de consola, persiste la información en PostgreSQL y permite generar archivos PDF, Excel y CSV con las incidencias registradas.
+TrazaLab registra la trazabilidad técnica de computadoras de laboratorio. La aplicación web permite consultar y registrar incidencias en PostgreSQL y descargar el listado en PDF, Excel o CSV.
 
-## Capacidades
+## Capacidades disponibles
 
 | Capacidad | Descripción |
-| :--- | :--- |
-| Registro de incidencias | Asocia una computadora identificada por QR con un usuario reportante y almacena la descripción y fecha. |
-| Consulta de incidencias | Lista los registros persistidos en PostgreSQL. |
-| Historial por computadora | Busca un equipo por código QR y muestra sus datos básicos y sus incidencias en orden cronológico. |
-| Exportación | Genera un archivo PDF, Excel (`.xlsx`) o CSV a partir de las incidencias consultadas. |
-| Logging de aplicación | Registra acciones funcionales, resultado y datos operativos útiles para seguimiento. |
+|---|---|
+| Registro de incidencias | El formulario captura manualmente el QR y la descripción; el servidor fija el usuario reportante de demostración. |
+| Consulta de incidencias | Presenta los registros más recientes primero, en páginas de 25 filas. |
+| Exportación | Descarga PDF, XLSX o CSV mediante consultas por lotes. |
+| Logging de aplicación | Escribe eventos de operación mediante SLF4J y Logback. |
+
+Los paneles de mantenimiento y reportes están en construcción. Sus rutas muestran un estado provisional hasta que se integren sus servicios y consultas.
 
 ## Arquitectura
 
-La consola es el adaptador de entrada actual. Los casos de uso se mantienen en los controladores y servicios, separados del acceso a datos y de los formatos de exportación.
-
 ```text
-Consola
-  ├─ Registro y consultas → DTO → IncidenciaController → RegistroIncidenciaPersistenteServicio
-  │                                                           └─ Repositorios JPA → PostgreSQL
-  └─ Exportación → ExportacionIncidenciasController → Exportadores PDF / Excel / CSV
-
-IncidenciaController y ExportacionIncidenciasController → LoggingAplicacion → SLF4J / Logback
+Navegador
+  → Spring MVC / Thymeleaf / Bootstrap 5.3.8
+  → controller + DTO de formulario
+  → service (reglas, transacción y eventos)
+  → persistence.jpa.springdata / entity / converter
+  → Hibernate / JPA
+  → PostgreSQL
 ```
 
-| Paquete | Responsabilidad |
-| :--- | :--- |
-| `console` | Presenta el menú, solicita datos y comunica resultados. |
-| `controller` | Valida entradas de los casos de uso y coordina la operación. |
-| `service` | Aplica reglas y coordina la consulta o escritura de incidencias. |
-| `dto` | Define los datos que cruzan los límites entre capas. |
-| `repository` | Implementa el acceso a datos mediante repositorios Spring Data JPA. |
-| `model` | Contiene las entidades persistentes y estados del dominio. |
-| `database` | Agrupa convertidores y detalles específicos de JPA. Hibernate valida las entidades frente al esquema SQL. |
-| `export` | Define el contrato de exportación y genera archivos en PDF, Excel y CSV. |
-| `logging` | Define el contrato de logging de aplicación y su adaptador actual. |
-| Integración con recolector | Adaptador previsto para recibir datos de la aplicación C++; aún no existe código de producción. |
-| Interfaz web | Adaptador previsto para el panel; aún no existe código de producción. |
+Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguiendo la estructura usada por el proyecto ilustrativo Opalina. Los controladores MVC están en `controller`; no existe una capa adicional de «Adaptador Web».
 
-El controlador actual no expone rutas HTTP ni requiere una interfaz web. La aplicación recolectora de computadoras será un segundo sistema; el contrato de intercambio entre ambos aún está pendiente de definición.
+| Paquete o recurso | Responsabilidad |
+|---|---|
+| `controller` | Recibe solicitudes HTTP, valida formularios y renderiza vistas o descargas. |
+| `service` | Aplica reglas de negocio, transacciones y registro de eventos. |
+| `dto` | Separa datos de formulario, identidad demo y datos de respuesta. |
+| `persistence.jpa.entity` | Mapea entidades persistentes al esquema de PostgreSQL. |
+| `persistence.jpa.springdata` | Define las consultas y operaciones JPA. |
+| `persistence.jpa.converter` | Convierte estados entre Java y el esquema SQL. |
+| `templates/fragments` | Comparte encabezado, menú, mensajes y scripts. |
+| `templates/incidencias` | Contiene las vistas de consulta y registro. |
+| `static/css`, `static/js` | Contiene variables Bootstrap, estilos e interacciones de la interfaz. |
+| `export` | Genera los archivos de incidencias en PDF, Excel y CSV. |
 
-## Estructura del proyecto
+La [arquitectura detallada](docs/Arquitectura.md) distingue código implementado, pantallas provisionales y trabajo pendiente.
 
-```text
-.
-├── database/
-│   ├── 01_trazalab_schema.sql       # Esquema, restricciones y datos iniciales
-│   ├── compose.yaml                # Servicio PostgreSQL para desarrollo
-│   └── run.ps1                     # Carga variables y ejecuta TrazaLab
-├── docs/
-│   ├── Arquitectura.md
-│   ├── Matriz Trazabilidad.md
-│   ├── Seguridad y Limites.md
-│   ├── Versiones y Fuente.md
-│   └── TrazaLab_Arquitectura_Trazabilidad.drawio
-├── src/
-│   ├── main/java/com/utp/trazalab/ # Capas de aplicación y adaptadores
-│   ├── main/resources/             # Configuración Spring Boot y Logback
-│   └── test/java/                  # Pruebas de integración JPA
-├── .env.example                    # Variables de conexión de desarrollo
-├── pom.xml
-└── mvnw.cmd
-```
-
-## Tecnologías y dependencias
+## Tecnologías
 
 | Tecnología | Uso |
-| :--- | :--- |
-| Java 21 | Plataforma de ejecución. |
-| Spring Boot 4.1.2 | Configuración y ciclo de vida de la aplicación. |
-| Spring Data JPA e Hibernate | Repositorios, mapeo objeto-relacional y validación del esquema. |
-| PostgreSQL 16 | Persistencia relacional. |
-| Docker Compose | Ejecución local de PostgreSQL. |
-| Apache PDFBox 3.0.8 | Generación del PDF. |
-| Apache POI 5.5.1 | Generación del libro Excel. |
-| Apache Commons CSV 1.14.1 | Escritura del archivo CSV. |
-| JUnit y Testcontainers | Pruebas de integración con PostgreSQL temporal. |
-| SLF4J y Logback | Registro de eventos funcionales mediante `LoggingAplicacion`. |
+|---|---|
+| Java 21 y Spring Boot 4.1.2 | Plataforma y ciclo de vida de la aplicación. |
+| Spring MVC y Thymeleaf | Rutas web y plantillas HTML. |
+| Bootstrap 5.3.8 | Componentes y diseño responsivo. |
+| Spring Data JPA, Hibernate y PostgreSQL 16 | Persistencia y validación del esquema. |
+| Flyway | Versionado del esquema SQL. |
+| Spring Security | CSRF habilitado; autenticación desactivada en la etapa demo. |
+| JUnit y Testcontainers | Pruebas con PostgreSQL temporal. |
+| Apache PDFBox 3.0.8 | Reportes PDF. |
+| Apache POI 5.5.1 | Libros XLSX. |
+| Apache Commons CSV 1.14.1 | Exportación CSV. |
+| SLF4J y Logback | Registro de eventos de aplicación. |
 
-El proyecto también incluye Spring Validation para validar los DTO y Spring Security como dependencia preparada para una etapa posterior. La consola actual no implementa autenticación. Las dependencias y versiones efectivas se declaran en [`pom.xml`](pom.xml).
+Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). La autenticación todavía no forma parte de esta etapa.
 
 ## Requisitos
 
@@ -101,77 +81,54 @@ El proyecto también incluye Spring Validation para validar los DTO y Spring Sec
    Copy-Item .env.example .env
    ```
 
-2. Asigna una contraseña local a `SPRING_DATASOURCE_PASSWORD` en `.env`.
-3. Desde la raíz del proyecto, inicia PostgreSQL:
+2. Establece una contraseña local en `SPRING_DATASOURCE_PASSWORD`.
+3. Inicia PostgreSQL desde la raíz del repositorio:
 
    ```powershell
    docker compose --env-file .env -f database/compose.yaml up -d
    ```
 
-4. Ejecuta TrazaLab:
+4. Arranca TrazaLab:
 
    ```powershell
    .\database\run.ps1
    ```
 
-También puedes arrancar TrazaLab directamente con Maven:
+5. Abre `http://localhost:8080/incidencias`.
 
-```powershell
-.\mvnw.cmd spring-boot:run
-```
+También se puede iniciar directamente con `.\mvnw.cmd spring-boot:run`. Spring Boot carga las variables desde `.env` y conecta con PostgreSQL.
 
-Al iniciar, la consola mantiene abierto el menú hasta seleccionar `0. Salir`:
+El usuario reportante demo se selecciona mediante `TRAZALAB_DEMO_USER_EMAIL` o usa `ana.torres.demo@trazalab.local` por defecto. La opción de insertar datos demo está desactivada por defecto para no modificar bases existentes; se activa explícitamente con `TRAZALAB_SEED_ENABLED=true` solo en un entorno preparado para ello.
 
-1. Consultar incidencias existentes.
-2. Registrar una incidencia.
-3. Consultar la ficha e historial de una computadora mediante su código QR.
-4. Exportar incidencias a PDF, Excel o CSV.
-0. Salir.
-
-Flyway aplica las migraciones de `src/main/resources/db/migration` al iniciar la aplicación. Hibernate usa `spring.jpa.hibernate.ddl-auto=validate`: comprueba compatibilidad entre entidades y esquema, sin crear ni modificar tablas. Los registros iniciales de laboratorio se insertan en PostgreSQL de manera idempotente. Para un volumen anterior a Flyway, sigue primero la guía de [migraciones existentes](database/README.md#migraciones-y-volumenes-existentes); no elimines el volumen.
+Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate utiliza `spring.jpa.hibernate.ddl-auto=validate` y no crea ni actualiza tablas. Para una base que ya tenía datos antes de Flyway, sigue [`database/README.md`](database/README.md#migraciones-y-volumenes-existentes); el procedimiento genera un respaldo antes de registrar la línea base y conserva el volumen.
 
 ## Exportación
 
-La opción 4 permite seleccionar PDF, Excel o CSV. Cada archivo contiene identificador, usuario reportante, código QR, descripción, fecha de registro y estado. Los archivos se guardan por defecto en `evidencias/`, con nombres como `incidencias_2026-10-15_15-36-28.csv`. La ruta se puede cambiar mediante `TRAZALAB_EXPORT_DIRECTORY`.
-
-El PDF usa orientación apaisada, encabezados repetidos y paginación. El libro Excel presenta título, fecha de generación, total de registros, filtros, encabezados fijos y texto ajustado. El CSV usa UTF-8 con BOM para facilitar su apertura en Excel.
+Desde el listado de incidencias se pueden descargar PDF, Excel o CSV. Los archivos incluyen identificador, reportante, QR, descripción, fecha y estado. Se generan por lotes y se transmiten desde el directorio configurado por `TRAZALAB_EXPORT_DIRECTORY`, cuyo valor predeterminado es `evidencias/`.
 
 ## Logging
 
-Los eventos funcionales se escriben en `logs/trazalab-app.log`. `APP_EVENT` registra la acción, el recurso, el resultado y, cuando corresponde, una referencia, cantidad o detalle. Por ejemplo, `incidencia.registrar`, `incidencia.listar`, `computadora.historial` e `incidencia.exportar`. Los eventos exitosos usan `INFO`, los rechazos por validación `WARN` y los errores técnicos `ERROR`. El archivo rota por fecha y tamaño y conserva hasta 30 días.
+Los eventos funcionales se escriben en `logs/trazalab-app.log`. `APP_EVENT` registra acción, recurso, resultado y, cuando corresponde, referencias o cantidades. No contiene descripciones, nombres, correos ni contraseñas.
 
 ## Pruebas
 
-`RegistroIncidenciaJpaTest` verifica el registro persistente a través del servicio, las consultas y las validaciones con PostgreSQL temporal mediante Testcontainers. Docker debe estar disponible para ejecutar la prueba:
+Ejecuta la suite con Docker disponible:
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-Maven guarda los resultados de prueba en `target/surefire-reports`. En la verificación del 27/10/2026 se ejecutaron las dos pruebas de `RegistroIncidenciaJpaTest` con PostgreSQL temporal: 2 aprobadas, 0 fallidas, 0 errores y 0 omitidas. Este resultado corresponde a esa ejecución; debe repetirse para demostrar una versión posterior.
+La verificación del 05/11/2026 ejecutó 11 pruebas con PostgreSQL temporal: **11 aprobadas, 0 fallidas, 0 errores y 0 omitidas**. Incluye render de vistas y registro web con identidad fijada, además de persistencia, paginación, exportación por lotes y comparación de consumo retenido de memoria. Maven deja resultados y logs de prueba en `target/surefire-reports`.
 
-Otros comandos de desarrollo disponibles desde la raíz:
+## Alcance y documentación
 
-| Comando | Resultado |
-| :--- | :--- |
-| `.\mvnw.cmd -DskipTests compile` | Compila el código sin ejecutar pruebas. |
-| `.\mvnw.cmd package` | Compila, ejecuta las pruebas y construye el JAR. |
-| `docker compose --env-file .env -f database/compose.yaml down` | Detiene PostgreSQL y conserva el volumen de datos. |
-
-## Alcance actual
-
-La versión actual implementa registro, consulta e historial de incidencias, y exportación de esos registros. La aplicación funciona por consola y usa PostgreSQL. La interfaz web, autenticación de usuarios, gestión de mantenimientos y componentes, análisis de fallas recurrentes y comunicación con la aplicación recolectora C++ son etapas posteriores.
-
-La consulta de historial muestra la ficha básica y las incidencias del equipo; todavía no reúne mantenimientos, fallas clasificadas ni componentes. El QR se escribe como texto. La exportación genera el listado de incidencias, no un análisis de fallas recurrentes. La base local consultada el 27/10/2026 tenía 14 tablas y 4 vistas; esa observación no acredita el piloto de 15 a 20 equipos definido en APF01.
-
-## Documentación técnica
+La interfaz web y la persistencia de incidencias están implementadas. El formulario requiere introducir el QR como texto y funciona en modo de demostración sin login. La consulta de historial individual por equipo, el registro de mantenimientos con componentes, los filtros de reportes y las recurrencias de fallas están pendientes; las pantallas provisionales lo indican.
 
 - [Arquitectura](docs/Arquitectura.md)
 - [Matriz de trazabilidad](docs/Matriz%20Trazabilidad.md)
-- [Matriz S10 de trazabilidad y transferencia](docs/S10_Matriz_Trazabilidad_y_Transferencia.xlsx)
 - [Seguridad y límites](docs/Seguridad%20y%20Limites.md)
 - [Versiones y fuentes](docs/Versiones%20y%20Fuente.md)
 - [Diagrama de arquitectura y trazabilidad](docs/TrazaLab_Arquitectura_Trazabilidad.drawio)
-- [Uso de PostgreSQL](database/README.md)
+- [Uso y migración de PostgreSQL](database/README.md)
 
-Los entregables académicos actualizados están en `APF01/`, `APF02/` y `APF03/` respecto de la carpeta `ProyectoFinal`. En particular, `APF03/Matriz de Transferencia y Trazabilidad.xlsx`, `APF03/Arquitectura.xlsx` y `APF03/Control de Versiones.xlsx` distinguen implementación, diseño y evidencia ejecutada.
+Los archivos del docente dentro de `APFFinal` son referencias de testing. Se documenta la transferencia y ejecución del proyecto en `docs/`; esos materiales no se editan.

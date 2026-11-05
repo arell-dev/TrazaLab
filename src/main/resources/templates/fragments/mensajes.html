@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <th:block th:fragment="mensajes">
+        <div class="alert alert-success" role="status" th:if="${mensajeExito}" th:text="${mensajeExito}"></div>
+    </th:block>
+</body>
+
+</html>
