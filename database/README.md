@@ -74,6 +74,14 @@ docker exec trazalab-postgres psql -U trazalab_app -d trazalab -c "SELECT incide
 - `POSTGRES_USER` y `POSTGRES_PASSWORD` solo inicializan el rol cuando se crea el volumen por primera vez. Cambiar `.env` por sí solo no actualiza la contraseña de una base ya inicializada.
 - Para cambiar la contraseña sin borrar los datos, inicia el contenedor, abre `psql` como arriba y ejecuta `\password trazalab_app`. Escribe la nueva clave cuando `psql` la solicite; después actualiza `SPRING_DATASOURCE_PASSWORD` en `.env` para que coincida.
 - No elimines el volumen si necesitas conservar los registros existentes.
-- El esquema inicial [`01_trazalab_schema.sql`](01_trazalab_schema.sql) solo se ejecuta al crear el volumen por primera vez.
+- Las migraciones Flyway de `src/main/resources/db/migration` son la fuente ejecutable del esquema. El archivo `01_trazalab_schema.sql` conserva el esquema inicial como referencia; Docker ya no lo ejecuta al crear el volumen.
 
 El flujo completo de la aplicación, las capas JPA y la trazabilidad de RF-05 están documentados en el [README principal](../README.md) y en [Arquitectura](../docs/Arquitectura.md).
+
+## Migraciones y volúmenes existentes
+
+En un volumen nuevo, inicia PostgreSQL y luego la aplicación. Flyway crea el esquema desde `V1__crear_esquema_trazalab.sql`; Hibernate solo valida el mapeo.
+
+Para adoptar Flyway en un volumen anterior, no uses `docker compose down -v`. Ejecuta `./database/baseline-existing.ps1` desde la raíz del proyecto. El script requiere la estructura inicial conocida (14 tablas y 4 vistas), comprueba que Flyway no se haya inicializado antes, crea un respaldo en `ProyectoFinal/_backups` y registra la versión 1 sin volver a ejecutar `V1`. Si una comprobación falla, detente y conserva la base tal como está.
+
+Después de baselinar, inicia la aplicación normalmente. Confirma que `flyway_schema_history` registra la versión 1 y que `spring.jpa.hibernate.ddl-auto=validate` permite arrancar. Las futuras modificaciones deben añadirse en una migración con versión superior; no edites una migración ya aplicada.
