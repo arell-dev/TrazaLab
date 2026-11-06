@@ -245,17 +245,13 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     private Sort ordenIncidenciasDescendente() {
-        Sort.TypedSort<IncidenciaEntidad> orden = Sort.sort(IncidenciaEntidad.class);
-        return orden.by(IncidenciaEntidad::getFechaRegistro)
-                .descending()
-                .and(orden.by(IncidenciaEntidad::getId).descending());
+        return Sort.by(IncidenciaEntidad::getFechaRegistro, IncidenciaEntidad::getId)
+                .descending();
     }
 
     private Sort ordenIncidenciasAscendente() {
-        Sort.TypedSort<IncidenciaEntidad> orden = Sort.sort(IncidenciaEntidad.class);
-        return orden.by(IncidenciaEntidad::getFechaRegistro)
-                .ascending()
-                .and(orden.by(IncidenciaEntidad::getId).ascending());
+        return Sort.by(IncidenciaEntidad::getFechaRegistro, IncidenciaEntidad::getId)
+                .ascending();
     }
 
     private int limitarTamanoPagina(Pageable pageable) {
