@@ -37,6 +37,7 @@ import com.utp.trazalab.service.RegistroIncidenciaPersistenteServicio;
 import com.utp.trazalab.service.RegistroMantenimientoServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
 import jakarta.persistence.EntityManager;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,12 +45,15 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.TextPosition;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -338,6 +342,40 @@ class RegistroIncidenciaJpaTest {
                 .getResponse();
         try (var documento = Loader.loadPDF(pdf.getContentAsByteArray())) {
             assertTrue(new PDFTextStripper().getText(documento).contains(computadora.getCodigoQr()));
+        }
+    }
+
+    @Test
+    void ajustaLasFilasExtensasAlAnchoDePaginaPdf() throws Exception {
+        LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Lima"));
+        FallaRecurrenteDto extensa = new FallaRecurrenteDto(
+                1,
+                "W".repeat(100),
+                "M".repeat(80),
+                "Categoria de hardware ".repeat(5),
+                1,
+                "Tipo de falla recurrente ".repeat(8),
+                12,
+                LocalDateTime.of(2026, 11, 5, 12, 0));
+
+        byte[] pdf = servicioReportes.exportarPdf(List.of(extensa), hoy.minusDays(1), hoy);
+
+        try (var documento = Loader.loadPDF(pdf)) {
+            PDFTextStripper verificadorAncho = new PDFTextStripper() {
+                @Override
+                protected void writeString(String texto, List<TextPosition> posiciones) throws IOException {
+                    double bordeDerecho = posiciones.stream()
+                            .mapToDouble(posicion -> posicion.getXDirAdj() + posicion.getWidthDirAdj())
+                            .max()
+                            .orElse(0);
+                    assertTrue(bordeDerecho <= PDRectangle.A4.getWidth() - 39);
+                    super.writeString(texto, posiciones);
+                }
+            };
+            String texto = verificadorAncho.getText(documento).replaceAll("\\s", "");
+
+            assertTrue(texto.contains("W".repeat(100)));
+            assertTrue(texto.contains("M".repeat(80)));
         }
     }
 

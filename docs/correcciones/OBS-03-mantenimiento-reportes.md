@@ -2,7 +2,7 @@
 
 **Fecha:** 05/11/2026
 **Rama de implementación:** `feat/mantenimientos-reportes`
-**Estado:** corregido y verificado con 16 pruebas aprobadas en PostgreSQL Testcontainers.
+**Estado:** corregido y verificado con 17 pruebas aprobadas en PostgreSQL Testcontainers.
 
 ## Hallazgos durante la ejecución
 
@@ -12,6 +12,7 @@
 | El trigger exige asociar una falla válida a todo mantenimiento correctivo y que esa falla pertenezca al mismo equipo. | El primer intento de probar un mantenimiento correctivo sin asociación fue rechazado correctamente por PostgreSQL. | El formulario ofrece fallas clasificadas recientes y el servicio valida la coincidencia de equipo antes de guardar. |
 | El reloj usaba UTC para construir `TIMESTAMP` locales mientras el periodo del reporte se tomaba en Lima. | Cerca de medianoche una falla podía quedar en el día siguiente y excluirse del reporte por fecha. | El bean `Clock` usa `America/Lima`, el huso definido para fechas operativas y JPA. La fecha de incidencia continúa como `Instant`. |
 | La prueba MockMvc añadida llamó métodos que lanzan `Exception` sin declararla; además, esperaba dos resultados aunque los dos casos forman un solo grupo recurrente. | Maven detuvo la ejecución durante `testCompile`; la suite no llegó a ejecutarse en ese intento. | La prueba declara `throws Exception`, conserva la frecuencia de dos casos y espera un grupo («1 resultado»). El panel también pluraliza el contador. La ejecución posterior aprobó 16/16. |
+| La exportación PDF escribía cada recurrencia en una sola línea sin medir el ancho de sus campos. | Códigos QR, series o nombres largos podían quedar recortados fuera del borde de la página. | Se ajustan las filas al ancho útil, se repite el encabezado al paginar y una prueba verifica las posiciones del texto en una fila extensa. La suite final aprobó 17/17. |
 
 ## Trazabilidad
 
