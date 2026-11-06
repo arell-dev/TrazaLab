@@ -1,6 +1,6 @@
 # Arquitectura de TrazaLab
 
-El diagrama editable actualizado está en [`TrazaLab_Arquitectura_Trazabilidad.drawio`](TrazaLab_Arquitectura_Trazabilidad.drawio). Describe el flujo web activo y marca como futuros los módulos que todavía no tienen lógica de producción.
+El diagrama editable actualizado está en [`TrazaLab_Arquitectura_Trazabilidad.drawio`](TrazaLab_Arquitectura_Trazabilidad.drawio). Describe los flujos web activos y deja como futuro el contrato con el recolector C++.
 
 ## Criterio de diseño
 
@@ -51,7 +51,8 @@ Los recursos web están organizados así:
 templates/
 ├── fragments/              Encabezado, navegación, mensajes y scripts
 ├── incidencias/            Consulta y formulario de incidencias
-└── modulos/                Pantallas provisionales para módulos aún pendientes
+├── mantenimientos/         Registro de intervenciones y componentes
+└── reportes/               Filtros y resultados de recurrencias
 static/
 ├── css/                    Variables de Bootstrap y estilos de aplicación
 └── js/                     Interacciones pequeñas de la interfaz
@@ -61,17 +62,17 @@ static/
 
 | Módulo | Responsabilidad | Estado actual |
 |---|---|---|
-| `controller` | Recibir solicitudes HTTP, validar formularios y devolver vistas o archivos | Implementado para incidencias y exportación |
-| `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Implementado para incidencias |
-| `service` | Aplicar reglas de negocio, transacciones y registro funcional | Implementado para incidencias |
-| `persistence.jpa.entity` | Mapear entidades del esquema existente | Implementado para rol, usuario, ubicación, computadora e incidencia |
-| `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Implementado para el flujo de incidencias |
-| `export` | Generar archivos PDF, Excel y CSV por lotes | Implementado para el listado de incidencias |
-| `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Pantalla provisional; lógica pendiente |
-| `reportes` | Aplicar filtros y producir recurrencias de fallas | Pantalla provisional; lógica pendiente |
+| `controller` | Recibir solicitudes HTTP, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos, reportes y exportación |
+| `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes y resultados de mantenimiento |
+| `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
+| `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
+| `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
+| `export` | Generar archivos PDF, XLSX y CSV | Incidencias: PDF, XLSX y CSV; recurrencias: PDF y CSV |
+| `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; preserva asignaciones temporales de componentes |
+| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; dos o más fallas clasificadas del mismo tipo por equipo |
 | Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
 
-La aplicación web de esta etapa es de demostración: Spring Security conserva CSRF y permite las rutas sin autenticación; no se implementan login, sesión ni autorización de usuario. `trazalab.demo.usuario-correo` fija la identidad reportante del servidor. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
+La aplicación web de esta etapa es de demostración: Spring Security conserva CSRF y permite las rutas sin autenticación; no se implementan login ni sesión. `trazalab.demo.usuario-correo` fija la identidad reportante y `trazalab.demo.mantenimiento-correo` fija la identidad técnica del servidor. La base exige que el responsable técnico esté activo y tenga rol técnico. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
 
 ## Persistencia y ejecución
 
@@ -82,6 +83,10 @@ La aplicación web de esta etapa es de demostración: Spring Security conserva C
 - Las credenciales locales se cargan desde `.env`, excluido de Git.
 - La línea base de un volumen preexistente se registra solo después de validar el esquema y generar un respaldo. No se activa `baseline-on-migrate` de forma general.
 - La propiedad `trazalab.seed.enabled` queda en `false` por defecto. No se elimina ni reinicializa el volumen local.
+- La clasificación de incidencias es opcional; el reporte solo considera fallas clasificadas.
+- Un mantenimiento correctivo requiere una falla de una incidencia del mismo equipo.
+
+Las entidades principales se guardan con Spring Data JPA. `RegistroMantenimientoServicio` usa `JdbcTemplate` en la misma transacción para el historial temporal de asignaciones y la relación de acciones de componentes. `ReporteFallasServicio` usa una consulta SQL agrupada y parametrizada para contar fallas y filtrar periodo, equipo y tipo.
 
 Para el arranque local y la guía de base de datos, consulta [`README.md`](../README.md) y [`database/README.md`](../database/README.md).
 
@@ -90,8 +95,10 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 | Elemento | Correspondencia | Estado |
 |---|---|---|
 | RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: registro web funcional en modo demo; autenticación pendiente |
+| RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
+| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` → PostgreSQL y PDF/CSV | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | Servicio de historial por QR escrito como texto | Consulta web de historial pendiente; lector físico no implementado |
 | EXT-01 | `ExportacionWebController` y exportadores PDF, XLSX y CSV | Descarga del listado implementada; no equivale al análisis RF-06 |
-| Registro web | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 4 verificaciones web y 7 de persistencia aprobadas en la ejecución registrada el 05/11/2026 |
+| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 16 pruebas aprobadas el 05/11/2026; incluye mantenimiento, componentes, recurrencias y exportación |
 
-La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). Las pruebas documentan tanto el flujo web ejecutado como los módulos que siguen diseñados o pendientes.
+La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).

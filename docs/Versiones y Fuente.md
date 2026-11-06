@@ -20,8 +20,8 @@ Inventario contrastado con el proyecto local el 05/11/2026. Las bibliotecas sin 
 | Apache Commons CSV | 1.14.1 | CSV de incidencias |
 | Google Guava | No declarada | Pendiente respecto de la rúbrica; no se le atribuye uso |
 | Maven Wrapper | Según [configuración del wrapper](../.mvn/wrapper/maven-wrapper.properties) | Ejecución reproducible de Maven |
-| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 11 pruebas con PostgreSQL temporal en la ejecución del 05/11/2026 |
-| Flyway | Administrado por Spring Boot 4.1.2, con módulo PostgreSQL | `src/main/resources/db/migration`; `V1` contiene el esquema inicial |
+| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 16 pruebas con PostgreSQL temporal en la ejecución del 05/11/2026 |
+| Flyway | Administrado por Spring Boot 4.1.2, con módulo PostgreSQL | `src/main/resources/db/migration`; V1 define el esquema y V2 agrega el catálogo inicial de tipos de falla |
 
 ## Fuentes académicas
 
@@ -36,9 +36,9 @@ Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFina
 
 ## Evidencia observada
 
-- El 05/11/2026, `./mvnw.cmd -q test` ejecutó 11 pruebas con PostgreSQL temporal: 11 aprobadas, 0 fallidas, 0 errores y 0 omitidas. La suite incluye render y envío de formularios MVC.
-- La misma suite verificó registro en PostgreSQL, validación, consultas paginadas, exportaciones CSV/XLSX/PDF y una comparación de carga completa frente a lectura por lotes.
-- Las pruebas corren contra una base PostgreSQL creada por Testcontainers; no certifican por sí solas un piloto real ni los paneles pendientes.
+- El 05/11/2026, `./mvnw.cmd -q test` ejecutó 16 pruebas con PostgreSQL temporal: 16 aprobadas, 0 fallidas, 0 errores y 0 omitidas.
+- La suite verificó render y envío de formularios MVC, registro y clasificación, paginación, mantenimiento correctivo y componentes, recurrencias, exportaciones CSV/XLSX/PDF y lectura por lotes.
+- Las pruebas usan una base PostgreSQL desechable de Testcontainers; no certifican por sí solas un piloto real ni el inventario completo.
 - La verificación local del esquema y la línea base Flyway se documentaron en la PR #3; la base de datos preexistente conserva sus filas.
 
 ## Referencias técnicas
@@ -52,4 +52,4 @@ Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFina
 - [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/)
 - [Testcontainers for Java](https://java.testcontainers.org/)
 
-La exportación PDF, XLSX y CSV está disponible desde el listado de incidencias. El análisis de fallas recurrentes y los reportes filtrables siguen pendientes.
+La exportación PDF, XLSX y CSV está disponible desde el listado de incidencias. El reporte de recurrencias filtra hasta 30 días por equipo y tipo, y exporta PDF y CSV.
