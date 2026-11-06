@@ -4,6 +4,7 @@ import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.RegistroIncidenciaDto;
 import com.utp.trazalab.dto.UsuarioResumenDto;
+import com.utp.trazalab.dto.TipoFallaResumenDto;
 import com.utp.trazalab.logging.EventoAplicacion;
 import com.utp.trazalab.logging.LoggingAplicacion;
 import com.utp.trazalab.logging.ResultadoEvento;
@@ -27,15 +28,24 @@ public class IncidenciaAplicacionServicio {
     }
 
     public IncidenciaRegistradaDto registrar(RegistroIncidenciaDto solicitud) {
+        return registrar(solicitud, null);
+    }
+
+    public IncidenciaRegistradaDto registrar(RegistroIncidenciaDto solicitud, Integer tipoFallaId) {
         return ejecutar(
                 "incidencia.registrar",
                 "incidencia",
                 () -> servicio.registrar(
                         solicitud.getUsuarioId(),
                         solicitud.getCodigoQr(),
-                        solicitud.getDescripcion()),
+                        solicitud.getDescripcion(),
+                        tipoFallaId),
                 incidencia -> "id=" + incidencia.id(),
                 incidencia -> null);
+    }
+
+    public List<TipoFallaResumenDto> consultarTiposFalla() {
+        return servicio.consultarTiposFalla();
     }
 
     public Page<IncidenciaRegistradaDto> consultarIncidencias(Pageable pageable) {

@@ -52,6 +52,7 @@ public class IncidenciaWebController {
         UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
         model.addAttribute("registroIncidencia", new RegistroIncidenciaFormulario());
         model.addAttribute("usuarioDemostracion", usuarioDemostracion);
+        model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
         return "incidencias/nueva";
     }
 
@@ -64,6 +65,7 @@ public class IncidenciaWebController {
         UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
         if (errores.hasErrors()) {
             model.addAttribute("usuarioDemostracion", usuarioDemostracion);
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";
         }
 
@@ -72,12 +74,13 @@ public class IncidenciaWebController {
             solicitud.setUsuarioId(usuarioDemostracion.id());
             solicitud.setCodigoQr(formulario.getCodigoQr());
             solicitud.setDescripcion(formulario.getDescripcion());
-            servicio.registrar(solicitud);
+            servicio.registrar(solicitud, formulario.getTipoFallaId());
             redireccion.addFlashAttribute("mensajeExito", "La incidencia se registró correctamente.");
             return "redirect:/incidencias";
         } catch (IllegalArgumentException error) {
             errores.reject("incidencia.invalida", error.getMessage());
             model.addAttribute("usuarioDemostracion", usuarioDemostracion);
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";
         }
     }

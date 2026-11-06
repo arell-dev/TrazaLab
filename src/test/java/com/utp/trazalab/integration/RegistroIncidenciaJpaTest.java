@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
+import com.utp.trazalab.dto.FallaRecurrenteDto;
 import com.utp.trazalab.export.csv.ExportadorIncidenciasCsv;
 import com.utp.trazalab.export.excel.ExportadorIncidenciasExcel;
 import com.utp.trazalab.export.pdf.ExportadorIncidenciasPdf;
@@ -20,15 +21,21 @@ import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
 import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.ComponenteEntidad;
+import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.RolEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.ComponenteJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.IncidenciaJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.TipoFallaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.RolJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import com.utp.trazalab.service.RegistroIncidenciaPersistenteServicio;
+import com.utp.trazalab.service.RegistroMantenimientoServicio;
+import com.utp.trazalab.service.ReporteFallasServicio;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -36,6 +43,7 @@ import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -87,6 +95,10 @@ class RegistroIncidenciaJpaTest {
     @Autowired private UbicacionJpaRepositorio ubicaciones;
     @Autowired private ComputadoraJpaRepositorio computadoras;
     @Autowired private IncidenciaJpaRepositorio incidencias;
+    @Autowired private ComponenteJpaRepositorio componentes;
+    @Autowired private TipoFallaJpaRepositorio tiposFalla;
+    @Autowired private RegistroMantenimientoServicio servicioMantenimiento;
+    @Autowired private ReporteFallasServicio servicioReportes;
     @Autowired private ExportadorIncidenciasCsv exportadorCsv;
     @Autowired private ExportadorIncidenciasExcel exportadorExcel;
     @Autowired private ExportadorIncidenciasPdf exportadorPdf;
@@ -98,6 +110,7 @@ class RegistroIncidenciaJpaTest {
     private Path directorioTemporal;
 
     private UsuarioEntidad reportante;
+    private UsuarioEntidad tecnico;
     private ComputadoraEntidad computadora;
 
     @BeforeEach
@@ -106,6 +119,10 @@ class RegistroIncidenciaJpaTest {
                 .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Docente", "Reporta incidencias del laboratorio.")));
         reportante = usuarios.saveAndFlush(new UsuarioEntidad(
                 rol, "Ana", "Torres", "ana.torres.demo@trazalab.local", "activo"));
+        RolEntidad rolTecnico = roles.findByNombreIgnoreCase("Técnico de Soporte")
+                .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Técnico de Soporte", "Pruebas de mantenimiento.")));
+        tecnico = usuarios.saveAndFlush(new UsuarioEntidad(
+                rolTecnico, "Luis", "Pérez", "tecnico.trazalab.demo@trazalab.local", "activo"));
         UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración"));
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));
     }
@@ -139,7 +156,7 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void renderizaElListadoYLosPanelesProvisionales() throws Exception {
+    void renderizaLosPanelesWebActivos() throws Exception {
         servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "La pantalla no enciende.");
 
         mockMvc.perform(get("/incidencias"))
@@ -149,11 +166,13 @@ class RegistroIncidenciaJpaTest {
 
         mockMvc.perform(get("/mantenimientos"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Mantenimientos")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar intervención")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Intervenciones recientes")));
 
         mockMvc.perform(get("/reportes"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Reportes")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Fallas recurrentes")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")));
     }
 
     @Test
@@ -180,6 +199,146 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Ingresa el código QR del equipo.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("La descripción de la falla es obligatoria.")));
+    }
+
+    @Test
+    void registraMantenimientoSinCambiarEstadoNiCerrarIncidencia() throws Exception {
+        IncidenciaRegistradaDto incidencia = servicio.registrar(
+                reportante.getId(), computadora.getCodigoQr(), "Pantalla intermitente.");
+
+        servicioMantenimiento.registrar(
+                tecnico.getId(),
+                computadora.getCodigoQr(),
+                "preventivo",
+                null,
+                "Se revisó el cable de video.",
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertEquals("operativa", jdbcTemplate.queryForObject(
+                "SELECT estado FROM computadora WHERE computadora_id = ?", String.class, computadora.getId()));
+        assertEquals("registrada", jdbcTemplate.queryForObject(
+                "SELECT estado FROM incidencia WHERE incidencia_id = ?", String.class, incidencia.id()));
+        assertEquals(1, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mantenimiento", Integer.class));
+        mockMvc.perform(get("/mantenimientos"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Se revisó el cable de video.")));
+    }
+
+    @Test
+    void instalarYReemplazarComponenteMantieneHistorialDeAsignaciones() {
+        servicioMantenimiento.registrar(
+                tecnico.getId(), computadora.getCodigoQr(), "preventivo", null, "Instalación inicial.",
+                "instalado", null, "Memoria 8 GB", "RAM", "RAM-OLD");
+        ComponenteEntidad anterior = componentes.findByNumeroSerieIgnoreCase("RAM-OLD").orElseThrow();
+
+        servicioMantenimiento.registrar(
+                tecnico.getId(), computadora.getCodigoQr(), "preventivo", null, "Se reemplazó la memoria.",
+                "reemplazado", "RAM-OLD", "Memoria 16 GB", "RAM", "RAM-NEW");
+
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM computadora_componente "
+                        + "WHERE computadora_id = ? AND componente_id = ? AND fecha_retiro IS NOT NULL",
+                Integer.class,
+                computadora.getId(),
+                anterior.getId()));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM computadora_componente cc "
+                        + "JOIN componente c ON c.componente_id = cc.componente_id "
+                        + "WHERE cc.computadora_id = ? AND c.numero_serie = 'RAM-NEW' AND cc.fecha_retiro IS NULL",
+                Integer.class,
+                computadora.getId()));
+        assertEquals("operativa", jdbcTemplate.queryForObject(
+                "SELECT estado FROM computadora WHERE computadora_id = ?", String.class, computadora.getId()));
+        assertEquals(3, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mantenimiento_componente", Integer.class));
+    }
+
+    @Test
+    void mantenimientoCorrectivoExigeFallaDelMismoEquipo() {
+        Integer tipoFallaId = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().getFirst().getId();
+        IncidenciaRegistradaDto incidencia = servicio.registrar(
+                reportante.getId(), computadora.getCodigoQr(), "Falla para correctivo.", tipoFallaId);
+        Integer fallaId = jdbcTemplate.queryForObject(
+                "SELECT falla_id FROM falla WHERE incidencia_id = ?", Integer.class, incidencia.id());
+
+        UbicacionEntidad otraUbicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-OTRO", "Equipo separado"));
+        ComputadoraEntidad otroEquipo = computadoras.saveAndFlush(new ComputadoraEntidad(
+                "QR-TEST-002", "SERIE-TEST-002", "Dell", "OptiPlex", otraUbicacion, EstadoComputadora.OPERATIVA));
+
+        assertThrows(IllegalArgumentException.class, () -> servicioMantenimiento.registrar(
+                tecnico.getId(), otroEquipo.getCodigoQr(), "correctivo", fallaId, "Correctivo cruzado.",
+                null, null, null, null, null));
+        assertEquals(0, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mantenimiento", Integer.class));
+
+        servicioMantenimiento.registrar(
+                tecnico.getId(), computadora.getCodigoQr(), "correctivo", fallaId, "Correctivo asociado.",
+                null, null, null, null, null);
+        assertEquals(fallaId, jdbcTemplate.queryForObject(
+                "SELECT falla_id FROM mantenimiento", Integer.class));
+    }
+
+    @Test
+    void clasificaFallasYCalculaRecurrenciaPorEquipoYTipoEnElPeriodo() throws Exception {
+        List<TipoFallaEntidad> catalogo = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc();
+        Integer tipoFallaId = catalogo.getFirst().getId();
+        Integer otroTipoFallaId = catalogo.get(1).getId();
+        LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Lima"));
+
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Primer caso.", tipoFallaId);
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Segundo caso.", tipoFallaId);
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Falla de otro tipo.", otroTipoFallaId);
+
+        List<FallaRecurrenteDto> recurrencias = servicioReportes.consultarRecurrencias(
+                hoy.minusDays(29), hoy, computadora.getCodigoQr(), tipoFallaId);
+
+        assertEquals(1, recurrencias.size());
+        assertEquals(2, recurrencias.getFirst().frecuencia());
+        assertEquals(computadora.getCodigoQr(), recurrencias.getFirst().codigoQr());
+        assertTrue(servicioReportes.consultarRecurrencias(
+                hoy.minusDays(29), hoy, computadora.getCodigoQr(), otroTipoFallaId).isEmpty());
+        assertEquals(3, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM falla", Integer.class));
+        mockMvc.perform(get("/reportes")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("tipoFallaId", tipoFallaId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1 resultado")));
+    }
+
+    @Test
+    void exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb() throws Exception {
+        Integer tipoFallaId = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().getFirst().getId();
+        LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Lima"));
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Primer caso de exportación.", tipoFallaId);
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Segundo caso de exportación.", tipoFallaId);
+
+        var csv = mockMvc.perform(get("/reportes/exportar/csv")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("tipoFallaId", tipoFallaId.toString()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse();
+        assertTrue(csv.getContentType().contains("text/csv"));
+        assertTrue(csv.getContentAsString(StandardCharsets.UTF_8).contains(computadora.getCodigoQr()));
+
+        var pdf = mockMvc.perform(get("/reportes/exportar/pdf")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("tipoFallaId", tipoFallaId.toString()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse();
+        try (var documento = Loader.loadPDF(pdf.getContentAsByteArray())) {
+            assertTrue(new PDFTextStripper().getText(documento).contains(computadora.getCodigoQr()));
+        }
     }
 
     @Test

@@ -24,18 +24,21 @@ public class DatosInicialesPersistencia implements CommandLineRunner {
     private final UbicacionJpaRepositorio ubicaciones;
     private final ComputadoraJpaRepositorio computadoras;
     private final String correoUsuarioDemostracion;
+    private final String correoTecnicoDemostracion;
 
     public DatosInicialesPersistencia(
             RolJpaRepositorio roles,
             UsuarioJpaRepositorio usuarios,
             UbicacionJpaRepositorio ubicaciones,
             ComputadoraJpaRepositorio computadoras,
-            @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion) {
+            @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion,
+            @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
         this.roles = roles;
         this.usuarios = usuarios;
         this.ubicaciones = ubicaciones;
         this.computadoras = computadoras;
         this.correoUsuarioDemostracion = correoUsuarioDemostracion;
+        this.correoTecnicoDemostracion = correoTecnicoDemostracion;
     }
 
     @Override
@@ -48,6 +51,15 @@ public class DatosInicialesPersistencia implements CommandLineRunner {
                         "Ana",
                         "Torres",
                         correoUsuarioDemostracion,
+                        "activo")));
+        RolEntidad rolTecnico = roles.findByNombreIgnoreCase("Técnico de Soporte")
+                .orElseThrow(() -> new IllegalStateException("Falta el rol Técnico de Soporte."));
+        usuarios.findByCorreoIgnoreCase(correoTecnicoDemostracion)
+                .orElseGet(() -> usuarios.save(new UsuarioEntidad(
+                        rolTecnico,
+                        "Técnico",
+                        "Demostración",
+                        correoTecnicoDemostracion,
                         "activo")));
 
         UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCase("LAB-01")

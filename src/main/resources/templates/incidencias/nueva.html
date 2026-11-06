@@ -45,6 +45,16 @@
                             </div>
 
                             <div class="mb-4">
+                                <label class="form-label" for="tipoFallaId">Clasificación de la falla <span class="text-body-secondary">(opcional)</span></label>
+                                <select class="form-select" id="tipoFallaId" th:field="*{tipoFallaId}">
+                                    <option value="">Sin clasificar</option>
+                                    <option th:each="tipo : ${tiposFalla}" th:value="${tipo.id()}"
+                                        th:text="|${tipo.categoria()} · ${tipo.nombre()}|">Tipo de falla</option>
+                                </select>
+                                <div class="form-text">La clasificación permite calcular recurrencias en los reportes.</div>
+                            </div>
+
+                            <div class="mb-4">
                                 <label class="form-label" for="descripcion">Descripción de la falla</label>
                                 <textarea class="form-control" id="descripcion" th:field="*{descripcion}"
                                     rows="6" maxlength="500" data-caracteres-maximos="500"
