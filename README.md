@@ -14,11 +14,14 @@ TrazaLab registra la trazabilidad técnica de computadoras de laboratorio. La ap
 | Capacidad | Descripción |
 |---|---|
 | Registro de incidencias | El formulario captura manualmente el QR y la descripción; el servidor fija el usuario reportante de demostración. |
+| Clasificación | Se puede clasificar una incidencia por categoría y tipo de falla para alimentar los reportes de recurrencia. |
 | Consulta de incidencias | Presenta los registros más recientes primero, en páginas de 25 filas. |
 | Exportación | Descarga PDF, XLSX o CSV mediante consultas por lotes. |
+| Mantenimientos | Registra intervenciones preventivas o correctivas y acciones de instalación, intervención, reemplazo o retiro de componentes. |
+| Reportes | Filtra recurrencias por periodo, equipo y tipo; considera recurrentes dos o más fallas del mismo tipo en el equipo. Exporta PDF y CSV. |
 | Logging de aplicación | Escribe eventos de operación mediante SLF4J y Logback. |
 
-Los paneles de mantenimiento y reportes están en construcción. Sus rutas muestran un estado provisional hasta que se integren sus servicios y consultas.
+El mantenimiento no cambia el estado operativo de la computadora ni cierra una incidencia. Los mantenimientos correctivos requieren asociar una falla del mismo equipo.
 
 ## Arquitectura
 
@@ -44,10 +47,11 @@ Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguie
 | `persistence.jpa.converter` | Convierte estados entre Java y el esquema SQL. |
 | `templates/fragments` | Comparte encabezado, menú, mensajes y scripts. |
 | `templates/incidencias` | Contiene las vistas de consulta y registro. |
+| `templates/mantenimientos`, `templates/reportes` | Contiene los paneles de registro técnico y consulta de recurrencias. |
 | `static/css`, `static/js` | Contiene variables Bootstrap, estilos e interacciones de la interfaz. |
 | `export` | Genera los archivos de incidencias en PDF, Excel y CSV. |
 
-La [arquitectura detallada](docs/Arquitectura.md) distingue código implementado, pantallas provisionales y trabajo pendiente.
+La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.
 
 ## Tecnologías
 
@@ -98,7 +102,7 @@ Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). La auten
 
 También se puede iniciar directamente con `.\mvnw.cmd spring-boot:run`. Spring Boot carga las variables desde `.env` y conecta con PostgreSQL.
 
-El usuario reportante demo se selecciona mediante `TRAZALAB_DEMO_USER_EMAIL` o usa `ana.torres.demo@trazalab.local` por defecto. La opción de insertar datos demo está desactivada por defecto para no modificar bases existentes; se activa explícitamente con `TRAZALAB_SEED_ENABLED=true` solo en un entorno preparado para ello.
+El usuario reportante demo se selecciona mediante `TRAZALAB_DEMO_USER_EMAIL` o usa `ana.torres.demo@trazalab.local` por defecto. El responsable de mantenimiento se selecciona mediante `TRAZALAB_DEMO_TECH_EMAIL` o usa `tecnico.trazalab.demo@trazalab.local`. Debe ser un usuario activo con rol técnico, según las reglas del esquema. La opción de insertar datos demo está desactivada por defecto para no modificar bases existentes; se activa explícitamente con `TRAZALAB_SEED_ENABLED=true` solo en un entorno preparado para ello. El sembrado crea el usuario técnico demo si no existe.
 
 Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate utiliza `spring.jpa.hibernate.ddl-auto=validate` y no crea ni actualiza tablas. Para una base que ya tenía datos antes de Flyway, sigue [`database/README.md`](database/README.md#migraciones-y-volumenes-existentes); el procedimiento genera un respaldo antes de registrar la línea base y conserva el volumen.
 
@@ -118,12 +122,13 @@ Ejecuta la suite con Docker disponible:
 .\mvnw.cmd test
 ```
 
-La verificación del 05/11/2026 ejecutó 11 pruebas con PostgreSQL temporal: **11 aprobadas, 0 fallidas, 0 errores y 0 omitidas**. Incluye render de vistas y registro web con identidad fijada, además de persistencia, paginación, exportación por lotes y comparación de consumo retenido de memoria. Maven deja resultados y logs de prueba en `target/surefire-reports`.
+El 05/11/2026, `./mvnw.cmd -q test` terminó con 16 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas en PostgreSQL temporal mediante Testcontainers. La suite cubre persistencia, rutas web, clasificación de fallas, reglas de mantenimiento, componentes e informes. La matriz con caso, requisito, ejecución y resultado está en [`docs/testing/README.md`](docs/testing/README.md). Maven deja resultados y logs de prueba en `target/surefire-reports`.
 
 ## Alcance y documentación
 
-La interfaz web y la persistencia de incidencias están implementadas. El formulario requiere introducir el QR como texto y funciona en modo de demostración sin login. La consulta de historial individual por equipo, el registro de mantenimientos con componentes, los filtros de reportes y las recurrencias de fallas están pendientes; las pantallas provisionales lo indican.
+Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara ni autenticación. La consulta de historial técnico completo por computadora, la gestión integral del inventario, la autenticación y la autorización por sesión siguen pendientes.
 
+- [Índice de documentación](docs/README.md)
 - [Arquitectura](docs/Arquitectura.md)
 - [Matriz de trazabilidad](docs/Matriz%20Trazabilidad.md)
 - [Seguridad y límites](docs/Seguridad%20y%20Limites.md)
@@ -131,4 +136,4 @@ La interfaz web y la persistencia de incidencias están implementadas. El formul
 - [Diagrama de arquitectura y trazabilidad](docs/TrazaLab_Arquitectura_Trazabilidad.drawio)
 - [Uso y migración de PostgreSQL](database/README.md)
 
-Los archivos del docente dentro de `APFFinal` son referencias de testing. Se documenta la transferencia y ejecución del proyecto en `docs/`; esos materiales no se editan.
+Los archivos del docente de `TestLab_Semana13_COMPLETO` son referencias de testing. Se documenta la transferencia y ejecución del proyecto en `docs/`; esos materiales no se editan.
