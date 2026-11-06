@@ -7,9 +7,12 @@ import com.utp.trazalab.dto.UsuarioResumenDto;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.FallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.FallaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.IncidenciaJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.TipoFallaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import java.time.Clock;
 import java.time.Instant;
@@ -32,21 +35,32 @@ public class RegistroIncidenciaPersistenteServicio {
     private final UsuarioJpaRepositorio usuarios;
     private final ComputadoraJpaRepositorio computadoras;
     private final IncidenciaJpaRepositorio incidencias;
+    private final FallaJpaRepositorio fallas;
+    private final TipoFallaJpaRepositorio tiposFalla;
     private final Clock reloj;
 
     public RegistroIncidenciaPersistenteServicio(
             UsuarioJpaRepositorio usuarios,
             ComputadoraJpaRepositorio computadoras,
             IncidenciaJpaRepositorio incidencias,
+            FallaJpaRepositorio fallas,
+            TipoFallaJpaRepositorio tiposFalla,
             Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.incidencias = incidencias;
+        this.fallas = fallas;
+        this.tiposFalla = tiposFalla;
         this.reloj = reloj;
     }
 
     @Transactional
     public IncidenciaRegistradaDto registrar(long usuarioId, String codigoQr, String descripcion) {
+        return registrar(usuarioId, codigoQr, descripcion, null);
+    }
+
+    @Transactional
+    public IncidenciaRegistradaDto registrar(long usuarioId, String codigoQr, String descripcion, Integer tipoFallaId) {
         UsuarioEntidad usuario = usuarios.findById(Math.toIntExact(usuarioId))
                 .orElseThrow(() -> new IllegalArgumentException("El usuario indicado no existe."));
         if (!"activo".equalsIgnoreCase(usuario.getEstado())) {
@@ -67,9 +81,27 @@ public class RegistroIncidenciaPersistenteServicio {
 
         ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
                 .orElseThrow(() -> new IllegalArgumentException("No existe una computadora con ese código QR."));
+        Instant fechaRegistro = Instant.now(reloj);
         IncidenciaEntidad guardada = incidencias.saveAndFlush(new IncidenciaEntidad(
-                computadora, usuario, descripcion.trim(), Instant.now(reloj), EstadoIncidencia.REGISTRADA));
+                computadora, usuario, descripcion.trim(), fechaRegistro, EstadoIncidencia.REGISTRADA));
+        if (tipoFallaId != null) {
+            var tipoFalla = tiposFalla.findById(tipoFallaId)
+                    .orElseThrow(() -> new IllegalArgumentException("El tipo de falla seleccionado no existe."));
+            fallas.save(new FallaEntidad(
+                    guardada,
+                    tipoFalla,
+                    descripcion.trim(),
+                    java.time.LocalDateTime.ofInstant(fechaRegistro, reloj.getZone())));
+        }
         return convertirIncidencia(guardada);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.utp.trazalab.dto.TipoFallaResumenDto> consultarTiposFalla() {
+        return tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().stream()
+                .map(tipo -> new com.utp.trazalab.dto.TipoFallaResumenDto(
+                        tipo.getId(), tipo.getCategoria().getNombre(), tipo.getNombre()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

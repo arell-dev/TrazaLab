@@ -12,6 +12,8 @@ public class RegistroIncidenciaFormulario {
     @Size(max = 500, message = "La descripción no puede superar 500 caracteres.")
     private String descripcion;
 
+    private Integer tipoFallaId;
+
     public String getCodigoQr() {
         return codigoQr;
     }
@@ -26,5 +28,13 @@ public class RegistroIncidenciaFormulario {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public Integer getTipoFallaId() {
+        return tipoFallaId;
+    }
+
+    public void setTipoFallaId(Integer tipoFallaId) {
+        this.tipoFallaId = tipoFallaId;
     }
 }

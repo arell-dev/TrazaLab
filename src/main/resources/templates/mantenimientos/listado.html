@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head(${titulo})}"></head>
+
+<body>
+    <div class="app-layout">
+        <div th:replace="~{fragments/sidebar :: sidebar(${seccion})}"></div>
+
+        <div class="app-main">
+            <div th:replace="~{fragments/header :: header}"></div>
+
+            <main class="container-fluid app-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="page-overline">Historial técnico</p>
+                        <h1>Mantenimientos</h1>
+                        <p class="text-body-secondary mb-0">Registra una intervención preventiva o correctiva y los componentes relacionados.</p>
+                    </div>
+                </div>
+
+                <div th:replace="~{fragments/mensajes :: mensajes}"></div>
+
+                <section class="alert alert-warning" aria-label="Modo de demostración">
+                    <strong>Modo de demostración sin inicio de sesión.</strong>
+                    <span>El responsable técnico se fija en servidor como </span>
+                    <span class="fw-semibold" th:text="|${tecnicoDemostracion.nombres()} ${tecnicoDemostracion.apellidos()}|">Técnico demo</span>.
+                </section>
+
+                <section class="card app-card mb-4" aria-labelledby="titulo-nuevo-mantenimiento">
+                    <div class="card-header px-4 py-3">
+                        <h2 class="h5 mb-0" id="titulo-nuevo-mantenimiento">Registrar intervención</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <form th:action="@{/mantenimientos}" th:object="${registroMantenimiento}" method="post" novalidate>
+                            <div class="alert alert-danger" role="alert" th:if="${#fields.hasGlobalErrors()}">
+                                <p class="mb-1" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Error</p>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label" for="codigoQr">Código QR del equipo</label>
+                                    <input class="form-control" id="codigoQr" type="text" th:field="*{codigoQr}"
+                                        maxlength="100" placeholder="Ejemplo: PC-001" autocomplete="off" required
+                                        th:classappend="${#fields.hasErrors('codigoQr')} ? 'is-invalid'">
+                                    <div class="invalid-feedback" th:errors="*{codigoQr}">QR inválido</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="tipo">Tipo de mantenimiento</label>
+                                    <select class="form-select" id="tipo" th:field="*{tipo}" required>
+                                        <option value="preventivo">Preventivo</option>
+                                        <option value="correctivo">Correctivo</option>
+                                    </select>
+                                    <div class="invalid-feedback" th:errors="*{tipo}">Selecciona un tipo</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="fallaId">ID de falla asociada</label>
+                                    <select class="form-select" id="fallaId" th:field="*{fallaId}">
+                                        <option value="">Sin falla asociada</option>
+                                        <option th:each="falla : ${fallasRecientes}" th:value="${falla.id()}"
+                                            th:text="|#${falla.id()} · ${falla.codigoQr()} · ${falla.tipoFalla()}|">Falla</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="accionComponente">Acción sobre componente</label>
+                                    <select class="form-select" id="accionComponente" th:field="*{accionComponente}">
+                                        <option value="">Sin cambio de componente</option>
+                                        <option value="intervenido">Intervenir uno instalado</option>
+                                        <option value="instalado">Instalar uno nuevo</option>
+                                        <option value="reemplazado">Reemplazar uno instalado</option>
+                                        <option value="retirado">Retirar uno instalado</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="descripcion">Descripción de la intervención</label>
+                                    <textarea class="form-control" id="descripcion" th:field="*{descripcion}"
+                                        rows="3" maxlength="1000" placeholder="Describe el trabajo realizado." required
+                                        th:classappend="${#fields.hasErrors('descripcion')} ? 'is-invalid'"></textarea>
+                                    <div class="invalid-feedback" th:errors="*{descripcion}">Descripción inválida</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="serieComponenteActual">Serie instalada a intervenir</label>
+                                    <input class="form-control" id="serieComponenteActual" type="text"
+                                        th:field="*{serieComponenteActual}" maxlength="80" autocomplete="off">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="nombreComponenteNuevo">Nombre del componente nuevo</label>
+                                    <input class="form-control" id="nombreComponenteNuevo" type="text"
+                                        th:field="*{nombreComponenteNuevo}" maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="tipoComponenteNuevo">Tipo del componente nuevo</label>
+                                    <input class="form-control" id="tipoComponenteNuevo" type="text"
+                                        th:field="*{tipoComponenteNuevo}" maxlength="60" placeholder="RAM, SSD, fuente...">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="serieComponenteNuevo">Serie del componente nuevo</label>
+                                    <input class="form-control" id="serieComponenteNuevo" type="text"
+                                        th:field="*{serieComponenteNuevo}" maxlength="80">
+                                </div>
+                            </div>
+                            <p class="form-text mt-3 mb-0">Un mantenimiento correctivo requiere asociar una falla del mismo equipo. Para intervenir, retirar o reemplazar, escribe la serie instalada. Para instalar o reemplazar, completa los datos del componente nuevo. El servidor registra el responsable técnico de demostración; el mantenimiento no cambia el estado del equipo ni cierra incidencias.</p>
+                            <div class="d-flex justify-content-end pt-3">
+                                <button class="btn btn-primary" type="submit">Guardar mantenimiento</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <section class="card app-card" aria-labelledby="titulo-historial-mantenimientos">
+                    <div class="card-header px-4 py-3">
+                        <h2 class="h5 mb-0" id="titulo-historial-mantenimientos">Intervenciones recientes</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr><th scope="col">Fecha</th><th scope="col">Equipo</th><th scope="col">Tipo</th><th scope="col">Responsable demo</th><th scope="col">Descripción</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="mantenimiento : ${mantenimientos}">
+                                    <td class="text-nowrap" th:text="${#temporals.format(mantenimiento.fecha(), 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                                    <td class="fw-semibold" th:text="${mantenimiento.codigoQr()}">PC</td>
+                                    <td><span class="badge text-bg-light" th:text="${mantenimiento.tipo()}">Tipo</span></td>
+                                    <td th:text="${mantenimiento.reportante()}">Usuario</td>
+                                    <td th:text="${mantenimiento.descripcion()}">Descripción</td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(mantenimientos)}">
+                                    <td class="empty-state" colspan="5">Aún no hay mantenimientos registrados.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer text-body-secondary small">Se muestran hasta las 50 intervenciones más recientes.</div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>
