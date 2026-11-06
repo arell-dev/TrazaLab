@@ -13,10 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
-import com.utp.trazalab.dto.IncidenciasExportacionDto;
 import com.utp.trazalab.dto.FallaRecurrenteDto;
-import com.utp.trazalab.export.csv.ExportadorIncidenciasCsv;
-import com.utp.trazalab.export.pdf.ExportadorIncidenciasPdf;
+import java.io.ByteArrayInputStream;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
@@ -36,29 +34,25 @@ import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import com.utp.trazalab.service.RegistroIncidenciaPersistenteServicio;
 import com.utp.trazalab.service.RegistroMantenimientoServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
-import jakarta.persistence.EntityManager;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Stream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -104,14 +98,8 @@ class RegistroIncidenciaJpaTest {
     @Autowired private TipoFallaJpaRepositorio tiposFalla;
     @Autowired private RegistroMantenimientoServicio servicioMantenimiento;
     @Autowired private ReporteFallasServicio servicioReportes;
-    @Autowired private ExportadorIncidenciasCsv exportadorCsv;
-    @Autowired private ExportadorIncidenciasPdf exportadorPdf;
-    @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MockMvc mockMvc;
-
-    @TempDir
-    private Path directorioTemporal;
 
     private UsuarioEntidad reportante;
     private UsuarioEntidad tecnico;
@@ -152,13 +140,15 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void renderizaElFormularioWebConIdentidadDeDemostracion() throws Exception {
+    void renderizaElFormularioWebSinTextoDeIdentidadDemostracion() throws Exception {
         mockMvc.perform(get("/incidencias/nueva"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar incidencia")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Confirmación")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("Modo de demostración"))));
+                        org.hamcrest.Matchers.containsString("Sin autenticación"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("identidad de demostración"))));
     }
 
     @Test
@@ -172,7 +162,11 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/colores.css")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/componentes.css")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("Excel"))));
+                        org.hamcrest.Matchers.containsString("/incidencias/exportar/"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("CSV"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("PDF"))));
 
         mockMvc.perform(get("/mantenimientos"))
                 .andExpect(status().isOk())
@@ -182,12 +176,12 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/reportes"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Fallas recurrentes")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("Excel"))));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar CSV")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar Excel")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")));
 
         mockMvc.perform(get("/incidencias/exportar/excel"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -333,7 +327,7 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb() throws Exception {
+    void exportaRecurrenciasFiltradasEnCsvExcelYPdfDesdeLaWeb() throws Exception {
         Integer tipoFallaId = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().getFirst().getId();
         LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Lima"));
         servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Primer caso de exportación.", tipoFallaId);
@@ -350,6 +344,22 @@ class RegistroIncidenciaJpaTest {
         assertTrue(csv.getContentType().contains("text/csv"));
         assertTrue(csv.getContentAsString(StandardCharsets.UTF_8).contains(computadora.getCodigoQr()));
 
+        org.springframework.mock.web.MockHttpServletResponse excel = mockMvc.perform(get("/reportes/exportar/excel")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("tipoFallaId", tipoFallaId.toString()))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse();
+        assertTrue(excel.getContentType().contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        try (Workbook libro = WorkbookFactory.create(new ByteArrayInputStream(excel.getContentAsByteArray()))) {
+            assertEquals("TrazaLab | Informe de fallas recurrentes", libro.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
+            assertEquals("Código QR", libro.getSheetAt(0).getRow(3).getCell(1).getStringCellValue());
+            assertEquals(computadora.getCodigoQr(), libro.getSheetAt(0).getRow(4).getCell(1).getStringCellValue());
+            assertEquals(2, libro.getSheetAt(0).getRow(4).getCell(5).getNumericCellValue());
+        }
+
         org.springframework.mock.web.MockHttpServletResponse pdf = mockMvc.perform(get("/reportes/exportar/pdf")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString())
@@ -362,7 +372,7 @@ class RegistroIncidenciaJpaTest {
             assertTrue(new PDFTextStripper().getText(documento).contains(computadora.getCodigoQr()));
         }
 
-        mockMvc.perform(get("/reportes/exportar/excel")
+        mockMvc.perform(get("/reportes/exportar/otro")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString()))
                 .andExpect(status().isBadRequest());
@@ -459,95 +469,34 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void exportaTodosLosRegistrosPorLotesEnCsvYPdf() throws Exception {
-        guardarIncidencias(251);
-        IncidenciasExportacionDto datosExportacion = servicio.prepararExportacionIncidencias();
-        guardarIncidencias(252, 1);
-
-        Path csv = exportadorCsv.exportar(datosExportacion.incidencias(), datosExportacion.total(), directorioTemporal, Instant.parse("2026-11-05T12:00:00Z"));
-        Path pdf = exportadorPdf.exportar(datosExportacion.incidencias(), datosExportacion.total(), directorioTemporal, Instant.parse("2026-11-05T12:00:00Z"));
-
-        assertEquals(251, datosExportacion.total());
-        assertEquals(252, Files.readAllLines(csv, StandardCharsets.UTF_8).size());
-        try (PDDocument documento = Loader.loadPDF(pdf.toFile())) {
-            String contenido = new PDFTextStripper().getText(documento);
-            assertTrue(documento.getNumberOfPages() > 1);
-            assertTrue(contenido.contains("Total de incidencias: 251"));
-            assertTrue(contenido.contains("Falla número 1"));
-            assertTrue(contenido.contains("Falla número 251"));
-            assertFalse(contenido.contains("Falla número 252"));
-            assertTrue(contenido.contains(
-                    "Página " + documento.getNumberOfPages() + " de " + documento.getNumberOfPages()));
-        }
-    }
-
-    @Test
-    void comparaCargaCompletaConIteracionPorLotesSobreElMismoConjunto() throws Exception {
+    void recorrePorPaginasUnHistorialDeCincoMilIncidencias() {
         int cantidad = 5_000;
         guardarIncidenciasJdbc(cantidad);
-        entityManager.clear();
-        System.gc();
-        Thread.sleep(100);
-
-        long memoriaAntesCargaCompleta = memoriaUsada();
-        long inicioCargaCompleta = System.nanoTime();
-        List<IncidenciaRegistradaDto> cargaCompleta = entityManager.createQuery(
-                        "select incidencia from IncidenciaEntidad incidencia "
-                                + "join fetch incidencia.usuario "
-                                + "join fetch incidencia.computadora "
-                                + "order by incidencia.fechaRegistro desc, incidencia.id desc",
-                        IncidenciaEntidad.class)
-                .getResultList()
-                .stream()
-                .map(this::convertirIncidencia)
-                .toList();
-        long tiempoCargaCompleta = System.nanoTime() - inicioCargaCompleta;
-        System.gc();
-        Thread.sleep(100);
-        long memoriaRetenidaCompleta = Math.max(0, memoriaUsada() - memoriaAntesCargaCompleta);
-
-        assertEquals(cantidad, cargaCompleta.size());
-        cargaCompleta = null;
-        entityManager.clear();
-        System.gc();
-        Thread.sleep(100);
-
-        long memoriaAntesLotes = memoriaUsada();
-        long inicioLotes = System.nanoTime();
-        IncidenciasExportacionDto exportacion = servicio.prepararExportacionIncidencias();
+        int numeroPagina = 0;
         long registrosLeidos = 0;
-        Iterator<IncidenciaRegistradaDto> iteradorIncidencias = exportacion.incidencias().iterator();
-        while (iteradorIncidencias.hasNext()) {
-            iteradorIncidencias.next();
-            registrosLeidos++;
-            if (registrosLeidos % 250 == 0) {
-                entityManager.clear();
+        Integer idAnterior = null;
+        Page<IncidenciaRegistradaDto> pagina;
+
+        do {
+            pagina = servicio.consultarIncidencias(PageRequest.of(numeroPagina, 100));
+            assertEquals(cantidad, pagina.getTotalElements());
+            for (IncidenciaRegistradaDto incidencia : pagina.getContent()) {
+                if (idAnterior != null) {
+                    assertTrue(idAnterior > incidencia.id());
+                }
+                idAnterior = incidencia.id();
+                registrosLeidos++;
             }
-        }
-        long tiempoLotes = System.nanoTime() - inicioLotes;
-        System.gc();
-        Thread.sleep(100);
-        long memoriaRetenidaLotes = Math.max(0, memoriaUsada() - memoriaAntesLotes);
+            numeroPagina++;
+        } while (pagina.hasNext());
 
         assertEquals(cantidad, registrosLeidos);
-        assertEquals(cantidad, exportacion.total());
-        System.out.printf(
-                "BENCHMARK OBS-01: filas=%d, cargaCompletaMs=%.2f, lotesMs=%.2f, "
-                        + "heapRetenidoCompletaBytes=%d, heapRetenidoLotesBytes=%d%n",
-                cantidad,
-                tiempoCargaCompleta / 1_000_000.0,
-                tiempoLotes / 1_000_000.0,
-                memoriaRetenidaCompleta,
-                memoriaRetenidaLotes);
+        assertEquals(50, numeroPagina);
     }
 
     private void guardarIncidencias(int cantidad) {
-        guardarIncidencias(1, cantidad);
-    }
-
-    private void guardarIncidencias(int primerNumero, int cantidad) {
         Instant fechaCompartida = Instant.parse("2026-11-05T12:00:00Z");
-        for (int numero = primerNumero; numero < primerNumero + cantidad; numero++) {
+        for (int numero = 1; numero <= cantidad; numero++) {
             incidencias.saveAndFlush(new IncidenciaEntidad(
                     computadora,
                     reportante,
@@ -581,19 +530,4 @@ class RegistroIncidenciaJpaTest {
         });
     }
 
-    private IncidenciaRegistradaDto convertirIncidencia(IncidenciaEntidad incidencia) {
-        return new IncidenciaRegistradaDto(
-                incidencia.getId(),
-                incidencia.getUsuario().getId(),
-                incidencia.getUsuario().getNombres() + " " + incidencia.getUsuario().getApellidos(),
-                incidencia.getComputadora().getCodigoQr(),
-                incidencia.getDescripcion(),
-                incidencia.getFechaRegistro(),
-                incidencia.getEstado().name().toLowerCase(Locale.ROOT));
-    }
-
-    private long memoriaUsada() {
-        Runtime runtime = Runtime.getRuntime();
-        return runtime.totalMemory() - runtime.freeMemory();
-    }
 }

@@ -1,6 +1,6 @@
 # Corrección OBS-01: consultas y exportaciones paginadas
 
-> Registro histórico de la implementación del 05/11/2026. La exportación XLSX descrita en este hallazgo se retiró después; las exportaciones vigentes son PDF y CSV.
+> Registro histórico de la implementación del 05/11/2026. Las exportaciones por lotes de incidencias descritas aquí fueron retiradas después. La paginación sigue vigente para el listado e historial; las exportaciones actuales pertenecen a Reportes.
 
 ## Observación
 
@@ -12,8 +12,8 @@ Las consultas de incidencias e historial cargaban listas completas. Los exportad
 - Las consultas conservan un orden determinista: fecha e ID descendentes para el listado, y ascendentes para el historial.
 - El tamaño de una página de consulta se limita a 100 registros.
 - `IncidenciaWebController` presenta la lista en páginas de 25 registros; el servicio admite tamaños de hasta 100.
-- La exportación captura el ID máximo y el total inicial. Lee lotes de 250 incidencias, excluye las incidencias creadas después de iniciar el reporte y evita que nuevas filas desplacen los resultados de páginas posteriores.
-- CSV escribe cada registro al archivo. Excel usa `SXSSFWorkbook` con una ventana de 100 filas. PDF construye cada página a partir del iterador y utiliza almacenamiento temporal de PDFBox.
+- En la implementación histórica, la exportación capturaba el ID máximo y el total inicial para leer lotes de 250 incidencias y excluir altas posteriores; esa ruta se retiró al limitar las exportaciones a Reportes.
+- CSV, Excel y PDF se generaban por lotes en esa etapa. La exportación XLSX vigente corresponde al informe de fallas recurrentes.
 
 ## Errores de implementación y corrección
 
@@ -25,7 +25,7 @@ Las consultas de incidencias e historial cargaban listas completas. Los exportad
 
 ## Verificación
 
-La suite `RegistroIncidenciaJpaTest` pasó con PostgreSQL de Testcontainers. En esa ejecución comprobó páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 registros a CSV, Excel y PDF. El caso de exportación añadió una incidencia después de capturar el límite inicial y comprobó que el reporte conservara exactamente el conjunto inicial. La cobertura vigente mantiene PDF/CSV y ya no prueba ni genera XLSX.
+Las ejecuciones históricas con PostgreSQL de Testcontainers comprobaron páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 incidencias. La prueba vigente `recorrePorPaginasUnHistorialDeCincoMilIncidencias` recorre 5 000 registros en 50 páginas y valida orden sin duplicados; las exportaciones CSV, XLSX y PDF se verifican desde Reportes.
 
 Ejecución inicial de la PR #4: `./mvnw.cmd -q test` · 7 pruebas aprobadas · 0 fallos · 0 errores · 0 omitidas. Después de migrar la interfaz a Spring MVC, la suite ampliada se ejecutó de nuevo con 11 pruebas aprobadas el 05/11/2026.
 
@@ -50,3 +50,5 @@ El 05/11/2026 se repitió la misma comparación dentro de la suite ampliada, en 
 | Lectura por lotes | 450,13 ms | 26 680 bytes |
 
 En esta repetición el recorrido por lotes tomó aproximadamente 2,80 veces más y dejó menos heap retenido después de GC. Es una medición puntual, no el pico de memoria ni una garantía de rendimiento.
+
+Estas comparaciones son evidencia histórica de la exportación por lotes de incidencias y no describen el flujo vigente. La suite actual verifica paginación funcional, sin mantener el benchmark temporal dentro de las pruebas.

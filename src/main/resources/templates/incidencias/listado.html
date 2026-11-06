@@ -28,10 +28,6 @@
                             <h2 class="h5 mb-1" id="titulo-lista-incidencias">Historial de reportes</h2>
                             <p class="small text-body-secondary mb-0" th:text="|${incidencias.totalElements} incidencias registradas|">Incidencias</p>
                         </div>
-                        <div class="d-flex gap-2" aria-label="Exportar incidencias">
-                            <a class="btn btn-outline-secondary btn-sm" th:href="@{/incidencias/exportar/csv}">CSV</a>
-                            <a class="btn btn-outline-secondary btn-sm" th:href="@{/incidencias/exportar/pdf}">PDF</a>
-                        </div>
                     </div>
 
                     <div class="table-responsive">

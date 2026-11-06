@@ -16,7 +16,7 @@ Desde la raíz de `trazalab`, con Docker Desktop activo:
 .\mvnw.cmd -q test
 ```
 
-`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. Cada prueba corre dentro de una transacción que se revierte. En la ejecución del 06/11/2026: **18 aprobadas, 0 fallidas, 0 errores y 0 omitidas**. Esto no altera el volumen de la base local ni acredita un piloto real.
+`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. En la revisión de esta rama, `clean test` terminó con **17 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** (06/11/2026). Esto no altera el volumen de la base local ni acredita un piloto real.
 
 Los resultados por clase quedan en `target/surefire-reports`. No se informa un porcentaje JaCoCo porque el proyecto aún no configura ese agente o informe.
 
@@ -32,9 +32,9 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | RF-03, componentes | `instalarYReemplazarComponenteMantieneHistorialDeAsignaciones` | Cierra la asignación anterior, crea la nueva y registra las acciones ligadas a mantenimientos. | Ejecutado |
 | RF-03, vínculo correctivo | `mantenimientoCorrectivoExigeFallaDelMismoEquipo` | Rechaza una falla de otro equipo y permite asociar la falla correcta. | Ejecutado |
 | RF-06, agrupación | `clasificaFallasYCalculaRecurrenciaPorEquipoYTipoEnElPeriodo` | Agrupa por computadora y tipo; dos casos generan recurrencia, uno de otro tipo no. | Ejecutado |
-| RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb` | Responde CSV y PDF con los filtros del reporte. | Ejecutado |
-| EXT-01, exportación de incidencias | `exportaTodosLosRegistrosPorLotesEnCsvYPdf` | Comprueba filas, total, contenido y paginación de archivos PDF y CSV. | Ejecutado |
-| OBS-01, memoria de exportación | `comparaCargaCompletaConIteracionPorLotesSobreElMismoConjunto` | Compara los 5 000 registros en carga completa y por lotes. | Ejecutado; benchmark variable por entorno |
+| RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvExcelYPdfDesdeLaWeb` | Descarga CSV, XLSX (validado con Apache POI) y PDF con los filtros del reporte. | Ejecutado |
+| EXT-01, alcance de exportación | `renderizaLosPanelesWebActivos` | Comprueba que la lista de incidencias no muestra enlaces ni controles de exportación. | Ejecutado |
+| OBS-01, paginación de historial | `recorrePorPaginasUnHistorialDeCincoMilIncidencias` | Recorre 5 000 incidencias en 50 páginas y valida orden estable sin duplicados. | Ejecutado |
 
 La suite también cubre paginación estable, límites de página, historial por QR, asociación del usuario activo y validación del usuario de demostración. La salida efectiva se debe volver a consultar después de cada cambio; esta matriz no sustituye el XML de Surefire.
 

@@ -2,6 +2,8 @@ package com.utp.trazalab.controller;
 
 import com.utp.trazalab.dto.DistribucionCategoriaDto;
 import com.utp.trazalab.dto.FallaRecurrenteDto;
+import com.utp.trazalab.export.FormatoExportacion;
+import com.utp.trazalab.export.excel.ExportadorReporteFallasExcel;
 import com.utp.trazalab.service.IncidenciaAplicacionServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
 import java.nio.charset.StandardCharsets;
@@ -9,12 +11,13 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,11 +30,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/reportes")
 public class ReporteWebController {
     private final ReporteFallasServicio reportes;
+    private final ExportadorReporteFallasExcel exportadorExcel;
     private final IncidenciaAplicacionServicio incidencias;
     private final Clock reloj;
 
-    public ReporteWebController(ReporteFallasServicio reportes, IncidenciaAplicacionServicio incidencias, Clock reloj) {
+    public ReporteWebController(ReporteFallasServicio reportes, ExportadorReporteFallasExcel exportadorExcel, IncidenciaAplicacionServicio incidencias, Clock reloj) {
         this.reportes = reportes;
+        this.exportadorExcel = exportadorExcel;
         this.incidencias = incidencias;
         this.reloj = reloj;
     }
@@ -99,23 +104,26 @@ public class ReporteWebController {
         } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().build();
         }
-        String nombreBase = "trazalab-fallas-recurrentes-" + desde + "-" + hasta;
-        byte[] contenido;
-        MediaType tipoContenido;
-        String extension;
-        if ("csv".equalsIgnoreCase(formato)) {
-            contenido = reportes.exportarCsv(recurrencias, desde, hasta);
-            tipoContenido = new MediaType("text", "csv", StandardCharsets.UTF_8);
-            extension = "csv";
-        } else if ("pdf".equalsIgnoreCase(formato)) {
-            contenido = reportes.exportarPdf(recurrencias, desde, hasta);
-            tipoContenido = MediaType.APPLICATION_PDF;
-            extension = "pdf";
-        } else {
+        FormatoExportacion formatoExportacion;
+        try {
+            formatoExportacion = FormatoExportacion.valueOf(formato.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().build();
         }
+        byte[] contenido = switch (formatoExportacion) {
+            case CSV -> reportes.exportarCsv(recurrencias, desde, hasta);
+            case EXCEL -> exportadorExcel.exportar(recurrencias, desde, hasta);
+            case PDF -> reportes.exportarPdf(recurrencias, desde, hasta);
+        };
+        MediaType tipoContenido = switch (formatoExportacion) {
+            case CSV -> new MediaType("text", "csv", StandardCharsets.UTF_8);
+            case EXCEL -> MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            case PDF -> MediaType.APPLICATION_PDF;
+        };
+        String nombreBase = "trazalab-fallas-recurrentes-" + desde + "-" + hasta;
         ContentDisposition disposicion = ContentDisposition.attachment()
-                .filename(nombreBase + "." + extension, StandardCharsets.UTF_8)
+                .filename(nombreBase + "." + formatoExportacion.extension(), StandardCharsets.UTF_8)
                 .build();
         return ResponseEntity.ok()
                 .contentType(tipoContenido)
