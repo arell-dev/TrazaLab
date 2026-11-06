@@ -13,31 +13,52 @@
             <main class="container-fluid app-content">
                 <div class="page-heading">
                     <div>
-                        <p class="page-overline">Indicadores operativos</p>
-                        <h1>Reportes de fallas</h1>
-                        <p class="text-body-secondary mb-0">Revisa recurrencias por equipo y tipo de falla; el criterio requiere dos casos en el periodo.</p>
+                        <p class="page-overline">Módulo de auditoría y métricas</p>
+                        <h1>Reportes y trazabilidad</h1>
+                        <p class="text-body-secondary mb-0">Consulta las fallas que se repiten por equipo y periodo.</p>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">download</span>
+                            Exportar informe
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" th:href="@{/reportes/exportar/csv(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">
+                                    Descargar CSV
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" th:href="@{/reportes/exportar/pdf(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">
+                                    Descargar PDF
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
                 <section class="card app-card mb-4" aria-labelledby="titulo-filtros">
                     <div class="card-header px-4 py-3">
-                        <h2 class="h5 mb-0" id="titulo-filtros">Filtros del reporte</h2>
+                        <h2 class="h5 mb-0" id="titulo-filtros">Periodo y filtros</h2>
                     </div>
                     <div class="card-body p-4">
                         <form th:action="@{/reportes}" method="get" class="row g-3 align-items-end">
-                            <div class="col-sm-6 col-lg-3">
+                            <div class="col-sm-6 col-xl-3">
                                 <label class="form-label" for="desde">Desde</label>
                                 <input class="form-control" id="desde" name="desde" type="date" th:value="${desde}" required>
                             </div>
-                            <div class="col-sm-6 col-lg-3">
+                            <div class="col-sm-6 col-xl-3">
                                 <label class="form-label" for="hasta">Hasta</label>
                                 <input class="form-control" id="hasta" name="hasta" type="date" th:value="${hasta}" required>
                             </div>
-                            <div class="col-sm-6 col-lg-3">
-                                <label class="form-label" for="codigoQr">Código QR</label>
-                                <input class="form-control" id="codigoQr" name="codigoQr" type="text" th:value="${codigoQr}" maxlength="100" placeholder="Todos los equipos">
+                            <div class="col-sm-6 col-xl-3">
+                                <label class="form-label" for="codigoQr">Equipo</label>
+                                <input class="form-control" id="codigoQr" name="codigoQr" type="text"
+                                    th:value="${codigoQr}" maxlength="100" placeholder="Todos los equipos">
                             </div>
-                            <div class="col-sm-6 col-lg-3">
+                            <div class="col-sm-6 col-xl-3">
                                 <label class="form-label" for="tipoFallaId">Tipo de falla</label>
                                 <select class="form-select" id="tipoFallaId" name="tipoFallaId">
                                     <option value="">Todos los tipos</option>
@@ -47,10 +68,8 @@
                                 </select>
                             </div>
                             <div class="col-12 d-flex flex-wrap justify-content-end gap-2">
-                                <button class="btn btn-primary" type="submit">Aplicar filtros</button>
                                 <a class="btn btn-outline-secondary" th:href="@{/reportes}">Restablecer</a>
-                                <a class="btn btn-outline-primary" th:href="@{/reportes/exportar/csv(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">Descargar CSV</a>
-                                <a class="btn btn-outline-primary" th:href="@{/reportes/exportar/pdf(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">Descargar PDF</a>
+                                <button class="btn btn-primary" type="submit">Aplicar filtros</button>
                             </div>
                         </form>
                     </div>
@@ -60,35 +79,99 @@
                     Revisa el periodo seleccionado.
                 </div>
 
-                <section class="card app-card" aria-labelledby="titulo-recurrencias">
-                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3">
-                        <h2 class="h5 mb-0" id="titulo-recurrencias">Fallas recurrentes</h2>
-                        <span class="badge text-bg-light"
-                            th:text="|${#lists.size(recurrencias)} ${#lists.size(recurrencias) == 1 ? 'resultado' : 'resultados'}|">
-                            0 resultados
-                        </span>
+                <section class="row g-3 mb-4" aria-label="Resumen del reporte">
+                    <div class="col-md-4">
+                        <article class="reporte-indicador">
+                            <span class="small text-body-secondary">Patrones recurrentes</span>
+                            <strong class="reporte-indicador__valor" th:text="${cantidadPatrones}">0</strong>
+                            <span class="small text-body-secondary">Dos o más casos por equipo</span>
+                        </article>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead>
-                                <tr><th scope="col">Equipo</th><th scope="col">Serie</th><th scope="col">Categoría</th><th scope="col">Tipo de falla</th><th scope="col">Casos</th><th scope="col">Última identificación</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="falla : ${recurrencias}">
-                                    <td class="fw-semibold" th:text="${falla.codigoQr()}">PC</td>
-                                    <td th:text="${falla.numeroSerie()}">Serie</td>
-                                    <td th:text="${falla.categoria()}">Categoría</td>
-                                    <td th:text="${falla.tipoFalla()}">Tipo</td>
-                                    <td><span class="badge text-bg-danger" th:text="${falla.frecuencia()}">2</span></td>
-                                    <td class="text-nowrap" th:text="${#temporals.format(falla.ultimaIdentificacion(), 'dd/MM/yyyy HH:mm')}">Fecha</td>
-                                </tr>
-                                <tr th:if="${#lists.isEmpty(recurrencias)}">
-                                    <td class="empty-state" colspan="6">No hay recurrencias que coincidan. Registra incidencias con categoría y tipo de falla para alimentar este reporte.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="col-md-4">
+                        <article class="reporte-indicador">
+                            <span class="small text-body-secondary">Equipos afectados</span>
+                            <strong class="reporte-indicador__valor" th:text="${equiposAfectados}">0</strong>
+                            <span class="small text-body-secondary">En el periodo seleccionado</span>
+                        </article>
+                    </div>
+                    <div class="col-md-4">
+                        <article class="reporte-indicador">
+                            <span class="small text-body-secondary">Incidencias clasificadas</span>
+                            <strong class="reporte-indicador__valor" th:text="${cantidadEventos}">0</strong>
+                            <span class="small text-body-secondary">Incluidas en los patrones</span>
+                        </article>
                     </div>
                 </section>
+
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <section class="card app-card h-100" aria-labelledby="titulo-recurrencias">
+                            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3">
+                                <div>
+                                    <h2 class="h5 mb-1" id="titulo-recurrencias">Fallas recurrentes</h2>
+                                    <p class="small text-body-secondary mb-0">Ordenadas por frecuencia en el periodo.</p>
+                                </div>
+                                <span class="badge text-bg-light"
+                                    th:text="|${#lists.size(recurrencias)} ${#lists.size(recurrencias) == 1 ? 'resultado' : 'resultados'}|">
+                                    0 resultados
+                                </span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Equipo</th>
+                                            <th scope="col">Categoría y tipo</th>
+                                            <th scope="col">Casos</th>
+                                            <th scope="col">Última identificación</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="falla : ${recurrencias}">
+                                            <td>
+                                                <span class="d-block fw-semibold" th:text="${falla.codigoQr()}">PC</span>
+                                                <span class="small text-body-secondary" th:text="${falla.numeroSerie()}">Serie</span>
+                                            </td>
+                                            <td>
+                                                <span class="d-block" th:text="${falla.tipoFalla()}">Tipo</span>
+                                                <span class="small text-body-secondary" th:text="${falla.categoria()}">Categoría</span>
+                                            </td>
+                                            <td><span class="badge text-bg-danger" th:text="${falla.frecuencia()}">2</span></td>
+                                            <td class="text-nowrap" th:text="${#temporals.format(falla.ultimaIdentificacion(), 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(recurrencias)}">
+                                            <td class="empty-state" colspan="4">No hay fallas recurrentes para estos filtros.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <section class="card app-card h-100" aria-labelledby="titulo-categorias">
+                            <div class="card-header px-4 py-3">
+                                <h2 class="h5 mb-1" id="titulo-categorias">Distribución por categoría</h2>
+                                <p class="small text-body-secondary mb-0" th:text="|${cantidadEventos} incidencias|">0 incidencias</p>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="reporte-categoria" th:each="categoria : ${distribucionCategorias}">
+                                    <div class="d-flex justify-content-between gap-2 mb-2">
+                                        <span class="fw-semibold" th:text="${categoria.categoria()}">Hardware</span>
+                                        <span class="small text-body-secondary" th:text="|${categoria.porcentaje()}% · ${categoria.frecuencia()} casos|">0%</span>
+                                    </div>
+                                    <div class="reporte-categoria__barra" role="img"
+                                        th:attr="aria-label=|${categoria.porcentaje()} por ciento de las incidencias|">
+                                        <span th:style="|width: ${categoria.porcentaje()}%|"></span>
+                                    </div>
+                                </div>
+                                <p class="text-body-secondary small mb-0" th:if="${#lists.isEmpty(distribucionCategorias)}">
+                                    No hay datos clasificados para mostrar.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
             </main>
         </div>
     </div>

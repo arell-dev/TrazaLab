@@ -16,7 +16,7 @@ Desde la raíz de `trazalab`, con Docker Desktop activo:
 .\mvnw.cmd -q test
 ```
 
-`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. Cada prueba corre dentro de una transacción que se revierte. En la última ejecución del 05/11/2026: **16 aprobadas, 0 fallidas, 0 errores y 0 omitidas**. Esto no altera el volumen de la base local ni acredita un piloto real.
+`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. Cada prueba corre dentro de una transacción que se revierte. En la ejecución del 06/11/2026: **18 aprobadas, 0 fallidas, 0 errores y 0 omitidas**. Esto no altera el volumen de la base local ni acredita un piloto real.
 
 Los resultados por clase quedan en `target/surefire-reports`. No se informa un porcentaje JaCoCo porque el proyecto aún no configura ese agente o informe.
 
@@ -33,7 +33,7 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | RF-03, vínculo correctivo | `mantenimientoCorrectivoExigeFallaDelMismoEquipo` | Rechaza una falla de otro equipo y permite asociar la falla correcta. | Ejecutado |
 | RF-06, agrupación | `clasificaFallasYCalculaRecurrenciaPorEquipoYTipoEnElPeriodo` | Agrupa por computadora y tipo; dos casos generan recurrencia, uno de otro tipo no. | Ejecutado |
 | RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb` | Responde CSV y PDF con los filtros del reporte. | Ejecutado |
-| EXT-01, exportación de incidencias | `exportaTodosLosRegistrosPorLotesEnCsvExcelYPdf` | Comprueba filas, total, contenido y paginación de archivos. | Ejecutado |
+| EXT-01, exportación de incidencias | `exportaTodosLosRegistrosPorLotesEnCsvYPdf` | Comprueba filas, total, contenido y paginación de archivos PDF y CSV. | Ejecutado |
 | OBS-01, memoria de exportación | `comparaCargaCompletaConIteracionPorLotesSobreElMismoConjunto` | Compara los 5 000 registros en carga completa y por lotes. | Ejecutado; benchmark variable por entorno |
 
 La suite también cubre paginación estable, límites de página, historial por QR, asociación del usuario activo y validación del usuario de demostración. La salida efectiva se debe volver a consultar después de cada cambio; esta matriz no sustituye el XML de Surefire.

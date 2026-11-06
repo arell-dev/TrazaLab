@@ -1,13 +1,13 @@
 # PostgreSQL desde la consola del proyecto
 
-Esta guía muestra cómo iniciar la base y abrir `psql` en el contenedor Docker desde PowerShell, ubicado en la raíz del proyecto.
+Esta guía muestra cómo iniciar la base definida en el [`compose.yaml`](../compose.yaml) de la raíz y abrir `psql` en el contenedor Docker desde PowerShell, ubicado en la raíz del proyecto.
 
 ## Iniciar PostgreSQL
 
 Comprueba que `.env` tenga credenciales locales válidas. Luego, en la raíz de TrazaLab, ejecuta:
 
 ```powershell
-docker compose --env-file .env -f database/compose.yaml up -d
+docker compose --env-file .env up -d
 ```
 
 Comprueba que el contenedor esté activo:

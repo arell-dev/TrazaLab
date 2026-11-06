@@ -14,22 +14,20 @@
         <nav class="nav flex-column app-navigation" aria-label="Navegación principal">
             <a class="nav-link" th:classappend="${activo == 'incidencias'} ? 'active'"
                 th:href="@{/incidencias}" th:aria-current="${activo == 'incidencias'} ? 'page' : null">
+                <span class="material-symbols-outlined" aria-hidden="true">report_problem</span>
                 Incidencias
             </a>
             <a class="nav-link" th:classappend="${activo == 'mantenimientos'} ? 'active'"
                 th:href="@{/mantenimientos}" th:aria-current="${activo == 'mantenimientos'} ? 'page' : null">
+                <span class="material-symbols-outlined" aria-hidden="true">build_circle</span>
                 Mantenimientos
             </a>
             <a class="nav-link" th:classappend="${activo == 'reportes'} ? 'active'"
                 th:href="@{/reportes}" th:aria-current="${activo == 'reportes'} ? 'page' : null">
+                <span class="material-symbols-outlined" aria-hidden="true">monitoring</span>
                 Reportes
             </a>
         </nav>
-
-        <div class="app-sidebar__footer">
-            <span class="badge text-bg-success">Base de datos conectada</span>
-            <small>Entorno de demostración</small>
-        </div>
     </aside>
 </body>
 

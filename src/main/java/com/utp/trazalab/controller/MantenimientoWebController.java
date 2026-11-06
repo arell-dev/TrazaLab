@@ -73,7 +73,6 @@ public class MantenimientoWebController {
     private void prepararModelo(Model model) {
         model.addAttribute("seccion", "mantenimientos");
         model.addAttribute("titulo", "Mantenimientos");
-        model.addAttribute("tecnicoDemostracion", incidencias.consultarUsuarioDemostracion(correoTecnicoDemostracion));
         model.addAttribute("mantenimientos", mantenimientos.consultarRecientes());
         model.addAttribute("fallasRecientes", mantenimientos.consultarFallasRecientes());
     }

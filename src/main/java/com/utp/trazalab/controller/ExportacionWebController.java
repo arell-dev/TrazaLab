@@ -1,5 +1,6 @@
 package com.utp.trazalab.controller;
 
+import com.utp.trazalab.dto.ArchivoExportadoDto;
 import com.utp.trazalab.export.FormatoExportacion;
 import com.utp.trazalab.service.ExportacionIncidenciasServicio;
 import java.io.IOException;
@@ -27,13 +28,11 @@ public class ExportacionWebController {
 
     @GetMapping("/{formato}")
     public ResponseEntity<Resource> exportar(@PathVariable FormatoExportacion formato) throws IOException {
-        var archivo = servicio.exportar(formato);
+        ArchivoExportadoDto archivo = servicio.exportar(formato);
         Path ruta = Path.of(archivo.ruta());
         FileSystemResource recurso = new FileSystemResource(ruta);
         MediaType tipo = switch (formato) {
             case PDF -> MediaType.APPLICATION_PDF;
-            case EXCEL -> MediaType.parseMediaType(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             case CSV -> new MediaType("text", "csv", StandardCharsets.UTF_8);
         };
         ContentDisposition disposicion = ContentDisposition.attachment()

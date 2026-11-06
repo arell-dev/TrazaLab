@@ -49,9 +49,7 @@ public class IncidenciaWebController {
 
     @GetMapping("/nueva")
     public String nueva(Model model) {
-        UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
         model.addAttribute("registroIncidencia", new RegistroIncidenciaFormulario());
-        model.addAttribute("usuarioDemostracion", usuarioDemostracion);
         model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
         return "incidencias/nueva";
     }
@@ -62,24 +60,26 @@ public class IncidenciaWebController {
             BindingResult errores,
             Model model,
             RedirectAttributes redireccion) {
-        UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
         if (errores.hasErrors()) {
-            model.addAttribute("usuarioDemostracion", usuarioDemostracion);
             model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";
         }
 
         try {
+            UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
             RegistroIncidenciaDto solicitud = new RegistroIncidenciaDto();
             solicitud.setUsuarioId(usuarioDemostracion.id());
             solicitud.setCodigoQr(formulario.getCodigoQr());
             solicitud.setDescripcion(formulario.getDescripcion());
             servicio.registrar(solicitud, formulario.getTipoFallaId());
-            redireccion.addFlashAttribute("mensajeExito", "La incidencia se registró correctamente.");
+            redireccion.addFlashAttribute("mensajeExito", "Incidencia registrada.");
             return "redirect:/incidencias";
         } catch (IllegalArgumentException error) {
             errores.reject("incidencia.invalida", error.getMessage());
-            model.addAttribute("usuarioDemostracion", usuarioDemostracion);
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
+            return "incidencias/nueva";
+        } catch (IllegalStateException error) {
+            errores.reject("incidencia.no-disponible", "No se pudo registrar el reporte con la configuración actual.");
             model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";
         }
