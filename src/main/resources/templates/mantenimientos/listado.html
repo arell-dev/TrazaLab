@@ -21,12 +21,6 @@
 
                 <div th:replace="~{fragments/mensajes :: mensajes}"></div>
 
-                <section class="alert alert-warning" aria-label="Modo de demostración">
-                    <strong>Modo de demostración sin inicio de sesión.</strong>
-                    <span>El responsable técnico se fija en servidor como </span>
-                    <span class="fw-semibold" th:text="|${tecnicoDemostracion.nombres()} ${tecnicoDemostracion.apellidos()}|">Técnico demo</span>.
-                </section>
-
                 <section class="card app-card mb-4" aria-labelledby="titulo-nuevo-mantenimiento">
                     <div class="card-header px-4 py-3">
                         <h2 class="h5 mb-0" id="titulo-nuevo-mantenimiento">Registrar intervención</h2>
@@ -99,7 +93,7 @@
                                         th:field="*{serieComponenteNuevo}" maxlength="80">
                                 </div>
                             </div>
-                            <p class="form-text mt-3 mb-0">Un mantenimiento correctivo requiere asociar una falla del mismo equipo. Para intervenir, retirar o reemplazar, escribe la serie instalada. Para instalar o reemplazar, completa los datos del componente nuevo. El servidor registra el responsable técnico de demostración; el mantenimiento no cambia el estado del equipo ni cierra incidencias.</p>
+                            <p class="form-text mt-3 mb-0">Asocia la falla del equipo y registra el componente cuando corresponda.</p>
                             <div class="d-flex justify-content-end pt-3">
                                 <button class="btn btn-primary" type="submit">Guardar mantenimiento</button>
                             </div>
@@ -114,7 +108,7 @@
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead>
-                                <tr><th scope="col">Fecha</th><th scope="col">Equipo</th><th scope="col">Tipo</th><th scope="col">Responsable demo</th><th scope="col">Descripción</th></tr>
+                                <tr><th scope="col">Fecha</th><th scope="col">Equipo</th><th scope="col">Tipo</th><th scope="col">Responsable</th><th scope="col">Descripción</th></tr>
                             </thead>
                             <tbody>
                                 <tr th:each="mantenimiento : ${mantenimientos}">

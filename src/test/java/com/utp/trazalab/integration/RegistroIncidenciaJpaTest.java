@@ -13,9 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
+import com.utp.trazalab.dto.IncidenciasExportacionDto;
 import com.utp.trazalab.dto.FallaRecurrenteDto;
 import com.utp.trazalab.export.csv.ExportadorIncidenciasCsv;
-import com.utp.trazalab.export.excel.ExportadorIncidenciasExcel;
 import com.utp.trazalab.export.pdf.ExportadorIncidenciasPdf;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
@@ -47,14 +47,15 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -104,7 +105,6 @@ class RegistroIncidenciaJpaTest {
     @Autowired private RegistroMantenimientoServicio servicioMantenimiento;
     @Autowired private ReporteFallasServicio servicioReportes;
     @Autowired private ExportadorIncidenciasCsv exportadorCsv;
-    @Autowired private ExportadorIncidenciasExcel exportadorExcel;
     @Autowired private ExportadorIncidenciasPdf exportadorPdf;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -155,8 +155,10 @@ class RegistroIncidenciaJpaTest {
     void renderizaElFormularioWebConIdentidadDeDemostracion() throws Exception {
         mockMvc.perform(get("/incidencias/nueva"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Modo de demostración")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ana Torres")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar incidencia")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Confirmación")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Modo de demostración"))));
     }
 
     @Test
@@ -166,7 +168,11 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/incidencias"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Historial de reportes")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("La pantalla no enciende.")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("La pantalla no enciende.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/colores.css")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/componentes.css")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Excel"))));
 
         mockMvc.perform(get("/mantenimientos"))
                 .andExpect(status().isOk())
@@ -176,7 +182,19 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/reportes"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Fallas recurrentes")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Excel"))));
+
+        mockMvc.perform(get("/incidencias/exportar/excel"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void informaElEstadoDeLaApiConConexionPostgresql() throws Exception {
+        mockMvc.perform(get("/api/health"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"estado\":\"disponible\"}"));
     }
 
     @Test
@@ -321,7 +339,7 @@ class RegistroIncidenciaJpaTest {
         servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Primer caso de exportación.", tipoFallaId);
         servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Segundo caso de exportación.", tipoFallaId);
 
-        var csv = mockMvc.perform(get("/reportes/exportar/csv")
+        org.springframework.mock.web.MockHttpServletResponse csv = mockMvc.perform(get("/reportes/exportar/csv")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString())
                         .param("codigoQr", computadora.getCodigoQr())
@@ -332,7 +350,7 @@ class RegistroIncidenciaJpaTest {
         assertTrue(csv.getContentType().contains("text/csv"));
         assertTrue(csv.getContentAsString(StandardCharsets.UTF_8).contains(computadora.getCodigoQr()));
 
-        var pdf = mockMvc.perform(get("/reportes/exportar/pdf")
+        org.springframework.mock.web.MockHttpServletResponse pdf = mockMvc.perform(get("/reportes/exportar/pdf")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString())
                         .param("codigoQr", computadora.getCodigoQr())
@@ -340,9 +358,14 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse();
-        try (var documento = Loader.loadPDF(pdf.getContentAsByteArray())) {
+        try (PDDocument documento = Loader.loadPDF(pdf.getContentAsByteArray())) {
             assertTrue(new PDFTextStripper().getText(documento).contains(computadora.getCodigoQr()));
         }
+
+        mockMvc.perform(get("/reportes/exportar/excel")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -360,7 +383,7 @@ class RegistroIncidenciaJpaTest {
 
         byte[] pdf = servicioReportes.exportarPdf(List.of(extensa), hoy.minusDays(1), hoy);
 
-        try (var documento = Loader.loadPDF(pdf)) {
+        try (PDDocument documento = Loader.loadPDF(pdf)) {
             PDFTextStripper verificadorAncho = new PDFTextStripper() {
                 @Override
                 protected void writeString(String texto, List<TextPosition> posiciones) throws IOException {
@@ -436,21 +459,17 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void exportaTodosLosRegistrosPorLotesEnCsvExcelYPdf() throws Exception {
+    void exportaTodosLosRegistrosPorLotesEnCsvYPdf() throws Exception {
         guardarIncidencias(251);
-        var datosExportacion = servicio.prepararExportacionIncidencias();
+        IncidenciasExportacionDto datosExportacion = servicio.prepararExportacionIncidencias();
         guardarIncidencias(252, 1);
 
         Path csv = exportadorCsv.exportar(datosExportacion.incidencias(), datosExportacion.total(), directorioTemporal, Instant.parse("2026-11-05T12:00:00Z"));
-        Path excel = exportadorExcel.exportar(datosExportacion.incidencias(), datosExportacion.total(), directorioTemporal, Instant.parse("2026-11-05T12:00:00Z"));
         Path pdf = exportadorPdf.exportar(datosExportacion.incidencias(), datosExportacion.total(), directorioTemporal, Instant.parse("2026-11-05T12:00:00Z"));
 
         assertEquals(251, datosExportacion.total());
         assertEquals(252, Files.readAllLines(csv, StandardCharsets.UTF_8).size());
-        try (var libro = WorkbookFactory.create(excel.toFile())) {
-            assertEquals(255, libro.getSheet("Incidencias").getLastRowNum());
-        }
-        try (var documento = Loader.loadPDF(pdf.toFile())) {
+        try (PDDocument documento = Loader.loadPDF(pdf.toFile())) {
             String contenido = new PDFTextStripper().getText(documento);
             assertTrue(documento.getNumberOfPages() > 1);
             assertTrue(contenido.contains("Total de incidencias: 251"));
@@ -495,9 +514,11 @@ class RegistroIncidenciaJpaTest {
 
         long memoriaAntesLotes = memoriaUsada();
         long inicioLotes = System.nanoTime();
-        var exportacion = servicio.prepararExportacionIncidencias();
+        IncidenciasExportacionDto exportacion = servicio.prepararExportacionIncidencias();
         long registrosLeidos = 0;
-        for (IncidenciaRegistradaDto incidencia : exportacion.incidencias()) {
+        Iterator<IncidenciaRegistradaDto> iteradorIncidencias = exportacion.incidencias().iterator();
+        while (iteradorIncidencias.hasNext()) {
+            iteradorIncidencias.next();
             registrosLeidos++;
             if (registrosLeidos % 250 == 0) {
                 entityManager.clear();

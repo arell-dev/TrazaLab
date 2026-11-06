@@ -45,16 +45,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
-		<!-- Exportacion de reportes en PDF, Excel y CSV. -->
+		<!-- Exportación de reportes en PDF y CSV. -->
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
 			<version>3.0.8</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.poi</groupId>
-			<artifactId>poi-ooxml</artifactId>
-			<version>5.5.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>

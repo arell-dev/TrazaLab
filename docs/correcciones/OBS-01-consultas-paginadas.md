@@ -1,5 +1,7 @@
 # Corrección OBS-01: consultas y exportaciones paginadas
 
+> Registro histórico de la implementación del 05/11/2026. La exportación XLSX descrita en este hallazgo se retiró después; las exportaciones vigentes son PDF y CSV.
+
 ## Observación
 
 Las consultas de incidencias e historial cargaban listas completas. Los exportadores también recibían todas las incidencias en memoria, lo que podía elevar el uso de memoria al crecer el conjunto. El informe correctivo identifica el riesgo como potencial; no había una medición de rendimiento previa.
@@ -23,7 +25,7 @@ Las consultas de incidencias e historial cargaban listas completas. Los exportad
 
 ## Verificación
 
-La suite `RegistroIncidenciaJpaTest` pasa con PostgreSQL de Testcontainers. Comprueba páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 registros a CSV, Excel y PDF. El caso de exportación añade una incidencia después de capturar el límite inicial y comprueba que el reporte conserve exactamente el conjunto inicial.
+La suite `RegistroIncidenciaJpaTest` pasó con PostgreSQL de Testcontainers. En esa ejecución comprobó páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 registros a CSV, Excel y PDF. El caso de exportación añadió una incidencia después de capturar el límite inicial y comprobó que el reporte conservara exactamente el conjunto inicial. La cobertura vigente mantiene PDF/CSV y ya no prueba ni genera XLSX.
 
 Ejecución inicial de la PR #4: `./mvnw.cmd -q test` · 7 pruebas aprobadas · 0 fallos · 0 errores · 0 omitidas. Después de migrar la interfaz a Spring MVC, la suite ampliada se ejecutó de nuevo con 11 pruebas aprobadas el 05/11/2026.
 

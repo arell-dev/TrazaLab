@@ -1,12 +1,16 @@
 package com.utp.trazalab.controller;
 
+import com.utp.trazalab.dto.DistribucionCategoriaDto;
+import com.utp.trazalab.dto.FallaRecurrenteDto;
 import com.utp.trazalab.service.IncidenciaAplicacionServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
-import com.utp.trazalab.dto.FallaRecurrenteDto;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -49,14 +53,37 @@ public class ReporteWebController {
         model.addAttribute("codigoQr", codigoQr);
         model.addAttribute("tipoFallaId", tipoFallaId);
         model.addAttribute("tiposFalla", incidencias.consultarTiposFalla());
+        List<FallaRecurrenteDto> recurrencias = List.of();
         try {
-            model.addAttribute("recurrencias", reportes.consultarRecurrencias(
-                    fechaDesde, fechaHasta, codigoQr, tipoFallaId));
+            recurrencias = reportes.consultarRecurrencias(fechaDesde, fechaHasta, codigoQr, tipoFallaId);
         } catch (IllegalArgumentException error) {
-            model.addAttribute("recurrencias", List.of());
             model.addAttribute("errorReporte", error.getMessage());
         }
+        long cantidadEventos = recurrencias.stream().mapToLong(FallaRecurrenteDto::frecuencia).sum();
+        long equiposAfectados = recurrencias.stream().map(FallaRecurrenteDto::computadoraId).distinct().count();
+        model.addAttribute("recurrencias", recurrencias);
+        model.addAttribute("cantidadPatrones", recurrencias.size());
+        model.addAttribute("equiposAfectados", equiposAfectados);
+        model.addAttribute("cantidadEventos", cantidadEventos);
+        model.addAttribute("distribucionCategorias", resumirCategorias(recurrencias, cantidadEventos));
         return "reportes/listado";
+    }
+
+    private List<DistribucionCategoriaDto> resumirCategorias(List<FallaRecurrenteDto> recurrencias, long totalEventos) {
+        if (totalEventos == 0) {
+            return List.of();
+        }
+
+        Map<String, Long> frecuencias = recurrencias.stream().collect(Collectors.groupingBy(
+                FallaRecurrenteDto::categoria,
+                LinkedHashMap::new,
+                Collectors.summingLong(FallaRecurrenteDto::frecuencia)));
+        return frecuencias.entrySet().stream()
+                .map(entrada -> new DistribucionCategoriaDto(
+                        entrada.getKey(),
+                        entrada.getValue(),
+                        (int) Math.round(entrada.getValue() * 100.0 / totalEventos)))
+                .toList();
     }
 
     @GetMapping("/exportar/{formato}")

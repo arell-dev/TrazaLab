@@ -8,6 +8,8 @@ La aplicación sigue una estructura MVC con servicios de aplicación y persisten
 
 La interfaz actual está construida con Spring MVC, Thymeleaf y Bootstrap 5.3.8. Los fragmentos compartidos están en `templates/fragments`, las pantallas en carpetas por módulo y los recursos del cliente en `static/css` y `static/js`.
 
+El esquema PostgreSQL se versiona con migraciones Flyway en `src/main/resources/db/migration`, mientras Hibernate valida el mapeo. El [`compose.yaml`](../compose.yaml) está en la raíz para levantar la base desde el proyecto; `database/` conserva la guía operativa y el procedimiento de adopción para volúmenes existentes.
+
 ## Flujo web implementado
 
 ```text
@@ -36,7 +38,7 @@ com.utp.trazalab
 ├── controller              Controladores MVC HTTP
 ├── domain.enums            Estados del dominio sin anotaciones JPA
 ├── dto                     Formularios y datos de entrada / salida
-├── export                  Exportación PDF, XLSX y CSV
+├── export                  Exportación PDF y CSV de incidencias
 ├── logging                 Contrato y registro de eventos de aplicación
 ├── persistence.jpa
 │   ├── converter           Conversión entre estados y columnas SQL
@@ -54,7 +56,7 @@ templates/
 ├── mantenimientos/         Registro de intervenciones y componentes
 └── reportes/               Filtros y resultados de recurrencias
 static/
-├── css/                    Variables de Bootstrap y estilos de aplicación
+├── css/                    colores.css (tokens y Bootstrap) y componentes.css
 └── js/                     Interacciones pequeñas de la interfaz
 ```
 
@@ -67,7 +69,7 @@ static/
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
 | `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
-| `export` | Generar archivos PDF, XLSX y CSV | Incidencias: PDF, XLSX y CSV; recurrencias: PDF y CSV |
+| `export` | Generar archivos PDF y CSV para incidencias | Incidencias: PDF y CSV; recurrencias: PDF y CSV |
 | `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; preserva asignaciones temporales de componentes |
 | `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; dos o más fallas clasificadas del mismo tipo por equipo |
 | Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
@@ -77,6 +79,7 @@ La aplicación web de esta etapa es de demostración: Spring Security conserva C
 ## Persistencia y ejecución
 
 - PostgreSQL es el almacenamiento persistente; no se usa un repositorio en memoria.
+- Docker Compose define PostgreSQL en `compose.yaml` en la raíz del proyecto, con volumen persistente y healthcheck.
 - Hibernate valida las entidades contra el esquema con `spring.jpa.hibernate.ddl-auto=validate`; no crea ni actualiza tablas.
 - Flyway aplica migraciones SQL inmutables desde `src/main/resources/db/migration`.
 - `spring.jpa.open-in-view=false` evita mantener sesiones JPA abiertas al renderizar vistas.
@@ -98,7 +101,7 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 | RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
 | RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` → PostgreSQL y PDF/CSV | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | Servicio de historial por QR escrito como texto | Consulta web de historial pendiente; lector físico no implementado |
-| EXT-01 | `ExportacionWebController` y exportadores PDF, XLSX y CSV | Descarga del listado implementada; no equivale al análisis RF-06 |
-| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 16 pruebas aprobadas el 05/11/2026; incluye mantenimiento, componentes, recurrencias y exportación |
+| EXT-01 | `ExportacionWebController` y exportadores PDF y CSV | Descarga del listado implementada; no equivale al análisis RF-06 |
+| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 18 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, exportación PDF/CSV y API de salud |
 
 La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).

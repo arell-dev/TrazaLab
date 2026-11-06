@@ -1,6 +1,7 @@
 package com.utp.trazalab.service;
 
 import com.utp.trazalab.dto.ArchivoExportadoDto;
+import com.utp.trazalab.dto.IncidenciasExportacionDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.export.ExportadorIncidencias;
 import com.utp.trazalab.export.FormatoExportacion;
@@ -48,7 +49,7 @@ public class ExportacionIncidenciasServicio {
             throw new IllegalArgumentException("Selecciona un formato de exportación.");
         }
 
-        var datosExportacion = servicio.prepararExportacionIncidencias();
+        IncidenciasExportacionDto datosExportacion = servicio.prepararExportacionIncidencias();
         long totalIncidencias = datosExportacion.total();
         Iterable<IncidenciaRegistradaDto> incidencias = datosExportacion.incidencias();
         ExportadorIncidencias exportador = exportadores.get(formato);

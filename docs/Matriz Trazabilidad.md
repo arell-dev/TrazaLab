@@ -1,6 +1,6 @@
 # Matriz de trazabilidad de TrazaLab
 
-La referencia académica actualizada es [S10_Matriz_Trazabilidad_y_Transferencia.xlsx](S10_Matriz_Trazabilidad_y_Transferencia.xlsx), copia de `APF03/Matriz de Transferencia y Trazabilidad.xlsx`. Allí cada requisito enlaza entrada, código, persistencia, prueba, evidencia y estado. Las rutas APF son relativas a `ProyectoFinal`.
+Esta matriz documenta la correspondencia verificable entre cada requisito, el código, la persistencia, las pruebas y su estado. Los archivos de APF03 se mantienen como fuentes académicas externas al repositorio; no se conserva una copia Excel dentro del proyecto.
 
 ## Estado por requisito
 
@@ -16,11 +16,11 @@ La referencia académica actualizada es [S10_Matriz_Trazabilidad_y_Transferencia
 | RNF-02, acceso por rol | El servicio de registro exige que la identidad configurada exista, esté activa y tenga un rol reportante. La aplicación demo permite acceso anónimo a las rutas. | Parcial; identidad fija de demostración, autenticación y autorización pendientes. |
 | RNF-03, trazabilidad del reporte | Incidencias, fallas y mantenimientos almacenan responsable, equipo y fecha; el mantenimiento correctivo se asocia a una falla del mismo equipo. | Parcial; aplicación demo sin inicio de sesión. |
 | RE-01, piloto | Alcance de 15 a 20 equipos definido en APF01; no se ha validado ese piloto. | Diseñado. |
-| EXT-01, exportación de incidencias | `/incidencias/exportar/{formato}` → `ExportacionWebController` → `ExportacionIncidenciasServicio` → exportadores PDF, Excel y CSV. | Implementado para el listado; no equivale a RF-06. |
+| EXT-01, exportación de incidencias | `/incidencias/exportar/{formato}` → `ExportacionWebController` → `ExportacionIncidenciasServicio` → exportadores PDF y CSV. | Implementado para el listado; no equivale a RF-06. |
 
 ## Evidencia comprobada y límites
 
-El 05/11/2026, `./mvnw.cmd -q test` terminó con **16 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** en PostgreSQL temporal mediante Testcontainers. Incluye vistas e identidad fijada; persistencia y paginación; clasificación y agrupación de fallas; reglas de mantenimiento y componentes; exportaciones y lectura por lotes. El detalle por requisito y caso está en [`testing/README.md`](testing/README.md).
+La última ejecución de `./mvnw.cmd -q test` terminó con **18 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** en PostgreSQL temporal mediante Testcontainers (06/11/2026). Incluye vistas e identidad fijada; persistencia y paginación; clasificación y agrupación de fallas; reglas de mantenimiento y componentes; exportaciones PDF/CSV y lectura por lotes. El detalle por requisito y caso está en [`testing/README.md`](testing/README.md).
 
 Las pruebas corren en una base descartable de Testcontainers; no modifican ni acreditan un piloto con datos reales. Los archivos del docente se consultaron como referencia y no se modificaron.
 

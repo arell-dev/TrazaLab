@@ -8,6 +8,7 @@ import com.utp.trazalab.domain.enums.EstadoIncidencia;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.FallaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.FallaJpaRepositorio;
@@ -85,7 +86,7 @@ public class RegistroIncidenciaPersistenteServicio {
         IncidenciaEntidad guardada = incidencias.saveAndFlush(new IncidenciaEntidad(
                 computadora, usuario, descripcion.trim(), fechaRegistro, EstadoIncidencia.REGISTRADA));
         if (tipoFallaId != null) {
-            var tipoFalla = tiposFalla.findById(tipoFallaId)
+            TipoFallaEntidad tipoFalla = tiposFalla.findById(tipoFallaId)
                     .orElseThrow(() -> new IllegalArgumentException("El tipo de falla seleccionado no existe."));
             fallas.save(new FallaEntidad(
                     guardada,
@@ -109,7 +110,7 @@ public class RegistroIncidenciaPersistenteServicio {
         Pageable ordenado = PageRequest.of(
                 numeroPagina(pageable),
                 limitarTamanoPagina(pageable),
-                Sort.by(Sort.Order.desc("fechaRegistro"), Sort.Order.desc("id")));
+                ordenIncidenciasDescendente());
 
         return incidencias.findAllByOrderByFechaRegistroDescIdDesc(ordenado)
                 .map(this::convertirIncidencia);
@@ -138,7 +139,7 @@ public class RegistroIncidenciaPersistenteServicio {
                     Pageable pageable = PageRequest.of(
                             numeroPagina++,
                             TAMANO_LOTE_EXPORTACION,
-                            Sort.by(Sort.Order.desc("fechaRegistro"), Sort.Order.desc("id")));
+                            ordenIncidenciasDescendente());
                     Page<IncidenciaRegistradaDto> pagina = incidencias
                             .findAllByIdLessThanEqualOrderByFechaRegistroDescIdDesc(limiteId, pageable)
                             .map(RegistroIncidenciaPersistenteServicio.this::convertirIncidencia);
@@ -196,7 +197,7 @@ public class RegistroIncidenciaPersistenteServicio {
         Pageable ordenado = PageRequest.of(
                 numeroPagina(pageable),
                 limitarTamanoPagina(pageable),
-                Sort.by(Sort.Order.asc("fechaRegistro"), Sort.Order.asc("id")));
+                ordenIncidenciasAscendente());
         Page<IncidenciaRegistradaDto> historial = incidencias
                 .findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(computadora.getId(), ordenado)
                 .map(this::convertirIncidencia);
@@ -241,6 +242,20 @@ public class RegistroIncidenciaPersistenteServicio {
         String normalizado = nombreRol.toLowerCase(Locale.ROOT);
         return normalizado.equals("docente") || normalizado.equals("responsable")
                 || normalizado.equals("técnico de soporte") || normalizado.equals("técnico de laboratorio");
+    }
+
+    private Sort ordenIncidenciasDescendente() {
+        Sort.TypedSort<IncidenciaEntidad> orden = Sort.sort(IncidenciaEntidad.class);
+        return orden.by(IncidenciaEntidad::getFechaRegistro)
+                .descending()
+                .and(orden.by(IncidenciaEntidad::getId).descending());
+    }
+
+    private Sort ordenIncidenciasAscendente() {
+        Sort.TypedSort<IncidenciaEntidad> orden = Sort.sort(IncidenciaEntidad.class);
+        return orden.by(IncidenciaEntidad::getFechaRegistro)
+                .ascending()
+                .and(orden.by(IncidenciaEntidad::getId).ascending());
     }
 
     private int limitarTamanoPagina(Pageable pageable) {
