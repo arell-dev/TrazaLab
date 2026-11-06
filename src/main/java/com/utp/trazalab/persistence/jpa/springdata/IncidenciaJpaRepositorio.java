@@ -1,7 +1,6 @@
 package com.utp.trazalab.persistence.jpa.springdata;
 
 import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -12,13 +11,6 @@ public interface IncidenciaJpaRepositorio extends JpaRepository<IncidenciaEntida
     Page<IncidenciaEntidad> findAllByOrderByFechaRegistroDescIdDesc(Pageable pageable);
 
     @EntityGraph(attributePaths = {"usuario", "computadora"})
-    Page<IncidenciaEntidad> findAllByIdLessThanEqualOrderByFechaRegistroDescIdDesc(Integer limiteId, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"usuario", "computadora"})
     Page<IncidenciaEntidad> findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(Integer computadoraId, Pageable pageable);
 
-    long countByIdLessThanEqual(Integer limiteId);
-
-    @Query("select max(incidencia.id) from IncidenciaEntidad incidencia")
-    Integer obtenerMaximoId();
 }

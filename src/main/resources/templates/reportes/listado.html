@@ -31,6 +31,11 @@
                                 </a>
                             </li>
                             <li>
+                                <a class="dropdown-item" th:href="@{/reportes/exportar/excel(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">
+                                    Descargar Excel
+                                </a>
+                            </li>
+                            <li>
                                 <a class="dropdown-item" th:href="@{/reportes/exportar/pdf(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId})}">
                                     Descargar PDF
                                 </a>

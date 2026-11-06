@@ -2,7 +2,6 @@ package com.utp.trazalab.service;
 
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
-import com.utp.trazalab.dto.IncidenciasExportacionDto;
 import com.utp.trazalab.dto.UsuarioResumenDto;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
@@ -17,10 +16,8 @@ import com.utp.trazalab.persistence.jpa.springdata.TipoFallaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.NoSuchElementException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RegistroIncidenciaPersistenteServicio {
-    private static final int TAMANO_LOTE_EXPORTACION = 250;
     private static final int TAMANO_PAGINA_MAXIMO = 100;
 
     private final UsuarioJpaRepositorio usuarios;
@@ -114,51 +110,6 @@ public class RegistroIncidenciaPersistenteServicio {
 
         return incidencias.findAllByOrderByFechaRegistroDescIdDesc(ordenado)
                 .map(this::convertirIncidencia);
-    }
-
-    @Transactional(readOnly = true)
-    public IncidenciasExportacionDto prepararExportacionIncidencias() {
-        Integer limiteId = incidencias.obtenerMaximoId();
-        if (limiteId == null) {
-            return new IncidenciasExportacionDto(0, List.of());
-        }
-
-        long total = incidencias.countByIdLessThanEqual(limiteId);
-        return new IncidenciasExportacionDto(total, iterarIncidenciasHasta(limiteId));
-    }
-
-    private Iterable<IncidenciaRegistradaDto> iterarIncidenciasHasta(Integer limiteId) {
-        return () -> new Iterator<>() {
-            private int numeroPagina;
-            private Iterator<IncidenciaRegistradaDto> incidenciasActuales = List.<IncidenciaRegistradaDto>of().iterator();
-            private boolean ultimaPagina;
-
-            @Override
-            public boolean hasNext() {
-                while (!incidenciasActuales.hasNext() && !ultimaPagina) {
-                    Pageable pageable = PageRequest.of(
-                            numeroPagina++,
-                            TAMANO_LOTE_EXPORTACION,
-                            ordenIncidenciasDescendente());
-                    Page<IncidenciaRegistradaDto> pagina = incidencias
-                            .findAllByIdLessThanEqualOrderByFechaRegistroDescIdDesc(limiteId, pageable)
-                            .map(RegistroIncidenciaPersistenteServicio.this::convertirIncidencia);
-                    incidenciasActuales = pagina.iterator();
-                    ultimaPagina = pagina.isLast();
-                }
-
-                return incidenciasActuales.hasNext();
-            }
-
-            @Override
-            public IncidenciaRegistradaDto next() {
-                if (!hasNext()) {
-                    throw new NoSuchElementException("No hay más incidencias para exportar.");
-                }
-
-                return incidenciasActuales.next();
-            }
-        };
     }
 
     @Transactional(readOnly = true)

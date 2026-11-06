@@ -26,19 +26,19 @@ Navegador
 
 `RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador consulta el usuario demo configurado y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida que el usuario esté activo y tenga un rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
 
-La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. Las exportaciones se descargan desde la misma pantalla y usan los exportadores existentes por lotes. Los archivos se transmiten desde disco como recursos, sin cargar todo el archivo en memoria.
+La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Los archivos CSV, XLSX y PDF se generan únicamente desde Reportes y respetan los filtros activos.
 
-`IncidenciaAplicacionServicio` y `ExportacionIncidenciasServicio` registran los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
+`IncidenciaAplicacionServicio` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
 
 ## Distribución de módulos
 
 ```text
 com.utp.trazalab
 ├── config                  Reloj y configuración web / seguridad
-├── controller              Controladores MVC HTTP
+├── controller              Controladores web MVC
 ├── domain.enums            Estados del dominio sin anotaciones JPA
 ├── dto                     Formularios y datos de entrada / salida
-├── export                  Exportación PDF y CSV de incidencias
+├── export                  Exportador Excel de informes
 ├── logging                 Contrato y registro de eventos de aplicación
 ├── persistence.jpa
 │   ├── converter           Conversión entre estados y columnas SQL
@@ -64,14 +64,14 @@ static/
 
 | Módulo | Responsabilidad | Estado actual |
 |---|---|---|
-| `controller` | Recibir solicitudes HTTP, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos, reportes y exportación |
+| `controller` | Recibir solicitudes HTTP, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos y reportes |
 | `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes y resultados de mantenimiento |
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
 | `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
-| `export` | Generar archivos PDF y CSV para incidencias | Incidencias: PDF y CSV; recurrencias: PDF y CSV |
+| `export` | Generar XLSX del informe de recurrencias | Reportes: CSV, XLSX y PDF; incidencias: sin exportaciones |
 | `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; preserva asignaciones temporales de componentes |
-| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; dos o más fallas clasificadas del mismo tipo por equipo |
+| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; CSV, XLSX y PDF; dos o más fallas clasificadas del mismo tipo por equipo |
 | Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
 
 La aplicación web de esta etapa es de demostración: Spring Security conserva CSRF y permite las rutas sin autenticación; no se implementan login ni sesión. `trazalab.demo.usuario-correo` fija la identidad reportante y `trazalab.demo.mantenimiento-correo` fija la identidad técnica del servidor. La base exige que el responsable técnico esté activo y tenga rol técnico. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
@@ -99,9 +99,9 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 |---|---|---|
 | RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: registro web funcional en modo demo; autenticación pendiente |
 | RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
-| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` → PostgreSQL y PDF/CSV | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
+| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y `ExportadorReporteFallasExcel` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | Servicio de historial por QR escrito como texto | Consulta web de historial pendiente; lector físico no implementado |
-| EXT-01 | `ExportacionWebController` y exportadores PDF y CSV | Descarga del listado implementada; no equivale al análisis RF-06 |
-| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 18 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, exportación PDF/CSV y API de salud |
+| EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |
+| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 17 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, exportación y API de salud |
 
 La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).
