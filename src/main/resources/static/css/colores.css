@@ -7,8 +7,10 @@
   --bs-link-color: #8b0021;
   --bs-link-hover-color: #650018;
   --bs-body-font-family: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
-  --bs-border-radius: 0.5rem;
-  --bs-border-radius-lg: 0.75rem;
+  --bs-border-radius: 0.25rem;
+  --bs-border-radius-lg: 0.5rem;
+  --trazalab-action: #b50d30;
+  --trazalab-action-hover: #980b28;
   --trazalab-canvas: #f8f9fa;
   --trazalab-surface: #fff;
   --trazalab-border: #e5e7eb;

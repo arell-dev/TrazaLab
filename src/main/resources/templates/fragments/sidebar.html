@@ -4,11 +4,7 @@
 <body>
     <aside th:fragment="sidebar(activo)" class="app-sidebar">
         <a class="app-brand" th:href="@{/incidencias}">
-            <span class="app-brand__mark" aria-hidden="true">U</span>
-            <span>
-                <strong class="d-block">UTP</strong>
-                <small>Lab Traceability</small>
-            </span>
+            <img th:src="@{/images/utp-labtrace.svg}" alt="UTP Lab Traceability">
         </a>
 
         <nav class="nav flex-column app-navigation" aria-label="Navegación principal">
