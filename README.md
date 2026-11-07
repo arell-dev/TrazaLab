@@ -13,7 +13,7 @@ TrazaLab registra la trazabilidad técnica de computadoras de laboratorio. La ap
 
 | Capacidad | Descripción |
 |---|---|
-| Registro de incidencias | El formulario captura manualmente el QR y la descripción; el servidor fija el usuario reportante de demostración. |
+| Registro de incidencias | El formulario verifica el QR antes de avanzar, muestra los datos básicos del equipo y sus cinco incidencias más recientes; el servidor fija el reportante de demostración. |
 | Clasificación | Se puede clasificar una incidencia por categoría y tipo de falla para alimentar los reportes de recurrencia. |
 | Consulta de incidencias | Presenta los registros más recientes primero, en páginas de 25 filas. |
 | Exportación | Descarga reportes de recurrencias en CSV, Excel o PDF. El listado de incidencias no ofrece exportación. |
@@ -124,11 +124,11 @@ Ejecuta la suite con Docker disponible:
 .\mvnw.cmd test
 ```
 
-El 06/11/2026, `./mvnw.cmd -q test` terminó con 23 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas en PostgreSQL temporal mediante Testcontainers. La suite cubre persistencia, rutas web, clasificación de fallas, reglas de mantenimiento, componentes e informes. La matriz con caso, requisito, ejecución y resultado está en [`docs/testing/README.md`](docs/testing/README.md). Maven deja resultados y logs de prueba en `target/surefire-reports`.
+El 07/11/2026, `./mvnw.cmd -q clean test` terminó con 25 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas en PostgreSQL temporal mediante Testcontainers. La suite incluye la validación de QR y la consulta ordenada de las cinco incidencias recientes. La matriz con caso, requisito, ejecución y resultado está en [`docs/testing/README.md`](docs/testing/README.md). Maven deja resultados y logs de prueba en `target/surefire-reports`.
 
 ## Alcance y documentación
 
-Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara ni autenticación. La consulta de historial técnico completo por computadora, la gestión integral del inventario, la autenticación y la autorización por sesión siguen pendientes.
+Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara ni autenticación. El registro consulta los datos básicos del equipo y sus cinco incidencias más recientes; la consulta técnica integral, incluidas intervenciones y asignaciones de componentes, sigue pendiente.
 
 - [Índice de documentación](docs/README.md)
 - [Arquitectura](docs/Arquitectura.md)

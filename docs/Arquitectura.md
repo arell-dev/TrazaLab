@@ -28,6 +28,8 @@ Navegador
 
 `RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador consulta el usuario demo configurado y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida que el usuario esté activo y tenga un rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
 
+Antes de avanzar desde el primer paso, la interfaz consulta `GET /api/computadoras/historial?codigoQr=...`. `ComputadoraApiController` delega en el servicio de aplicación y el servicio JPA devuelve una ficha breve del equipo junto con las cinco incidencias más recientes, ordenadas por fecha e identificador descendente. La respuesta usa DTO de lista estable y no incluye el nombre del reportante. Un QR vacío devuelve 400 y uno inexistente devuelve 404 mediante `ProblemDetail`.
+
 La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Los archivos CSV, XLSX y PDF se generan únicamente desde Reportes y respetan los filtros activos.
 
 `IncidenciaAplicacionServicio` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
@@ -69,8 +71,8 @@ static/
 | Módulo | Responsabilidad | Estado actual |
 |---|---|---|
 | `controller` | Recibir solicitudes MVC, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos y reportes |
-| `controller.api` | Publicar endpoints REST y entregar respuestas JSON | Comprobación de salud de PostgreSQL (`/api/health`) |
-| `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes y resultados de mantenimiento |
+| `controller.api` | Publicar endpoints REST y entregar respuestas JSON | Salud PostgreSQL y consulta de equipo por QR con cinco incidencias recientes |
+| `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes, mantenimiento y ficha reciente del equipo |
 | `exception` | Clasificar errores REST y construir respuestas `ProblemDetail` | Validación 400, recurso 404 y conflictos 409; acotado a `controller.api` |
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
@@ -106,8 +108,8 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 | RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: registro web funcional en modo demo; autenticación pendiente |
 | RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
 | RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y `ExportadorReporteFallasExcel` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
-| RF-01 / RF-02 | Servicio de historial por QR escrito como texto | Consulta web de historial pendiente; lector físico no implementado |
+| RF-01 / RF-02 | `/api/computadoras/historial?codigoQr=...` → servicio de aplicación → repositorio JPA | Ficha del equipo y cinco incidencias recientes visibles en el registro; historial técnico integral y lector físico pendientes |
 | EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |
-| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 23 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, exportación y API de salud |
+| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 25 pruebas aprobadas el 07/11/2026; incluye historial reciente por QR, mantenimiento, componentes, recurrencias y exportación |
 
 La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).

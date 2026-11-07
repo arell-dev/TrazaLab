@@ -19,6 +19,7 @@
 - Esta entrega es una aplicación web de demostración sin autenticación. La configuración permite las rutas y no implementa login, sesión ni autorización HTTP por rol.
 - Las incidencias quedan asociadas al usuario demo configurado; esto identifica el registro de demostración y no acredita quién usó el equipo.
 - El formulario no admite escanear la cámara ni adjuntar imágenes; el QR se escribe como texto.
+- `GET /api/computadoras/historial` devuelve los datos básicos del equipo y hasta cinco incidencias recientes con descripción, fecha y estado; no incluye el nombre del reportante. La ruta sigue siendo pública mientras no exista autenticación.
 - Los módulos de mantenimiento y reportes funcionan en modo demo; el historial completo por equipo y la gestión integral del inventario siguen pendientes.
 - El intercambio seguro entre la aplicación recolectora y TrazaLab todavía no está definido.
 - La configuración demo no está preparada para exponer la aplicación como servicio público o productivo.

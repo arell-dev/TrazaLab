@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -144,6 +145,8 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar incidencia")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Confirmación")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Incidencias recientes")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Verificar equipo")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("Sin autenticación"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
@@ -188,6 +191,38 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"estado\":\"disponible\"}"));
+    }
+
+    @Test
+    void consultaEquipoYUltimasCincoIncidenciasPorCodigoQr() throws Exception {
+        for (int numero = 1; numero <= 6; numero++) {
+            servicio.registrar(
+                    reportante.getId(),
+                    computadora.getCodigoQr(),
+                    "Incidencia de prueba " + numero + ".");
+        }
+
+        mockMvc.perform(get("/api/computadoras/historial")
+                        .param("codigoQr", computadora.getCodigoQr()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigoQr").value("QR-TEST-001"))
+                .andExpect(jsonPath("$.numeroSerie").value("SERIE-TEST-001"))
+                .andExpect(jsonPath("$.marca").value("HP"))
+                .andExpect(jsonPath("$.ubicacion").value("LAB-TEST / Prueba de integración"))
+                .andExpect(jsonPath("$.incidencias.length()").value(5))
+                .andExpect(jsonPath("$.incidencias[0].descripcion")
+                        .value("Incidencia de prueba 6."))
+                .andExpect(jsonPath("$.incidencias[4].descripcion")
+                        .value("Incidencia de prueba 2."))
+                .andExpect(jsonPath("$.incidencias[0].reportante").doesNotExist());
+    }
+
+    @Test
+    void responde404CuandoElQrDelEquipoNoExiste() throws Exception {
+        mockMvc.perform(get("/api/computadoras/historial").param("codigoQr", "QR-INEXISTENTE"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Recurso no encontrado"))
+                .andExpect(jsonPath("$.detail").value("No existe una computadora con ese código QR."));
     }
 
     @Test

@@ -28,7 +28,8 @@
 
                 <section class="card app-card" aria-label="Registro de incidencia">
                     <form id="formulario-incidencia" th:action="@{/incidencias}" th:object="${registroIncidencia}"
-                        th:attr="data-initial-step=${#fields.hasErrors('descripcion') ? 2 : 1}" method="post" novalidate>
+                        th:attr="data-initial-step=${#fields.hasErrors('descripcion') ? 2 : 1}, data-equipo-historial-url=@{/api/computadoras/historial}"
+                        method="post" novalidate>
                         <div class="alert alert-danger m-4 mb-0" role="alert" th:if="${#fields.hasGlobalErrors()}">
                             <p class="mb-1" th:each="error : ${#fields.globalErrors()}" th:text="${error}">Error</p>
                         </div>
@@ -49,58 +50,98 @@
                         </ol>
 
                         <div class="card-body p-4 p-lg-5">
-                            <section data-step-panel="1" aria-labelledby="titulo-paso-equipo">
-                                <h2 class="h4 mb-2" id="titulo-paso-equipo">Identifica el equipo</h2>
-                                <p class="text-body-secondary mb-4">Ingresa el código de la etiqueta del equipo.</p>
+                            <div class="row g-4 align-items-start">
+                                <div class="col-12 col-xl-7">
+                                    <section data-step-panel="1" aria-labelledby="titulo-paso-equipo">
+                                        <h2 class="h4 mb-2" id="titulo-paso-equipo">Identifica el equipo</h2>
+                                        <p class="text-body-secondary mb-4">Ingresa el código de la etiqueta del equipo para consultar sus datos.</p>
 
-                                <label class="form-label" for="codigoQr">Código QR del equipo</label>
-                                <input class="form-control form-control-lg" id="codigoQr" type="text"
-                                    th:field="*{codigoQr}" maxlength="100" autocomplete="off" placeholder="PC-001"
-                                    th:classappend="${#fields.hasErrors('codigoQr')} ? 'is-invalid'" required>
-                                <div class="invalid-feedback" th:errors="*{codigoQr}">Código QR inválido</div>
-                            </section>
+                                        <label class="form-label" for="codigoQr">Código QR del equipo</label>
+                                        <input class="form-control form-control-lg" id="codigoQr" type="text"
+                                            th:field="*{codigoQr}" maxlength="100" autocomplete="off" placeholder="PC-001"
+                                            th:classappend="${#fields.hasErrors('codigoQr')} ? 'is-invalid'" required>
+                                        <div class="invalid-feedback" th:errors="*{codigoQr}">Código QR inválido</div>
+                                        <p class="form-text mb-0 mt-2" data-equipo-cargando role="status" hidden>
+                                            Consultando el equipo y sus incidencias recientes...
+                                        </p>
+                                        <div class="alert alert-danger mt-3 mb-0 py-2" data-equipo-error role="alert" hidden></div>
+                                    </section>
 
-                            <section data-step-panel="2" aria-labelledby="titulo-paso-incidencia" hidden>
-                                <h2 class="h4 mb-2" id="titulo-paso-incidencia">Describe la incidencia técnica</h2>
-                                <p class="text-body-secondary mb-4">Registra el síntoma para facilitar su seguimiento.</p>
+                                    <section data-step-panel="2" aria-labelledby="titulo-paso-incidencia" hidden>
+                                        <h2 class="h4 mb-2" id="titulo-paso-incidencia">Describe la incidencia técnica</h2>
+                                        <p class="text-body-secondary mb-4">Registra el síntoma para facilitar su seguimiento.</p>
 
-                                <div class="mb-4">
-                                    <label class="form-label" for="tipoFallaId">Tipo de falla <span class="text-body-secondary">(opcional)</span></label>
-                                    <select class="form-select" id="tipoFallaId" th:field="*{tipoFallaId}">
-                                        <option value="">Sin clasificar</option>
-                                        <option th:each="tipo : ${tiposFalla}" th:value="${tipo.id()}"
-                                            th:text="|${tipo.categoria()} · ${tipo.nombre()}|">Tipo de falla</option>
-                                    </select>
+                                        <div class="mb-4">
+                                            <label class="form-label" for="tipoFallaId">Tipo de falla <span class="text-body-secondary">(opcional)</span></label>
+                                            <select class="form-select" id="tipoFallaId" th:field="*{tipoFallaId}">
+                                                <option value="">Sin clasificar</option>
+                                                <option th:each="tipo : ${tiposFalla}" th:value="${tipo.id()}"
+                                                    th:text="|${tipo.categoria()} · ${tipo.nombre()}|">Tipo de falla</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                                                <label class="form-label mb-0" for="descripcion">Descripción de la falla</label>
+                                                <span class="small text-body-secondary text-nowrap">
+                                                    <span data-conteo-caracteres>0</span>/500
+                                                </span>
+                                            </div>
+                                            <textarea class="form-control" id="descripcion" th:field="*{descripcion}"
+                                                rows="6" maxlength="500" data-caracteres-maximos="500"
+                                                placeholder="Indica qué ocurrió y qué comportamiento observaste."
+                                                th:classappend="${#fields.hasErrors('descripcion')} ? 'is-invalid'" required></textarea>
+                                            <div class="invalid-feedback" th:errors="*{descripcion}">Descripción inválida</div>
+                                        </div>
+                                    </section>
+
+                                    <section data-step-panel="3" aria-labelledby="titulo-paso-confirmacion" hidden>
+                                        <p class="page-overline">Revisión final</p>
+                                        <h2 class="h4 mb-4" id="titulo-paso-confirmacion">Confirma los datos del reporte</h2>
+
+                                        <dl class="incidencia-resumen row g-3 mb-0">
+                                            <dt class="col-sm-4">Equipo</dt>
+                                            <dd class="col-sm-8 mb-0 text-break" data-resumen-equipo>—</dd>
+                                            <dt class="col-sm-4">Tipo de falla</dt>
+                                            <dd class="col-sm-8 mb-0" data-resumen-tipo>—</dd>
+                                            <dt class="col-sm-4">Descripción</dt>
+                                            <dd class="col-sm-8 mb-0 text-break" data-resumen-descripcion>—</dd>
+                                        </dl>
+                                    </section>
                                 </div>
 
-                                <div>
-                                    <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-                                        <label class="form-label mb-0" for="descripcion">Descripción de la falla</label>
-                                        <span class="small text-body-secondary text-nowrap">
-                                            <span data-conteo-caracteres>0</span>/500
-                                        </span>
-                                    </div>
-                                    <textarea class="form-control" id="descripcion" th:field="*{descripcion}"
-                                        rows="6" maxlength="500" data-caracteres-maximos="500"
-                                        placeholder="Indica qué ocurrió y qué comportamiento observaste."
-                                        th:classappend="${#fields.hasErrors('descripcion')} ? 'is-invalid'" required></textarea>
-                                    <div class="invalid-feedback" th:errors="*{descripcion}">Descripción inválida</div>
-                                </div>
-                            </section>
+                                <aside class="col-12 col-xl-5" data-equipo-resumen aria-labelledby="titulo-equipo-verificado" hidden>
+                                    <section class="card app-card h-100">
+                                        <div class="card-body p-4">
+                                            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                                                <div>
+                                                    <p class="page-overline mb-1">Equipo identificado</p>
+                                                    <h2 class="h5 mb-0 text-break" id="titulo-equipo-verificado" data-equipo-titulo>Equipo verificado</h2>
+                                                </div>
+                                                <span class="badge rounded-pill text-bg-secondary" data-equipo-estado></span>
+                                            </div>
 
-                            <section data-step-panel="3" aria-labelledby="titulo-paso-confirmacion" hidden>
-                                <p class="page-overline">Revisión final</p>
-                                <h2 class="h4 mb-4" id="titulo-paso-confirmacion">Confirma los datos del reporte</h2>
+                                            <dl class="row g-2 small mt-3 mb-0">
+                                                <dt class="col-5">N.º de serie</dt>
+                                                <dd class="col-7 mb-0 text-break" data-equipo-serie>—</dd>
+                                                <dt class="col-5">Fabricante / modelo</dt>
+                                                <dd class="col-7 mb-0 text-break" data-equipo-modelo>—</dd>
+                                                <dt class="col-5">Ubicación</dt>
+                                                <dd class="col-7 mb-0 text-break" data-equipo-ubicacion>—</dd>
+                                            </dl>
+                                        </div>
 
-                                <dl class="incidencia-resumen row g-3 mb-0">
-                                    <dt class="col-sm-4">Equipo</dt>
-                                    <dd class="col-sm-8 mb-0" data-resumen-equipo>—</dd>
-                                    <dt class="col-sm-4">Tipo de falla</dt>
-                                    <dd class="col-sm-8 mb-0" data-resumen-tipo>—</dd>
-                                    <dt class="col-sm-4">Descripción</dt>
-                                    <dd class="col-sm-8 mb-0 text-break" data-resumen-descripcion>—</dd>
-                                </dl>
-                            </section>
+                                        <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                                            <h3 class="h6 mb-0">Incidencias recientes</h3>
+                                            <span class="small text-body-secondary">Últimos 5 registros</span>
+                                        </div>
+                                        <ol class="list-group list-group-flush" data-equipo-historial></ol>
+                                        <p class="small text-body-secondary p-3 mb-0" data-historial-vacio hidden>
+                                            No hay incidencias anteriores registradas para este equipo.
+                                        </p>
+                                    </section>
+                                </aside>
+                            </div>
                         </div>
 
                         <div class="card-footer bg-white d-flex flex-wrap justify-content-between gap-2 p-3 p-lg-4">
@@ -109,7 +150,7 @@
                                 <button class="btn btn-outline-secondary" type="button" data-step-back hidden>Anterior</button>
                             </div>
                             <div class="d-flex flex-wrap gap-2">
-                                <button class="btn btn-primary" type="button" data-step-next>Siguiente</button>
+                                <button class="btn btn-primary" type="button" data-step-next>Verificar equipo</button>
                                 <button class="btn btn-primary" type="submit" data-step-submit hidden>Guardar incidencia</button>
                             </div>
                         </div>

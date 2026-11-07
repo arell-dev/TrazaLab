@@ -1,13 +1,15 @@
 package com.utp.trazalab.service;
 
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
+import com.utp.trazalab.dto.EquipoConHistorialRecienteDto;
 import com.utp.trazalab.dto.HistorialComputadoraDto;
+import com.utp.trazalab.dto.IncidenciaHistorialRecienteDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.UsuarioResumenDto;
 import com.utp.trazalab.exception.RecursoNoEncontradoException;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
-import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.FallaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RegistroIncidenciaPersistenteServicio {
     private static final int TAMANO_PAGINA_MAXIMO = 100;
+    private static final int TAMANO_HISTORIAL_RECIENTE = 5;
 
     private final UsuarioJpaRepositorio usuarios;
     private final ComputadoraJpaRepositorio computadoras;
@@ -136,13 +139,7 @@ public class RegistroIncidenciaPersistenteServicio {
 
     @Transactional(readOnly = true)
     public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr, Pageable pageable) {
-        if (codigoQr == null || codigoQr.isBlank()) {
-            throw new IllegalArgumentException("Ingresa el código QR de la computadora.");
-        }
-
-        ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
-                .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "No existe una computadora con ese código QR."));
+        ComputadoraEntidad computadora = buscarComputadora(codigoQr);
         Pageable ordenado = PageRequest.of(
                 numeroPagina(pageable),
                 limitarTamanoPagina(pageable),
@@ -150,21 +147,61 @@ public class RegistroIncidenciaPersistenteServicio {
         Page<IncidenciaRegistradaDto> historial = incidencias
                 .findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(computadora.getId(), ordenado)
                 .map(this::convertirIncidencia);
-        String ubicacion = computadora.getUbicacion().getNombre();
-        String detalle = computadora.getUbicacion().getDetalle();
-        if (detalle != null && !detalle.isBlank()) {
-            ubicacion += " / " + detalle;
+        return convertirHistorialComputadora(computadora, historial);
+    }
+
+    @Transactional(readOnly = true)
+    public EquipoConHistorialRecienteDto consultarHistorialRecienteComputadora(String codigoQr) {
+        ComputadoraEntidad computadora = buscarComputadora(codigoQr);
+        Pageable paginaReciente = PageRequest.of(0, TAMANO_HISTORIAL_RECIENTE);
+        List<IncidenciaHistorialRecienteDto> historial = incidencias
+                .findAllByComputadora_IdOrderByFechaRegistroDescIdDesc(computadora.getId(), paginaReciente)
+                .getContent()
+                .stream()
+                .map(this::convertirIncidenciaHistorialReciente)
+                .toList();
+
+        return new EquipoConHistorialRecienteDto(
+                computadora.getId(),
+                computadora.getCodigoQr(),
+                computadora.getNumeroSerie(),
+                computadora.getMarca(),
+                computadora.getModelo(),
+                convertirUbicacion(computadora),
+                computadora.getEstado().etiqueta(),
+                historial);
+    }
+
+    private ComputadoraEntidad buscarComputadora(String codigoQr) {
+        if (codigoQr == null || codigoQr.isBlank()) {
+            throw new IllegalArgumentException("Ingresa el código QR de la computadora.");
         }
 
+        return computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe una computadora con ese código QR."));
+    }
+
+    private HistorialComputadoraDto convertirHistorialComputadora(ComputadoraEntidad computadora, Page<IncidenciaRegistradaDto> historial) {
         return new HistorialComputadoraDto(
                 computadora.getId(),
                 computadora.getCodigoQr(),
                 computadora.getNumeroSerie(),
                 computadora.getMarca(),
                 computadora.getModelo(),
-                ubicacion,
+                convertirUbicacion(computadora),
                 computadora.getEstado().etiqueta(),
                 historial);
+    }
+
+    private String convertirUbicacion(ComputadoraEntidad computadora) {
+        String ubicacion = computadora.getUbicacion().getNombre();
+        String detalle = computadora.getUbicacion().getDetalle();
+        if (detalle != null && !detalle.isBlank()) {
+            ubicacion += " / " + detalle;
+        }
+
+        return ubicacion;
     }
 
     private IncidenciaRegistradaDto convertirIncidencia(IncidenciaEntidad incidencia) {
@@ -173,6 +210,14 @@ public class RegistroIncidenciaPersistenteServicio {
                 incidencia.getUsuario().getId(),
                 incidencia.getUsuario().getNombres() + " " + incidencia.getUsuario().getApellidos(),
                 incidencia.getComputadora().getCodigoQr(),
+                incidencia.getDescripcion(),
+                incidencia.getFechaRegistro(),
+                incidencia.getEstado().name().toLowerCase(Locale.ROOT));
+    }
+
+    private IncidenciaHistorialRecienteDto convertirIncidenciaHistorialReciente(IncidenciaEntidad incidencia) {
+        return new IncidenciaHistorialRecienteDto(
+                incidencia.getId(),
                 incidencia.getDescripcion(),
                 incidencia.getFechaRegistro(),
                 incidencia.getEstado().name().toLowerCase(Locale.ROOT));

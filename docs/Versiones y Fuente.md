@@ -19,7 +19,7 @@ Inventario contrastado con el proyecto local el 06/11/2026. Las bibliotecas sin 
 | Apache Commons CSV | 1.14.1 | CSV de fallas recurrentes |
 | Google Guava | No declarada | Pendiente respecto de la rúbrica; no se le atribuye uso |
 | Maven Wrapper | Según [configuración del wrapper](../.mvn/wrapper/maven-wrapper.properties) | Ejecución reproducible de Maven |
-| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 23 pruebas con PostgreSQL temporal en la ejecución del 06/11/2026 |
+| JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 25 pruebas con PostgreSQL temporal en la ejecución del 07/11/2026 |
 | Flyway | Administrado por Spring Boot 4.1.2, con módulo PostgreSQL | `src/main/resources/db/migration`; V1 define el esquema y V2 agrega el catálogo inicial de tipos de falla |
 
 ## Fuentes académicas
@@ -35,8 +35,8 @@ Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFina
 
 ## Evidencia observada
 
-- El 06/11/2026, `./mvnw.cmd -q clean test` ejecutó 23 pruebas con PostgreSQL temporal: 23 aprobadas, 0 fallidas, 0 errores y 0 omitidas.
-- La suite verificó render y envío de formularios MVC, registro y clasificación, paginación, mantenimiento correctivo y componentes, recurrencias, exportaciones CSV/XLSX/PDF y ausencia de descargas en incidencias.
+- El 07/11/2026, `./mvnw.cmd -q clean test` ejecutó 25 pruebas con PostgreSQL temporal: 25 aprobadas, 0 fallidas, 0 errores y 0 omitidas.
+- La suite verificó render y envío de formularios MVC, consulta de equipo y cinco incidencias recientes por QR, registro y clasificación, paginación, mantenimiento correctivo y componentes, recurrencias, exportaciones CSV/XLSX/PDF y ausencia de descargas en incidencias.
 - Las pruebas usan una base PostgreSQL desechable de Testcontainers; no certifican por sí solas un piloto real ni el inventario completo.
 - La verificación local del esquema y la línea base Flyway se documentaron en la PR #3; la base de datos preexistente conserva sus filas.
 

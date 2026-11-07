@@ -1,5 +1,6 @@
 package com.utp.trazalab.service;
 
+import com.utp.trazalab.dto.EquipoConHistorialRecienteDto;
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.RegistroIncidenciaDto;
@@ -80,6 +81,15 @@ public class IncidenciaAplicacionServicio {
                 () -> servicio.consultarHistorialComputadora(codigoQr, pageable),
                 historial -> "id=" + historial.computadoraId(),
                 historial -> historial.incidencias().getNumberOfElements());
+    }
+
+    public EquipoConHistorialRecienteDto consultarHistorialRecienteComputadora(String codigoQr) {
+        return ejecutar(
+                "computadora.historial.reciente",
+                "computadora",
+                () -> servicio.consultarHistorialRecienteComputadora(codigoQr),
+                historial -> "id=" + historial.computadoraId(),
+                historial -> historial.incidencias().size());
     }
 
     private <T> T ejecutar(String accion, String recurso, Supplier<T> operacion, Function<T, String> referencia, Function<T, Integer> cantidad) {

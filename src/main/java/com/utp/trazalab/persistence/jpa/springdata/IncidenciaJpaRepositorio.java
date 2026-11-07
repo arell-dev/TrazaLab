@@ -13,4 +13,7 @@ public interface IncidenciaJpaRepositorio extends JpaRepository<IncidenciaEntida
     @EntityGraph(attributePaths = {"usuario", "computadora"})
     Page<IncidenciaEntidad> findAllByComputadora_IdOrderByFechaRegistroAscIdAsc(Integer computadoraId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"usuario", "computadora"})
+    Page<IncidenciaEntidad> findAllByComputadora_IdOrderByFechaRegistroDescIdDesc(Integer computadoraId, Pageable pageable);
+
 }
