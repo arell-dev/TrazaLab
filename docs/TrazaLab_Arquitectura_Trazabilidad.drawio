@@ -10,7 +10,7 @@
                 <mxCell id="panel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#94A3B8;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=15;align=center;verticalAlign=middle;spacing=8;" value="Navegador&lt;br&gt;Thymeleaf + Bootstrap 5.3.8" vertex="1">
                     <mxGeometry height="100" width="200" x="30" y="225" as="geometry" />
                 </mxCell>
-                <mxCell id="mvc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B1F22;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=15;align=center;verticalAlign=middle;spacing=8;" value="Controladores MVC&lt;br&gt;Incidencias · Mantenimiento · Reportes" vertex="1">
+                <mxCell id="mvc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B1F22;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=15;align=center;verticalAlign=middle;spacing=8;" value="controller&lt;br&gt;MVC: Incidencias · Mantenimiento · Reportes&lt;br&gt;controller.api: REST /api/health" vertex="1">
                     <mxGeometry height="90" width="180" x="440" y="220" as="geometry" />
                 </mxCell>
                 <mxCell id="services" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2A2105;strokeColor=#F6C453;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=15;align=center;verticalAlign=middle;spacing=8;" value="Servicios de aplicación&lt;br&gt;Incidencias · Mantenimiento&lt;br&gt;Recurrencias" vertex="1">
@@ -51,6 +51,9 @@
                 </mxCell>
                 <mxCell id="cross3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="LoggingAplicacion&lt;br&gt;SLF4J / Logback" vertex="1">
                     <mxGeometry height="64" width="180" x="960" y="435" as="geometry" />
+                </mxCell>
+                <mxCell id="cross4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="exception / GlobalExceptionHandler&lt;br&gt;ProblemDetail · 400 · 404 · 409" vertex="1">
+                    <mxGeometry height="64" width="205" x="1165" y="435" as="geometry" />
                 </mxCell>
                 <mxCell id="dto" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17212C;strokeColor=#60A5FA;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="DTOs de formulario / salida&lt;br&gt;Incidencia · Mantenimiento" vertex="1">
                     <mxGeometry height="90" width="180" x="235" y="220" as="geometry" />

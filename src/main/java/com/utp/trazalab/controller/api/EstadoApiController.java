@@ -1,4 +1,4 @@
-package com.utp.trazalab.controller;
+package com.utp.trazalab.controller.api;
 
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;

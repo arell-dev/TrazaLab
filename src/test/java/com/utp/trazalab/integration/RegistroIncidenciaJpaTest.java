@@ -218,6 +218,19 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
+    void mantieneElFormularioCuandoElCodigoQrNoExiste() throws Exception {
+        mockMvc.perform(post("/incidencias")
+                        .with(csrf())
+                        .param("codigoQr", "QR-INEXISTENTE")
+                        .param("descripcion", "La computadora no inicia."))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "No existe una computadora con ese código QR.")));
+
+        assertEquals(0, incidencias.count());
+    }
+
+    @Test
     void registraMantenimientoSinCambiarEstadoNiCerrarIncidencia() throws Exception {
         IncidenciaRegistradaDto incidencia = servicio.registrar(
                 reportante.getId(), computadora.getCodigoQr(), "Pantalla intermitente.");
