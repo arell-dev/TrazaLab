@@ -73,6 +73,7 @@ class GlobalExceptionHandlerTest {
     }
 
     private static class FormularioApi {
+        @SuppressWarnings("unused")
         private void registrar(String codigoQr) {
         }
     }
