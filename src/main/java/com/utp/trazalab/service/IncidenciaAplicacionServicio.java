@@ -20,9 +20,7 @@ public class IncidenciaAplicacionServicio {
     private final RegistroIncidenciaPersistenteServicio servicio;
     private final LoggingAplicacion logging;
 
-    public IncidenciaAplicacionServicio(
-            RegistroIncidenciaPersistenteServicio servicio,
-            LoggingAplicacion logging) {
+    public IncidenciaAplicacionServicio(RegistroIncidenciaPersistenteServicio servicio, LoggingAplicacion logging) {
         this.servicio = servicio;
         this.logging = logging;
     }

@@ -29,6 +29,11 @@ public class RolEntidad {
         this.descripcion = descripcion;
     }
 
-    public Integer getId() { return id; }
-    public String getNombre() { return nombre; }
+    public Integer getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
 }

@@ -51,10 +51,27 @@ public class IncidenciaEntidad {
         this.estado = estado;
     }
 
-    public Integer getId() { return id; }
-    public ComputadoraEntidad getComputadora() { return computadora; }
-    public UsuarioEntidad getUsuario() { return usuario; }
-    public String getDescripcion() { return descripcion; }
-    public Instant getFechaRegistro() { return fechaRegistro; }
-    public EstadoIncidencia getEstado() { return estado; }
+    public Integer getId() {
+        return id;
+    }
+
+    public ComputadoraEntidad getComputadora() {
+        return computadora;
+    }
+
+    public UsuarioEntidad getUsuario() {
+        return usuario;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public Instant getFechaRegistro() {
+        return fechaRegistro;
+    }
+
+    public EstadoIncidencia getEstado() {
+        return estado;
+    }
 }

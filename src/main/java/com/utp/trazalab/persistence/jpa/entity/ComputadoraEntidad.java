@@ -53,11 +53,31 @@ public class ComputadoraEntidad {
         this.estado = estado;
     }
 
-    public Integer getId() { return id; }
-    public String getCodigoQr() { return codigoQr; }
-    public String getNumeroSerie() { return numeroSerie; }
-    public String getMarca() { return marca; }
-    public String getModelo() { return modelo; }
-    public UbicacionEntidad getUbicacion() { return ubicacion; }
-    public EstadoComputadora getEstado() { return estado; }
+    public Integer getId() {
+        return id;
+    }
+
+    public String getCodigoQr() {
+        return codigoQr;
+    }
+
+    public String getNumeroSerie() {
+        return numeroSerie;
+    }
+
+    public String getMarca() {
+        return marca;
+    }
+
+    public String getModelo() {
+        return modelo;
+    }
+
+    public UbicacionEntidad getUbicacion() {
+        return ubicacion;
+    }
+
+    public EstadoComputadora getEstado() {
+        return estado;
+    }
 }

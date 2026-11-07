@@ -45,10 +45,27 @@ public class UsuarioEntidad {
         this.estado = estado;
     }
 
-    public Integer getId() { return id; }
-    public RolEntidad getRol() { return rol; }
-    public String getNombres() { return nombres; }
-    public String getApellidos() { return apellidos; }
-    public String getCorreo() { return correo; }
-    public String getEstado() { return estado; }
+    public Integer getId() {
+        return id;
+    }
+
+    public RolEntidad getRol() {
+        return rol;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public String getApellidos() {
+        return apellidos;
+    }
+
+    public String getCorreo() {
+        return correo;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
 }

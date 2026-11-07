@@ -29,7 +29,15 @@ public class UbicacionEntidad {
         this.detalle = detalle;
     }
 
-    public Integer getId() { return id; }
-    public String getNombre() { return nombre; }
-    public String getDetalle() { return detalle; }
+    public Integer getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public String getDetalle() {
+        return detalle;
+    }
 }
