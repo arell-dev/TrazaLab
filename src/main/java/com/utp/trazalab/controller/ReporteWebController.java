@@ -34,7 +34,11 @@ public class ReporteWebController {
     private final IncidenciaAplicacionServicio incidencias;
     private final Clock reloj;
 
-    public ReporteWebController(ReporteFallasServicio reportes, ExportadorReporteFallasExcel exportadorExcel, IncidenciaAplicacionServicio incidencias, Clock reloj) {
+    public ReporteWebController(
+        ReporteFallasServicio reportes,
+        ExportadorReporteFallasExcel exportadorExcel,
+        IncidenciaAplicacionServicio incidencias,
+        Clock reloj) {
         this.reportes = reportes;
         this.exportadorExcel = exportadorExcel;
         this.incidencias = incidencias;
@@ -42,7 +46,12 @@ public class ReporteWebController {
     }
 
     @GetMapping
-    public String listar(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta, @RequestParam(required = false) String codigoQr, @RequestParam(required = false) Integer tipoFallaId, Model model) {
+    public String listar(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+        @RequestParam(required = false) String codigoQr,
+        @RequestParam(required = false) Integer tipoFallaId,
+        Model model) {
         LocalDate hoy = LocalDate.now(reloj);
         LocalDate fechaDesde = desde == null ? hoy.minusDays(29) : desde;
         LocalDate fechaHasta = hasta == null ? hoy : hasta;
@@ -69,7 +78,9 @@ public class ReporteWebController {
         return "reportes/listado";
     }
 
-    private List<DistribucionCategoriaDto> resumirCategorias(List<FallaRecurrenteDto> recurrencias, long totalEventos) {
+    private List<DistribucionCategoriaDto> resumirCategorias(
+        List<FallaRecurrenteDto> recurrencias,
+        long totalEventos) {
         if (totalEventos == 0) {
             return List.of();
         }
@@ -87,7 +98,12 @@ public class ReporteWebController {
     }
 
     @GetMapping("/exportar/{formato}")
-    public ResponseEntity<byte[]> exportar(@PathVariable String formato, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta, @RequestParam(required = false) String codigoQr, @RequestParam(required = false) Integer tipoFallaId) {
+    public ResponseEntity<byte[]> exportar(
+        @PathVariable String formato,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+        @RequestParam(required = false) String codigoQr,
+        @RequestParam(required = false) Integer tipoFallaId) {
         List<FallaRecurrenteDto> recurrencias;
         try {
             recurrencias = reportes.consultarRecurrencias(desde, hasta, codigoQr, tipoFallaId);

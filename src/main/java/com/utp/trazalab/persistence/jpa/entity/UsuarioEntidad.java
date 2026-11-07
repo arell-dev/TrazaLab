@@ -37,7 +37,12 @@ public class UsuarioEntidad {
     protected UsuarioEntidad() {
     }
 
-    public UsuarioEntidad(RolEntidad rol, String nombres, String apellidos, String correo, String estado) {
+    public UsuarioEntidad(
+        RolEntidad rol,
+        String nombres,
+        String apellidos,
+        String correo,
+        String estado) {
         this.rol = rol;
         this.nombres = nombres;
         this.apellidos = apellidos;

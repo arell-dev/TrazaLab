@@ -26,7 +26,13 @@ public class DatosInicialesPersistencia implements CommandLineRunner {
     private final String correoUsuarioDemostracion;
     private final String correoTecnicoDemostracion;
 
-    public DatosInicialesPersistencia(RolJpaRepositorio roles, UsuarioJpaRepositorio usuarios, UbicacionJpaRepositorio ubicaciones, ComputadoraJpaRepositorio computadoras, @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion, @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
+    public DatosInicialesPersistencia(
+        RolJpaRepositorio roles,
+        UsuarioJpaRepositorio usuarios,
+        UbicacionJpaRepositorio ubicaciones,
+        ComputadoraJpaRepositorio computadoras,
+        @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion,
+        @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
         this.roles = roles;
         this.usuarios = usuarios;
         this.ubicaciones = ubicaciones;

@@ -409,7 +409,9 @@ class RegistroIncidenciaJpaTest {
         try (PDDocument documento = Loader.loadPDF(pdf)) {
             PDFTextStripper verificadorAncho = new PDFTextStripper() {
                 @Override
-                protected void writeString(String texto, List<TextPosition> posiciones) throws IOException {
+                protected void writeString(
+                    String texto,
+                    List<TextPosition> posiciones) throws IOException {
                     double bordeDerecho = posiciones.stream()
                             .mapToDouble(posicion -> posicion.getXDirAdj() + posicion.getWidthDirAdj())
                             .max()
@@ -528,7 +530,9 @@ class RegistroIncidenciaJpaTest {
 
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
             @Override
-            public void setValues(PreparedStatement statement, int indice) throws java.sql.SQLException {
+            public void setValues(
+                PreparedStatement statement,
+                int indice) throws java.sql.SQLException {
                 statement.setInt(1, computadora.getId());
                 statement.setInt(2, reportante.getId());
                 statement.setString(3, "Incidencia sintética " + indice + " " + descripcionBase);

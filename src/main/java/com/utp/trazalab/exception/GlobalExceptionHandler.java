@@ -33,7 +33,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RecursoNoEncontradoException.class)
-    public ResponseEntity<ProblemDetail> manejarRecursoNoEncontrado(RecursoNoEncontradoException error) {
+    public ResponseEntity<ProblemDetail> manejarRecursoNoEncontrado(
+        RecursoNoEncontradoException error) {
         return responder(HttpStatus.NOT_FOUND, "Recurso no encontrado", error.getMessage());
     }
 
@@ -48,14 +49,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ProblemDetail> manejarConflictoPersistencia(DataIntegrityViolationException error) {
+    public ResponseEntity<ProblemDetail> manejarConflictoPersistencia(
+        DataIntegrityViolationException error) {
         return responder(
                 HttpStatus.CONFLICT,
                 "Conflicto de persistencia",
                 "La operación entra en conflicto con datos existentes.");
     }
 
-    private ResponseEntity<ProblemDetail> responder(HttpStatus estado, String titulo, String detalle) {
+    private ResponseEntity<ProblemDetail> responder(
+        HttpStatus estado,
+        String titulo,
+        String detalle) {
         return ResponseEntity.status(estado).body(crearProblema(estado, titulo, detalle));
     }
 

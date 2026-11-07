@@ -32,7 +32,13 @@ public class RegistroMantenimientoServicio {
     private final JdbcTemplate jdbcTemplate;
     private final Clock reloj;
 
-    public RegistroMantenimientoServicio(UsuarioJpaRepositorio usuarios, ComputadoraJpaRepositorio computadoras, ComponenteJpaRepositorio componentes, MantenimientoJpaRepositorio mantenimientos, JdbcTemplate jdbcTemplate, Clock reloj) {
+    public RegistroMantenimientoServicio(
+        UsuarioJpaRepositorio usuarios,
+        ComputadoraJpaRepositorio computadoras,
+        ComponenteJpaRepositorio componentes,
+        MantenimientoJpaRepositorio mantenimientos,
+        JdbcTemplate jdbcTemplate,
+        Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.componentes = componentes;
@@ -42,7 +48,17 @@ public class RegistroMantenimientoServicio {
     }
 
     @Transactional
-    public MantenimientoResumenDto registrar(Integer usuarioId, String codigoQr, String tipo, Integer fallaId, String descripcion, String accionComponente, String serieComponenteActual, String nombreComponenteNuevo, String tipoComponenteNuevo, String serieComponenteNuevo) {
+    public MantenimientoResumenDto registrar(
+        Integer usuarioId,
+        String codigoQr,
+        String tipo,
+        Integer fallaId,
+        String descripcion,
+        String accionComponente,
+        String serieComponenteActual,
+        String nombreComponenteNuevo,
+        String tipoComponenteNuevo,
+        String serieComponenteNuevo) {
         UsuarioEntidad usuario = usuarios.findById(usuarioId)
                 .filter(persona -> "activo".equalsIgnoreCase(persona.getEstado()))
                 .orElseThrow(() -> new IllegalArgumentException("El usuario de demostración no existe o está inactivo."));
@@ -138,7 +154,15 @@ public class RegistroMantenimientoServicio {
                 resultado.getObject("fecha_registro", LocalDateTime.class)));
     }
 
-    private void registrarAccionComponente(Integer mantenimientoId, Integer computadoraId, String accion, String serieActual, String nombreNuevo, String tipoNuevo, String serieNueva, LocalDateTime ahora) {
+    private void registrarAccionComponente(
+        Integer mantenimientoId,
+        Integer computadoraId,
+        String accion,
+        String serieActual,
+        String nombreNuevo,
+        String tipoNuevo,
+        String serieNueva,
+        LocalDateTime ahora) {
         if (!ACCIONES_COMPONENTE.contains(accion)) {
             throw new IllegalArgumentException("Selecciona una acción válida para el componente.");
         }
@@ -207,7 +231,10 @@ public class RegistroMantenimientoServicio {
         return Boolean.TRUE.equals(asignado);
     }
 
-    private void retirarDeComputadora(Integer computadoraId, Integer componenteId, LocalDateTime ahora) {
+    private void retirarDeComputadora(
+        Integer computadoraId,
+        Integer componenteId,
+        LocalDateTime ahora) {
         jdbcTemplate.update(
                 "UPDATE computadora_componente SET fecha_retiro = ? "
                         + "WHERE computadora_id = ? AND componente_id = ? AND fecha_retiro IS NULL",
@@ -216,7 +243,10 @@ public class RegistroMantenimientoServicio {
                 componenteId);
     }
 
-    private void instalarEnComputadora(Integer computadoraId, Integer componenteId, LocalDateTime ahora) {
+    private void instalarEnComputadora(
+        Integer computadoraId,
+        Integer componenteId,
+        LocalDateTime ahora) {
         jdbcTemplate.update(
                 "INSERT INTO computadora_componente "
                         + "(computadora_id, componente_id, fecha_instalacion, fecha_retiro) VALUES (?, ?, ?, NULL)",

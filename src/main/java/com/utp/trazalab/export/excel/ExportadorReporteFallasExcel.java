@@ -27,7 +27,10 @@ public class ExportadorReporteFallasExcel {
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final int FILA_ENCABEZADOS = 3;
 
-    public byte[] exportar(List<FallaRecurrenteDto> recurrencias, LocalDate desde, LocalDate hasta) {
+    public byte[] exportar(
+        List<FallaRecurrenteDto> recurrencias,
+        LocalDate desde,
+        LocalDate hasta) {
         try (ByteArrayOutputStream salida = new ByteArrayOutputStream();
                 SXSSFWorkbook workbook = new SXSSFWorkbook(100)) {
             workbook.setCompressTempFiles(true);
@@ -108,7 +111,10 @@ public class ExportadorReporteFallasExcel {
         return estilo;
     }
 
-    private void escribirRecurrencias(Sheet hoja, List<FallaRecurrenteDto> recurrencias, CellStyle estiloCuerpo) {
+    private void escribirRecurrencias(
+        Sheet hoja,
+        List<FallaRecurrenteDto> recurrencias,
+        CellStyle estiloCuerpo) {
         int numeroFila = FILA_ENCABEZADOS + 1;
         for (FallaRecurrenteDto falla : recurrencias) {
             Row fila = hoja.createRow(numeroFila++);
@@ -122,19 +128,31 @@ public class ExportadorReporteFallasExcel {
         }
     }
 
-    private void crearCelda(Row fila, int columna, String valor, CellStyle estilo) {
+    private void crearCelda(
+        Row fila,
+        int columna,
+        String valor,
+        CellStyle estilo) {
         Cell celda = fila.createCell(columna);
         celda.setCellValue(valor == null ? "" : valor);
         celda.setCellStyle(estilo);
     }
 
-    private void crearCelda(Row fila, int columna, int valor, CellStyle estilo) {
+    private void crearCelda(
+        Row fila,
+        int columna,
+        int valor,
+        CellStyle estilo) {
         Cell celda = fila.createCell(columna);
         celda.setCellValue(valor);
         celda.setCellStyle(estilo);
     }
 
-    private void crearCelda(Row fila, int columna, long valor, CellStyle estilo) {
+    private void crearCelda(
+        Row fila,
+        int columna,
+        long valor,
+        CellStyle estilo) {
         Cell celda = fila.createCell(columna);
         celda.setCellValue(valor);
         celda.setCellStyle(estilo);

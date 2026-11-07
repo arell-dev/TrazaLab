@@ -37,7 +37,13 @@ public class RegistroIncidenciaPersistenteServicio {
     private final TipoFallaJpaRepositorio tiposFalla;
     private final Clock reloj;
 
-    public RegistroIncidenciaPersistenteServicio(UsuarioJpaRepositorio usuarios, ComputadoraJpaRepositorio computadoras, IncidenciaJpaRepositorio incidencias, FallaJpaRepositorio fallas, TipoFallaJpaRepositorio tiposFalla, Clock reloj) {
+    public RegistroIncidenciaPersistenteServicio(
+        UsuarioJpaRepositorio usuarios,
+        ComputadoraJpaRepositorio computadoras,
+        IncidenciaJpaRepositorio incidencias,
+        FallaJpaRepositorio fallas,
+        TipoFallaJpaRepositorio tiposFalla,
+        Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.incidencias = incidencias;
@@ -52,7 +58,11 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     @Transactional
-    public IncidenciaRegistradaDto registrar(long usuarioId, String codigoQr, String descripcion, Integer tipoFallaId) {
+    public IncidenciaRegistradaDto registrar(
+        long usuarioId,
+        String codigoQr,
+        String descripcion,
+        Integer tipoFallaId) {
         UsuarioEntidad usuario = usuarios.findById(Math.toIntExact(usuarioId))
                 .orElseThrow(() -> new RecursoNoEncontradoException("El usuario indicado no existe."));
         if (!"activo".equalsIgnoreCase(usuario.getEstado())) {
@@ -135,7 +145,9 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     @Transactional(readOnly = true)
-    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr, Pageable pageable) {
+    public HistorialComputadoraDto consultarHistorialComputadora(
+        String codigoQr,
+        Pageable pageable) {
         if (codigoQr == null || codigoQr.isBlank()) {
             throw new IllegalArgumentException("Ingresa el código QR de la computadora.");
         }

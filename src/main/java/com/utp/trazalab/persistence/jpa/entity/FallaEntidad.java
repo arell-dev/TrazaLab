@@ -36,7 +36,11 @@ public class FallaEntidad {
     protected FallaEntidad() {
     }
 
-    public FallaEntidad(IncidenciaEntidad incidencia, TipoFallaEntidad tipo, String descripcionTecnica, LocalDateTime fechaRegistro) {
+    public FallaEntidad(
+        IncidenciaEntidad incidencia,
+        TipoFallaEntidad tipo,
+        String descripcionTecnica,
+        LocalDateTime fechaRegistro) {
         this.incidencia = incidencia;
         this.tipo = tipo;
         this.descripcionTecnica = descripcionTecnica;

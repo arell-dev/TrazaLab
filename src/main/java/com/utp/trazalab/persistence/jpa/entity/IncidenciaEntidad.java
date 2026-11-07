@@ -43,7 +43,12 @@ public class IncidenciaEntidad {
     protected IncidenciaEntidad() {
     }
 
-    public IncidenciaEntidad(ComputadoraEntidad computadora, UsuarioEntidad usuario, String descripcion, Instant fechaRegistro, EstadoIncidencia estado) {
+    public IncidenciaEntidad(
+        ComputadoraEntidad computadora,
+        UsuarioEntidad usuario,
+        String descripcion,
+        Instant fechaRegistro,
+        EstadoIncidencia estado) {
         this.computadora = computadora;
         this.usuario = usuario;
         this.descripcion = descripcion;

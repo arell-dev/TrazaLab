@@ -39,7 +39,11 @@ public class ReporteFallasServicio {
     }
 
     @Transactional(readOnly = true)
-    public List<FallaRecurrenteDto> consultarRecurrencias(LocalDate desde, LocalDate hasta, String codigoQr, Integer tipoFallaId) {
+    public List<FallaRecurrenteDto> consultarRecurrencias(
+        LocalDate desde,
+        LocalDate hasta,
+        String codigoQr,
+        Integer tipoFallaId) {
         validarRango(desde, hasta);
         StringBuilder sql = new StringBuilder("""
                 SELECT c.computadora_id, c.codigo_qr, c.numero_serie,
@@ -82,7 +86,10 @@ public class ReporteFallasServicio {
                 parametros.toArray());
     }
 
-    public byte[] exportarCsv(List<FallaRecurrenteDto> recurrencias, LocalDate desde, LocalDate hasta) {
+    public byte[] exportarCsv(
+        List<FallaRecurrenteDto> recurrencias,
+        LocalDate desde,
+        LocalDate hasta) {
         try (ByteArrayOutputStream salida = new ByteArrayOutputStream();
                 OutputStreamWriter writer = new OutputStreamWriter(salida, StandardCharsets.UTF_8)) {
             writer.write('\uFEFF');
@@ -104,7 +111,10 @@ public class ReporteFallasServicio {
         }
     }
 
-    public byte[] exportarPdf(List<FallaRecurrenteDto> recurrencias, LocalDate desde, LocalDate hasta) {
+    public byte[] exportarPdf(
+        List<FallaRecurrenteDto> recurrencias,
+        LocalDate desde,
+        LocalDate hasta) {
         try (PDDocument documento = new PDDocument(IOUtils.createTempFileOnlyStreamCache());
                 ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
             documento.getDocumentInformation().setTitle("TrazaLab - Fallas recurrentes");
@@ -170,7 +180,12 @@ public class ReporteFallasServicio {
                 .replaceAll("[^\\u0020-\\u007E]", "?");
     }
 
-    private float escribirEncabezado(PDPageContentStream contenido, float alto, LocalDate desde, LocalDate hasta, boolean continuacion) throws IOException {
+    private float escribirEncabezado(
+        PDPageContentStream contenido,
+        float alto,
+        LocalDate desde,
+        LocalDate hasta,
+        boolean continuacion) throws IOException {
         float y = alto - 48;
         String titulo = continuacion
                 ? "TrazaLab | Fallas recurrentes (continuacion)"
@@ -183,7 +198,11 @@ public class ReporteFallasServicio {
         return y - 14;
     }
 
-    private List<String> envolver(String texto, PDType1Font fuente, float tamano, float anchoMaximo) throws IOException {
+    private List<String> envolver(
+        String texto,
+        PDType1Font fuente,
+        float tamano,
+        float anchoMaximo) throws IOException {
         List<String> lineas = new ArrayList<>();
         StringBuilder linea = new StringBuilder();
 
@@ -222,7 +241,13 @@ public class ReporteFallasServicio {
         return fuente.getStringWidth(texto) * tamano / 1000;
     }
 
-    private void escribir(PDPageContentStream contenido, String texto, float x, float y, PDType1Font fuente, float tamano) throws IOException {
+    private void escribir(
+        PDPageContentStream contenido,
+        String texto,
+        float x,
+        float y,
+        PDType1Font fuente,
+        float tamano) throws IOException {
         contenido.beginText();
         contenido.setFont(fuente, tamano);
         contenido.newLineAtOffset(x, y);

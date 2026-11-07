@@ -27,7 +27,9 @@ public class IncidenciaWebController {
     private final IncidenciaAplicacionServicio servicio;
     private final String correoUsuarioDemostracion;
 
-    public IncidenciaWebController(IncidenciaAplicacionServicio servicio, @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion) {
+    public IncidenciaWebController(
+        IncidenciaAplicacionServicio servicio,
+        @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion) {
         this.servicio = servicio;
         this.correoUsuarioDemostracion = correoUsuarioDemostracion;
     }
@@ -53,7 +55,11 @@ public class IncidenciaWebController {
     }
 
     @PostMapping
-    public String registrar(@Valid @ModelAttribute("registroIncidencia") RegistroIncidenciaFormulario formulario, BindingResult errores, Model model, RedirectAttributes redireccion) {
+    public String registrar(
+        @Valid @ModelAttribute("registroIncidencia") RegistroIncidenciaFormulario formulario,
+        BindingResult errores,
+        Model model,
+        RedirectAttributes redireccion) {
         if (errores.hasErrors()) {
             model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";

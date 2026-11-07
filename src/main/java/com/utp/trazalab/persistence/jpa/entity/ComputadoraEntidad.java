@@ -44,7 +44,13 @@ public class ComputadoraEntidad {
     protected ComputadoraEntidad() {
     }
 
-    public ComputadoraEntidad(String codigoQr, String numeroSerie, String marca, String modelo, UbicacionEntidad ubicacion, EstadoComputadora estado) {
+    public ComputadoraEntidad(
+        String codigoQr,
+        String numeroSerie,
+        String marca,
+        String modelo,
+        UbicacionEntidad ubicacion,
+        EstadoComputadora estado) {
         this.codigoQr = codigoQr;
         this.numeroSerie = numeroSerie;
         this.marca = marca;

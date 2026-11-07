@@ -20,7 +20,9 @@ public class IncidenciaAplicacionServicio {
     private final RegistroIncidenciaPersistenteServicio servicio;
     private final LoggingAplicacion logging;
 
-    public IncidenciaAplicacionServicio(RegistroIncidenciaPersistenteServicio servicio, LoggingAplicacion logging) {
+    public IncidenciaAplicacionServicio(
+        RegistroIncidenciaPersistenteServicio servicio,
+        LoggingAplicacion logging) {
         this.servicio = servicio;
         this.logging = logging;
     }
@@ -73,7 +75,9 @@ public class IncidenciaAplicacionServicio {
                 usuario -> null);
     }
 
-    public HistorialComputadoraDto consultarHistorialComputadora(String codigoQr, Pageable pageable) {
+    public HistorialComputadoraDto consultarHistorialComputadora(
+        String codigoQr,
+        Pageable pageable) {
         return ejecutar(
                 "computadora.historial",
                 "computadora",
@@ -82,7 +86,12 @@ public class IncidenciaAplicacionServicio {
                 historial -> historial.incidencias().getNumberOfElements());
     }
 
-    private <T> T ejecutar(String accion, String recurso, Supplier<T> operacion, Function<T, String> referencia, Function<T, Integer> cantidad) {
+    private <T> T ejecutar(
+        String accion,
+        String recurso,
+        Supplier<T> operacion,
+        Function<T, String> referencia,
+        Function<T, Integer> cantidad) {
         try {
             T resultado = operacion.get();
             logging.registrar(new EventoAplicacion(
