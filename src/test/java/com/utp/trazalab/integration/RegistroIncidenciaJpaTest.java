@@ -14,7 +14,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.FallaRecurrenteDto;
-import java.io.ByteArrayInputStream;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
@@ -49,8 +48,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -177,7 +174,8 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Fallas recurrentes")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar CSV")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar Excel")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Descargar Excel"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Descargar PDF")));
 
         mockMvc.perform(get("/incidencias/exportar/excel"))
@@ -340,7 +338,7 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void exportaRecurrenciasFiltradasEnCsvExcelYPdfDesdeLaWeb() throws Exception {
+    void exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb() throws Exception {
         Integer tipoFallaId = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().getFirst().getId();
         LocalDate hoy = LocalDate.now(java.time.ZoneId.of("America/Lima"));
         servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "Primer caso de exportación.", tipoFallaId);
@@ -357,22 +355,6 @@ class RegistroIncidenciaJpaTest {
         assertTrue(csv.getContentType().contains("text/csv"));
         assertTrue(csv.getContentAsString(StandardCharsets.UTF_8).contains(computadora.getCodigoQr()));
 
-        org.springframework.mock.web.MockHttpServletResponse excel = mockMvc.perform(get("/reportes/exportar/excel")
-                        .param("desde", hoy.minusDays(29).toString())
-                        .param("hasta", hoy.toString())
-                        .param("codigoQr", computadora.getCodigoQr())
-                        .param("tipoFallaId", tipoFallaId.toString()))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse();
-        assertTrue(excel.getContentType().contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        try (Workbook libro = WorkbookFactory.create(new ByteArrayInputStream(excel.getContentAsByteArray()))) {
-            assertEquals("TrazaLab | Informe de fallas recurrentes", libro.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
-            assertEquals("Código QR", libro.getSheetAt(0).getRow(3).getCell(1).getStringCellValue());
-            assertEquals(computadora.getCodigoQr(), libro.getSheetAt(0).getRow(4).getCell(1).getStringCellValue());
-            assertEquals(2, libro.getSheetAt(0).getRow(4).getCell(5).getNumericCellValue());
-        }
-
         org.springframework.mock.web.MockHttpServletResponse pdf = mockMvc.perform(get("/reportes/exportar/pdf")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString())
@@ -388,6 +370,13 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/reportes/exportar/otro")
                         .param("desde", hoy.minusDays(29).toString())
                         .param("hasta", hoy.toString()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/reportes/exportar/excel")
+                        .param("desde", hoy.minusDays(29).toString())
+                        .param("hasta", hoy.toString())
+                        .param("codigoQr", computadora.getCodigoQr())
+                        .param("tipoFallaId", tipoFallaId.toString()))
                 .andExpect(status().isBadRequest());
     }
 

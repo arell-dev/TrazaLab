@@ -13,7 +13,7 @@ Las consultas de incidencias e historial cargaban listas completas. Los exportad
 - El tamaño de una página de consulta se limita a 100 registros.
 - `IncidenciaWebController` presenta la lista en páginas de 25 registros; el servicio admite tamaños de hasta 100.
 - En la implementación histórica, la exportación capturaba el ID máximo y el total inicial para leer lotes de 250 incidencias y excluir altas posteriores; esa ruta se retiró al limitar las exportaciones a Reportes.
-- CSV, Excel y PDF se generaban por lotes en esa etapa. La exportación XLSX vigente corresponde al informe de fallas recurrentes.
+- CSV, Excel y PDF se generaban por lotes en esa etapa. El XLSX de Reportes se habilitó después mediante PR #9 y se retiró junto con Apache POI en PR #14; actualmente Reportes ofrece CSV y PDF.
 
 ## Errores de implementación y corrección
 
@@ -25,7 +25,7 @@ Las consultas de incidencias e historial cargaban listas completas. Los exportad
 
 ## Verificación
 
-Las ejecuciones históricas con PostgreSQL de Testcontainers comprobaron páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 incidencias. La prueba vigente `recorrePorPaginasUnHistorialDeCincoMilIncidencias` recorre 5 000 registros en 50 páginas y valida orden sin duplicados; las exportaciones CSV, XLSX y PDF se verifican desde Reportes.
+Las ejecuciones históricas con PostgreSQL de Testcontainers comprobaron páginas vacías y parciales, desempate por ID con fechas iguales, recorrido del historial, tope de 100 filas y exportación de 251 incidencias. La prueba vigente `recorrePorPaginasUnHistorialDeCincoMilIncidencias` recorre 5 000 registros en 50 páginas y valida orden sin duplicados. Actualmente las exportaciones CSV y PDF se verifican desde Reportes; la ruta Excel se rechaza.
 
 Ejecución inicial de la PR #4: `./mvnw.cmd -q test` · 7 pruebas aprobadas · 0 fallos · 0 errores · 0 omitidas. Después de migrar la interfaz a Spring MVC, la suite ampliada se ejecutó de nuevo con 11 pruebas aprobadas el 05/11/2026.
 

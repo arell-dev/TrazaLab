@@ -28,7 +28,7 @@ Navegador
 
 `RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador consulta el usuario demo configurado y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida que el usuario esté activo y tenga un rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
 
-La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Los archivos CSV, XLSX y PDF se generan únicamente desde Reportes y respetan los filtros activos.
+La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Reportes genera CSV y PDF y respeta los filtros activos.
 
 `IncidenciaAplicacionServicio` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
 
@@ -42,7 +42,7 @@ com.utp.trazalab
 ├── domain.enums            Estados del dominio sin anotaciones JPA
 ├── dto                     Formularios y datos de entrada / salida
 ├── exception               Errores de dominio y respuestas de error REST
-├── export                  Exportador Excel de informes
+├── export                  Formatos de exportación CSV y PDF
 ├── logging                 Contrato y registro de eventos de aplicación
 ├── persistence.jpa
 │   ├── converter           Conversión entre estados y columnas SQL
@@ -75,9 +75,9 @@ static/
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
 | `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
-| `export` | Generar XLSX del informe de recurrencias | Reportes: CSV, XLSX y PDF; incidencias: sin exportaciones |
+| `export` | Identificar los formatos CSV y PDF admitidos | Reportes: CSV y PDF; incidencias: sin exportaciones |
 | `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; preserva asignaciones temporales de componentes |
-| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; CSV, XLSX y PDF; dos o más fallas clasificadas del mismo tipo por equipo |
+| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; CSV y PDF; dos o más fallas clasificadas del mismo tipo por equipo |
 | Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
 
 La aplicación web de esta etapa es de demostración: Spring Security conserva CSRF y permite las rutas sin autenticación; no se implementan login ni sesión. `trazalab.demo.usuario-correo` fija la identidad reportante y `trazalab.demo.mantenimiento-correo` fija la identidad técnica del servidor. La base exige que el responsable técnico esté activo y tenga rol técnico. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
@@ -105,9 +105,9 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 |---|---|---|
 | RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: registro web funcional en modo demo; autenticación pendiente |
 | RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
-| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y `ExportadorReporteFallasExcel` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
+| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y PostgreSQL; exporta CSV/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | Servicio de historial por QR escrito como texto | Consulta web de historial pendiente; lector físico no implementado |
-| EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |
-| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 17 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, exportación y API de salud |
+| EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` → `ReporteFallasServicio` | Descargas CSV/PDF de recurrencias; Excel e incidencias no exponen exportación |
+| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 23 pruebas aprobadas el 06/11/2026; incluye mantenimiento, componentes, recurrencias, CSV/PDF y API de salud; Excel retirado |
 
 La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).

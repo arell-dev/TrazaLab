@@ -46,7 +46,7 @@
                 <mxCell id="cross1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Bean Validation&lt;br&gt;formularios web" vertex="1">
                     <mxGeometry height="64" width="180" x="550" y="435" as="geometry" />
                 </mxCell>
-                <mxCell id="cross2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Descargas&lt;br&gt;Incidencias: PDF / CSV&lt;br&gt;Recurrencias: PDF / CSV" vertex="1">
+                <mxCell id="cross2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Descargas&lt;br&gt;Incidencias: sin exportaciones&lt;br&gt;Recurrencias: PDF / CSV" vertex="1">
                     <mxGeometry height="64" width="180" x="755" y="435" as="geometry" />
                 </mxCell>
                 <mxCell id="cross3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="LoggingAplicacion&lt;br&gt;SLF4J / Logback" vertex="1">

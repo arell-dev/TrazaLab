@@ -16,9 +16,9 @@ TrazaLab registra la trazabilidad técnica de computadoras de laboratorio. La ap
 | Registro de incidencias | El formulario captura manualmente el QR y la descripción; el servidor fija el usuario reportante de demostración. |
 | Clasificación | Se puede clasificar una incidencia por categoría y tipo de falla para alimentar los reportes de recurrencia. |
 | Consulta de incidencias | Presenta los registros más recientes primero, en páginas de 25 filas. |
-| Exportación | Descarga reportes de recurrencias en CSV, Excel o PDF. El listado de incidencias no ofrece exportación. |
+| Exportación | Descarga reportes de recurrencias en CSV o PDF. El listado de incidencias no ofrece exportación. |
 | Mantenimientos | Registra intervenciones preventivas o correctivas y acciones de instalación, intervención, reemplazo o retiro de componentes. |
-| Reportes | Filtra recurrencias por periodo, equipo y tipo; considera recurrentes dos o más fallas del mismo tipo en el equipo. Exporta CSV, Excel y PDF. |
+| Reportes | Filtra recurrencias por periodo, equipo y tipo; considera recurrentes dos o más fallas del mismo tipo en el equipo. Exporta CSV y PDF. |
 | Logging de aplicación | Escribe eventos de operación mediante SLF4J y Logback. |
 
 El mantenimiento no cambia el estado operativo de la computadora ni cierra una incidencia. Los mantenimientos correctivos requieren asociar una falla del mismo equipo.
@@ -51,7 +51,7 @@ Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguie
 | `templates/incidencias` | Contiene las vistas de consulta y registro. |
 | `templates/mantenimientos`, `templates/reportes` | Contiene los paneles de registro técnico y consulta de recurrencias. |
 | `static/css`, `static/js` | `colores.css` reúne tokens y variables Bootstrap; `componentes.css` define la interfaz y `app.js` sus interacciones. |
-| `export` | Genera la salida Excel del informe de fallas recurrentes. CSV y PDF pertenecen al servicio de reportes. |
+| `export` | Define los formatos CSV y PDF disponibles para reportes. |
 
 La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.
 
@@ -67,7 +67,6 @@ La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implement
 | Spring Security | CSRF habilitado; autenticación desactivada en la etapa demo. |
 | JUnit y Testcontainers | Pruebas con PostgreSQL temporal. |
 | Apache PDFBox 3.0.8 | Reportes PDF. |
-| Apache POI 5.5.1 | Reportes Excel (XLSX). |
 | Apache Commons CSV 1.14.1 | Exportación CSV. |
 | SLF4J y Logback | Registro de eventos de aplicación. |
 
@@ -110,7 +109,7 @@ Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate 
 
 ## Exportación
 
-Las descargas están disponibles únicamente en Reportes y respetan los filtros de periodo, equipo y tipo. Se ofrecen CSV, Excel (XLSX) y PDF para las fallas recurrentes. El listado de incidencias no tiene rutas ni botones de exportación.
+Las descargas están disponibles únicamente en Reportes y respetan los filtros de periodo, equipo y tipo. Se ofrecen CSV y PDF para las fallas recurrentes. El listado de incidencias no tiene rutas ni botones de exportación.
 
 ## Logging
 

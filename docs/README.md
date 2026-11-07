@@ -17,7 +17,7 @@ Esta carpeta separa la arquitectura, la trazabilidad de requisitos, la evidencia
 - [`correcciones/OBS-01-consultas-paginadas.md`](correcciones/OBS-01-consultas-paginadas.md): paginación de incidencias e historial; contexto histórico de exportaciones.
 - [`correcciones/OBS-02-arquitectura-web.md`](correcciones/OBS-02-arquitectura-web.md): migración a Spring MVC y estructura JPA.
 - [`correcciones/OBS-03-mantenimiento-reportes.md`](correcciones/OBS-03-mantenimiento-reportes.md): validaciones de rol técnico, asociación de fallas y fechas de recurrencia.
-- [`correcciones/OBS-04-retiro-exportacion-xlsx.md`](correcciones/OBS-04-retiro-exportacion-xlsx.md): Excel habilitado en Reportes y exportaciones retiradas de Incidencias.
+- [`correcciones/OBS-04-retiro-exportacion-xlsx.md`](correcciones/OBS-04-retiro-exportacion-xlsx.md): historial del XLSX de Reportes y su retiro final; CSV/PDF vigentes.
 - [`correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md`](correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md): ajuste del diagnóstico al paquete disponible en Spring Boot 4.
 - [`correcciones/OBS-06-diagnosticos-editor-java.md`](correcciones/OBS-06-diagnosticos-editor-java.md): iterador del benchmark, ordenamiento tipado y recarga Maven del editor.
 - [`correcciones/OBS-07-estructura-controller-api-excepciones.md`](correcciones/OBS-07-estructura-controller-api-excepciones.md): separación de controladores REST, excepciones tipadas y manejo de errores.
