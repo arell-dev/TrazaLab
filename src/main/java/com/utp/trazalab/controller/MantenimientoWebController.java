@@ -21,10 +21,7 @@ public class MantenimientoWebController {
     private final IncidenciaAplicacionServicio incidencias;
     private final String correoTecnicoDemostracion;
 
-    public MantenimientoWebController(
-            RegistroMantenimientoServicio mantenimientos,
-            IncidenciaAplicacionServicio incidencias,
-            @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
+    public MantenimientoWebController(RegistroMantenimientoServicio mantenimientos, IncidenciaAplicacionServicio incidencias, @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
         this.mantenimientos = mantenimientos;
         this.incidencias = incidencias;
         this.correoTecnicoDemostracion = correoTecnicoDemostracion;
@@ -38,11 +35,7 @@ public class MantenimientoWebController {
     }
 
     @PostMapping
-    public String registrar(
-            @Valid @ModelAttribute("registroMantenimiento") RegistroMantenimientoFormulario formulario,
-            BindingResult errores,
-            Model model,
-            RedirectAttributes redireccion) {
+    public String registrar(@Valid @ModelAttribute("registroMantenimiento") RegistroMantenimientoFormulario formulario, BindingResult errores, Model model, RedirectAttributes redireccion) {
         if (errores.hasErrors()) {
             prepararModelo(model);
             return "mantenimientos/listado";

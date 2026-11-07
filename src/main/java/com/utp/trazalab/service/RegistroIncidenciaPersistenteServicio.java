@@ -37,13 +37,7 @@ public class RegistroIncidenciaPersistenteServicio {
     private final TipoFallaJpaRepositorio tiposFalla;
     private final Clock reloj;
 
-    public RegistroIncidenciaPersistenteServicio(
-            UsuarioJpaRepositorio usuarios,
-            ComputadoraJpaRepositorio computadoras,
-            IncidenciaJpaRepositorio incidencias,
-            FallaJpaRepositorio fallas,
-            TipoFallaJpaRepositorio tiposFalla,
-            Clock reloj) {
+    public RegistroIncidenciaPersistenteServicio(UsuarioJpaRepositorio usuarios, ComputadoraJpaRepositorio computadoras, IncidenciaJpaRepositorio incidencias, FallaJpaRepositorio fallas, TipoFallaJpaRepositorio tiposFalla, Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.incidencias = incidencias;

@@ -82,12 +82,7 @@ public class IncidenciaAplicacionServicio {
                 historial -> historial.incidencias().getNumberOfElements());
     }
 
-    private <T> T ejecutar(
-            String accion,
-            String recurso,
-            Supplier<T> operacion,
-            Function<T, String> referencia,
-            Function<T, Integer> cantidad) {
+    private <T> T ejecutar(String accion, String recurso, Supplier<T> operacion, Function<T, String> referencia, Function<T, Integer> cantidad) {
         try {
             T resultado = operacion.get();
             logging.registrar(new EventoAplicacion(

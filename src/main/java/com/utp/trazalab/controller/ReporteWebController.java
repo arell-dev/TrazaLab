@@ -42,12 +42,7 @@ public class ReporteWebController {
     }
 
     @GetMapping
-    public String listar(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
-            @RequestParam(required = false) String codigoQr,
-            @RequestParam(required = false) Integer tipoFallaId,
-            Model model) {
+    public String listar(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta, @RequestParam(required = false) String codigoQr, @RequestParam(required = false) Integer tipoFallaId, Model model) {
         LocalDate hoy = LocalDate.now(reloj);
         LocalDate fechaDesde = desde == null ? hoy.minusDays(29) : desde;
         LocalDate fechaHasta = hasta == null ? hoy : hasta;
@@ -92,12 +87,7 @@ public class ReporteWebController {
     }
 
     @GetMapping("/exportar/{formato}")
-    public ResponseEntity<byte[]> exportar(
-            @PathVariable String formato,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
-            @RequestParam(required = false) String codigoQr,
-            @RequestParam(required = false) Integer tipoFallaId) {
+    public ResponseEntity<byte[]> exportar(@PathVariable String formato, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta, @RequestParam(required = false) String codigoQr, @RequestParam(required = false) Integer tipoFallaId) {
         List<FallaRecurrenteDto> recurrencias;
         try {
             recurrencias = reportes.consultarRecurrencias(desde, hasta, codigoQr, tipoFallaId);

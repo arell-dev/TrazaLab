@@ -39,11 +39,7 @@ public class ReporteFallasServicio {
     }
 
     @Transactional(readOnly = true)
-    public List<FallaRecurrenteDto> consultarRecurrencias(
-            LocalDate desde,
-            LocalDate hasta,
-            String codigoQr,
-            Integer tipoFallaId) {
+    public List<FallaRecurrenteDto> consultarRecurrencias(LocalDate desde, LocalDate hasta, String codigoQr, Integer tipoFallaId) {
         validarRango(desde, hasta);
         StringBuilder sql = new StringBuilder("""
                 SELECT c.computadora_id, c.codigo_qr, c.numero_serie,
@@ -174,12 +170,7 @@ public class ReporteFallasServicio {
                 .replaceAll("[^\\u0020-\\u007E]", "?");
     }
 
-    private float escribirEncabezado(
-            PDPageContentStream contenido,
-            float alto,
-            LocalDate desde,
-            LocalDate hasta,
-            boolean continuacion) throws IOException {
+    private float escribirEncabezado(PDPageContentStream contenido, float alto, LocalDate desde, LocalDate hasta, boolean continuacion) throws IOException {
         float y = alto - 48;
         String titulo = continuacion
                 ? "TrazaLab | Fallas recurrentes (continuacion)"
@@ -231,13 +222,7 @@ public class ReporteFallasServicio {
         return fuente.getStringWidth(texto) * tamano / 1000;
     }
 
-    private void escribir(
-            PDPageContentStream contenido,
-            String texto,
-            float x,
-            float y,
-            PDType1Font fuente,
-            float tamano) throws IOException {
+    private void escribir(PDPageContentStream contenido, String texto, float x, float y, PDType1Font fuente, float tamano) throws IOException {
         contenido.beginText();
         contenido.setFont(fuente, tamano);
         contenido.newLineAtOffset(x, y);

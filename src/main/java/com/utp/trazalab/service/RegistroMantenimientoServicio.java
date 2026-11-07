@@ -32,13 +32,7 @@ public class RegistroMantenimientoServicio {
     private final JdbcTemplate jdbcTemplate;
     private final Clock reloj;
 
-    public RegistroMantenimientoServicio(
-            UsuarioJpaRepositorio usuarios,
-            ComputadoraJpaRepositorio computadoras,
-            ComponenteJpaRepositorio componentes,
-            MantenimientoJpaRepositorio mantenimientos,
-            JdbcTemplate jdbcTemplate,
-            Clock reloj) {
+    public RegistroMantenimientoServicio(UsuarioJpaRepositorio usuarios, ComputadoraJpaRepositorio computadoras, ComponenteJpaRepositorio componentes, MantenimientoJpaRepositorio mantenimientos, JdbcTemplate jdbcTemplate, Clock reloj) {
         this.usuarios = usuarios;
         this.computadoras = computadoras;
         this.componentes = componentes;
@@ -48,17 +42,7 @@ public class RegistroMantenimientoServicio {
     }
 
     @Transactional
-    public MantenimientoResumenDto registrar(
-            Integer usuarioId,
-            String codigoQr,
-            String tipo,
-            Integer fallaId,
-            String descripcion,
-            String accionComponente,
-            String serieComponenteActual,
-            String nombreComponenteNuevo,
-            String tipoComponenteNuevo,
-            String serieComponenteNuevo) {
+    public MantenimientoResumenDto registrar(Integer usuarioId, String codigoQr, String tipo, Integer fallaId, String descripcion, String accionComponente, String serieComponenteActual, String nombreComponenteNuevo, String tipoComponenteNuevo, String serieComponenteNuevo) {
         UsuarioEntidad usuario = usuarios.findById(usuarioId)
                 .filter(persona -> "activo".equalsIgnoreCase(persona.getEstado()))
                 .orElseThrow(() -> new IllegalArgumentException("El usuario de demostración no existe o está inactivo."));
@@ -154,15 +138,7 @@ public class RegistroMantenimientoServicio {
                 resultado.getObject("fecha_registro", LocalDateTime.class)));
     }
 
-    private void registrarAccionComponente(
-            Integer mantenimientoId,
-            Integer computadoraId,
-            String accion,
-            String serieActual,
-            String nombreNuevo,
-            String tipoNuevo,
-            String serieNueva,
-            LocalDateTime ahora) {
+    private void registrarAccionComponente(Integer mantenimientoId, Integer computadoraId, String accion, String serieActual, String nombreNuevo, String tipoNuevo, String serieNueva, LocalDateTime ahora) {
         if (!ACCIONES_COMPONENTE.contains(accion)) {
             throw new IllegalArgumentException("Selecciona una acción válida para el componente.");
         }

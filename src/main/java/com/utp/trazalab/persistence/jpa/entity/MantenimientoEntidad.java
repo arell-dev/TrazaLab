@@ -42,13 +42,7 @@ public class MantenimientoEntidad {
     protected MantenimientoEntidad() {
     }
 
-    public MantenimientoEntidad(
-            ComputadoraEntidad computadora,
-            UsuarioEntidad usuario,
-            Integer fallaId,
-            String tipo,
-            String descripcion,
-            LocalDateTime fecha) {
+    public MantenimientoEntidad(ComputadoraEntidad computadora, UsuarioEntidad usuario, Integer fallaId, String tipo, String descripcion, LocalDateTime fecha) {
         this.computadora = computadora;
         this.usuario = usuario;
         this.fallaId = fallaId;
