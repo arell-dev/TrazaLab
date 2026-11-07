@@ -33,7 +33,7 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | RF-03, componentes | `instalarYReemplazarComponenteMantieneHistorialDeAsignaciones` | Cierra la asignación anterior, crea la nueva y registra las acciones ligadas a mantenimientos. | Ejecutado |
 | RF-03, vínculo correctivo | `mantenimientoCorrectivoExigeFallaDelMismoEquipo` | Rechaza una falla de otro equipo y permite asociar la falla correcta. | Ejecutado |
 | RF-06, agrupación | `clasificaFallasYCalculaRecurrenciaPorEquipoYTipoEnElPeriodo` | Agrupa por computadora y tipo; dos casos generan recurrencia, uno de otro tipo no. | Ejecutado |
-| RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvYPdfDesdeLaWeb` | Descarga CSV y PDF con filtros y confirma que la ruta Excel responde 400. | Ejecutado |
+| RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvExcelYPdfDesdeLaWeb` | Descarga CSV, XLSX (validado con Apache POI) y PDF con los filtros del reporte. | Ejecutado |
 | EXT-01, alcance de exportación | `renderizaLosPanelesWebActivos` | Comprueba que la lista de incidencias no muestra enlaces ni controles de exportación. | Ejecutado |
 | OBS-01, paginación de historial | `recorrePorPaginasUnHistorialDeCincoMilIncidencias` | Recorre 5 000 incidencias en 50 páginas y valida orden estable sin duplicados. | Ejecutado |
 | API REST, errores | `GlobalExceptionHandlerTest` | Verifica respuestas `ProblemDetail` y estados HTTP 400, 404 y 409 sin filtrar detalles internos de PostgreSQL. | Ejecutado |

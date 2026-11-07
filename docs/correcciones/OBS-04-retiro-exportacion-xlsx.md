@@ -1,24 +1,23 @@
-# OBS-04 — Historial y retiro final de exportación XLSX
+# OBS-04 — Exportaciones por panel
 
 **Fecha:** 06/11/2026
 
-**Alcance vigente:** Reportes solo ofrece descargas CSV y PDF. Se retiró XLSX de Reportes y no existe exportación desde Incidencias.
+**Alcance vigente:** Reportes ofrece CSV, Excel (XLSX) y PDF. Incidencias no muestra controles de exportación ni expone rutas de descarga.
 
-## Historial
+## Historial y corrección
 
-- Una corrección inicial retiró XLSX de la aplicación.
-- La PR #9 habilitó temporalmente la salida XLSX en Reportes mediante Apache POI; Incidencias siguió sin descargas.
-- Por decisión posterior, la PR #14 retira el XLSX de Reportes, el exportador, la dependencia Apache POI y la validación de libros generados. CSV y PDF permanecen en Reportes.
+- Una corrección anterior retiró exportaciones de Incidencias.
+- La PR #9 habilitó XLSX en Reportes mediante Apache POI y `SXSSFWorkbook`; CSV y PDF también quedaron disponibles en ese panel.
+- La PR #14 retiró por error XLSX de Reportes al confundirlo con los controles que deben faltar en Incidencias.
+- La PR #15 restablece la exportación XLSX en Reportes y conserva Incidencias sin botones de descarga.
 
-## Corrección vigente
+## Estado actual
 
-- Reportes conserva únicamente `GET /reportes/exportar/csv` y `GET /reportes/exportar/pdf`.
-- El valor `excel` ya no es parte de `FormatoExportacion`; la ruta desconocida se rechaza con HTTP 400.
-- La interfaz no muestra una opción Excel.
-- Se retiró `ExportadorReporteFallasExcel` y Apache POI del `pom.xml`.
-- README, arquitectura, inventario de dependencias, matriz de trazabilidad y pruebas describen el alcance CSV/PDF.
-- Se conservan las matrices académicas fuente fuera del repositorio.
+- `/reportes` ofrece descargas CSV, Excel y PDF. Las tres aplican los filtros del periodo, equipo y tipo seleccionados.
+- `/incidencias` no ofrece controles de descarga ni rutas `/incidencias/exportar/...`.
+- `ExportadorReporteFallasExcel` usa `SXSSFWorkbook` y cierra el libro para liberar sus recursos temporales.
+- La dependencia Apache POI permanece porque el XLSX forma parte del reporte.
 
 ## Verificación
 
-`RegistroIncidenciaJpaTest` comprueba las descargas CSV/PDF con los filtros seleccionados, confirma que `/reportes` no muestra la opción Excel y que `/reportes/exportar/excel` devuelve HTTP 400. El resultado vigente de Maven se registra en [`../testing/README.md`](../testing/README.md).
+`RegistroIncidenciaJpaTest` comprueba que la vista de Incidencias no incluya controles de exportación, que Reportes presente CSV/Excel/PDF y que las tres descargas respeten los filtros. El resultado de `clean test` se registra en [`../testing/README.md`](../testing/README.md).

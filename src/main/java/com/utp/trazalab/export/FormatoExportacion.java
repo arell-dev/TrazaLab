@@ -2,7 +2,8 @@ package com.utp.trazalab.export;
 
 public enum FormatoExportacion {
     PDF("PDF", "pdf"),
-    CSV("CSV", "csv");
+    CSV("CSV", "csv"),
+    EXCEL("Excel", "xlsx");
 
     private final String etiqueta;
     private final String extension;

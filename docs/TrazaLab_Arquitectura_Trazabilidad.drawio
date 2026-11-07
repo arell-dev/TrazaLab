@@ -46,7 +46,7 @@
                 <mxCell id="cross1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Bean Validation&lt;br&gt;formularios web" vertex="1">
                     <mxGeometry height="64" width="180" x="550" y="435" as="geometry" />
                 </mxCell>
-                <mxCell id="cross2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Descargas&lt;br&gt;Incidencias: sin exportaciones&lt;br&gt;Recurrencias: PDF / CSV" vertex="1">
+                <mxCell id="cross2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#34D399;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Descargas&lt;br&gt;Incidencias: sin exportaciones&lt;br&gt;Recurrencias: PDF / CSV / XLSX" vertex="1">
                     <mxGeometry height="64" width="180" x="755" y="435" as="geometry" />
                 </mxCell>
                 <mxCell id="cross3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="LoggingAplicacion&lt;br&gt;SLF4J / Logback" vertex="1">
@@ -114,7 +114,7 @@
                 <mxCell id="test" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2A2105;strokeColor=#F6C453;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="RegistroIncidenciaJpaTest&lt;br&gt;MockMvc + PostgreSQL Testcontainers" vertex="1">
                     <mxGeometry height="80" width="300" x="575" y="415" as="geometry" />
                 </mxCell>
-                <mxCell id="evidence" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B2A18;strokeColor=#4ADE80;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="18 pruebas aprobadas&lt;br&gt;0 fallos · 0 errores&lt;br&gt;PostgreSQL Testcontainers" vertex="1">
+                <mxCell id="evidence" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0B2A18;strokeColor=#4ADE80;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="23 pruebas aprobadas&lt;br&gt;0 fallos · 0 errores&lt;br&gt;PostgreSQL Testcontainers" vertex="1">
                     <mxGeometry height="80" width="300" x="925" y="415" as="geometry" />
                 </mxCell>
             </root>
@@ -143,7 +143,7 @@
                 <mxCell id="gr" edge="1" parent="1" source="green" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#CBD5E1;strokeWidth=2;fontSize=12;labelBackgroundColor=#FFFFFF;" target="refactor" value="">
                     <mxGeometry relative="1" as="geometry" />
                 </mxCell>
-                <mxCell id="suite" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2A2105;strokeColor=#F6C453;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="RegistroIncidenciaJpaTest&lt;br&gt;PostgreSQL temporal · 18 pruebas" vertex="1">
+                <mxCell id="suite" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2A2105;strokeColor=#F6C453;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=14;align=center;verticalAlign=middle;spacing=8;" value="RegistroIncidenciaJpaTest&lt;br&gt;PostgreSQL temporal · 23 pruebas" vertex="1">
                     <mxGeometry height="70" width="490" x="430" y="485" as="geometry" />
                 </mxCell>
             </root>

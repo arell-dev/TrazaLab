@@ -16,7 +16,7 @@ Inventario contrastado con el proyecto local el 06/11/2026. Las bibliotecas sin 
 | Driver JDBC PostgreSQL | Administrado por Spring Boot 4.1.2 | Persistencia JPA sobre PostgreSQL |
 | PostgreSQL | Imagen `postgres:16` | [`compose.yaml`](../compose.yaml); instancia local de desarrollo |
 | Apache PDFBox | 3.0.8 | PDF de fallas recurrentes |
-| Apache Commons CSV | 1.14.1 | CSV de reportes de fallas recurrentes |
+| Apache Commons CSV | 1.14.1 | CSV de fallas recurrentes |
 | Google Guava | No declarada | Pendiente respecto de la rúbrica; no se le atribuye uso |
 | Maven Wrapper | Según [configuración del wrapper](../.mvn/wrapper/maven-wrapper.properties) | Ejecución reproducible de Maven |
 | JUnit y Testcontainers | Administrados por Spring Boot 4.1.2 | 23 pruebas con PostgreSQL temporal en la ejecución del 06/11/2026 |
@@ -35,8 +35,8 @@ Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFina
 
 ## Evidencia observada
 
-- La ejecución más reciente de `./mvnw.cmd -q clean test` ejecutó 23 pruebas con PostgreSQL temporal: 23 aprobadas, 0 fallidas, 0 errores y 0 omitidas (06/11/2026).
-- La suite verificó render y envío de formularios MVC, registro y clasificación, paginación, mantenimiento correctivo y componentes, recurrencias, exportaciones CSV/PDF, retiro de Excel y ausencia de descargas en incidencias.
+- El 06/11/2026, `./mvnw.cmd -q clean test` ejecutó 23 pruebas con PostgreSQL temporal: 23 aprobadas, 0 fallidas, 0 errores y 0 omitidas.
+- La suite verificó render y envío de formularios MVC, registro y clasificación, paginación, mantenimiento correctivo y componentes, recurrencias, exportaciones CSV/XLSX/PDF y ausencia de descargas en incidencias.
 - Las pruebas usan una base PostgreSQL desechable de Testcontainers; no certifican por sí solas un piloto real ni el inventario completo.
 - La verificación local del esquema y la línea base Flyway se documentaron en la PR #3; la base de datos preexistente conserva sus filas.
 
@@ -50,4 +50,4 @@ Las rutas `APF01/`, `APF02/` y `APF03/` son relativas a la carpeta `ProyectoFina
 - [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/)
 - [Testcontainers for Java](https://java.testcontainers.org/)
 
-Las exportaciones CSV y PDF están disponibles únicamente en Reportes. Filtran hasta 30 días por equipo y tipo; el listado de incidencias no ofrece exportaciones.
+Las exportaciones CSV, XLSX y PDF están disponibles únicamente en Reportes. Filtran hasta 30 días por equipo y tipo; el listado de incidencias no ofrece exportaciones.
