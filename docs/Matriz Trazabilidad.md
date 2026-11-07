@@ -20,7 +20,7 @@ Esta matriz documenta la correspondencia verificable entre cada requisito, el c�
 
 ## Evidencia comprobada y límites
 
-La ejecución de `./mvnw.cmd -q clean test` terminó con **17 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** en PostgreSQL temporal mediante Testcontainers (06/11/2026). Incluye exportación XLSX en Reportes y confirma que el listado de incidencias no expone descargas. El detalle por requisito y caso está en [`testing/README.md`](testing/README.md).
+La ejecución de `./mvnw.cmd -q clean test` terminó con **23 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** en PostgreSQL temporal mediante Testcontainers (06/11/2026). Incluye exportación XLSX en Reportes, confirma que el listado de incidencias no expone descargas y prueba las respuestas centralizadas de errores REST. El detalle por requisito y caso está en [`testing/README.md`](testing/README.md).
 
 Las pruebas corren en una base descartable de Testcontainers; no modifican ni acreditan un piloto con datos reales. Los archivos del docente se consultaron como referencia y no se modificaron.
 

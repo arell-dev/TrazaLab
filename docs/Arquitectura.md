@@ -4,7 +4,9 @@ El diagrama editable actualizado está en [`TrazaLab_Arquitectura_Trazabilidad.d
 
 ## Criterio de diseño
 
-La aplicación sigue una estructura MVC con servicios de aplicación y persistencia JPA organizada, tomando como referencia la estructura de Opalina. Los controladores HTTP se mantienen en `controller`; no se agrega una capa separada de «Adaptador Web». Las entidades, conversores y repositorios Spring Data se ubican en `persistence.jpa`.
+La aplicación sigue una estructura MVC con servicios de aplicación y persistencia JPA organizada, tomando como referencia la estructura de Opalina. Los controladores de páginas y formularios están en `controller`; los controladores REST están en `controller/api`. No se agrega una capa separada de «Adaptador Web». Las entidades, conversores y repositorios Spring Data se ubican en `persistence.jpa`.
+
+Los DTO permanecen agrupados en `dto`, con formularios y respuestas planas por caso de uso. `exception` contiene excepciones de recursos inexistentes y conflictos de negocio, además de `GlobalExceptionHandler`, que limita las respuestas RFC 9457 `ProblemDetail` al paquete REST. Los controladores MVC mantienen sus mensajes y validaciones de formulario.
 
 La interfaz actual está construida con Spring MVC, Thymeleaf y Bootstrap 5.3.8. Los fragmentos compartidos están en `templates/fragments`, las pantallas en carpetas por módulo y los recursos del cliente en `static/css` y `static/js`.
 
@@ -35,9 +37,11 @@ La consulta web muestra incidencias por páginas de hasta 25 registros; el servi
 ```text
 com.utp.trazalab
 ├── config                  Reloj y configuración web / seguridad
-├── controller              Controladores web MVC
+├── controller              Controladores de páginas y formularios MVC
+│   └── api                 Controladores REST
 ├── domain.enums            Estados del dominio sin anotaciones JPA
 ├── dto                     Formularios y datos de entrada / salida
+├── exception               Errores de dominio y respuestas de error REST
 ├── export                  Exportador Excel de informes
 ├── logging                 Contrato y registro de eventos de aplicación
 ├── persistence.jpa
@@ -64,8 +68,10 @@ static/
 
 | Módulo | Responsabilidad | Estado actual |
 |---|---|---|
-| `controller` | Recibir solicitudes HTTP, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos y reportes |
+| `controller` | Recibir solicitudes MVC, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos y reportes |
+| `controller.api` | Publicar endpoints REST y entregar respuestas JSON | Comprobación de salud de PostgreSQL (`/api/health`) |
 | `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes y resultados de mantenimiento |
+| `exception` | Clasificar errores REST y construir respuestas `ProblemDetail` | Validación 400, recurso 404 y conflictos 409; acotado a `controller.api` |
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
 | `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |

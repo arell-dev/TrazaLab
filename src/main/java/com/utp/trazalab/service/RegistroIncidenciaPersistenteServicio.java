@@ -1,9 +1,10 @@
 package com.utp.trazalab.service;
 
+import com.utp.trazalab.domain.enums.EstadoIncidencia;
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.UsuarioResumenDto;
-import com.utp.trazalab.domain.enums.EstadoIncidencia;
+import com.utp.trazalab.exception.RecursoNoEncontradoException;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.FallaEntidad;
@@ -59,7 +60,7 @@ public class RegistroIncidenciaPersistenteServicio {
     @Transactional
     public IncidenciaRegistradaDto registrar(long usuarioId, String codigoQr, String descripcion, Integer tipoFallaId) {
         UsuarioEntidad usuario = usuarios.findById(Math.toIntExact(usuarioId))
-                .orElseThrow(() -> new IllegalArgumentException("El usuario indicado no existe."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("El usuario indicado no existe."));
         if (!"activo".equalsIgnoreCase(usuario.getEstado())) {
             throw new IllegalArgumentException("El usuario está inactivo.");
         }
@@ -77,13 +78,15 @@ public class RegistroIncidenciaPersistenteServicio {
         }
 
         ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
-                .orElseThrow(() -> new IllegalArgumentException("No existe una computadora con ese código QR."));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe una computadora con ese código QR."));
         Instant fechaRegistro = Instant.now(reloj);
         IncidenciaEntidad guardada = incidencias.saveAndFlush(new IncidenciaEntidad(
                 computadora, usuario, descripcion.trim(), fechaRegistro, EstadoIncidencia.REGISTRADA));
         if (tipoFallaId != null) {
             TipoFallaEntidad tipoFalla = tiposFalla.findById(tipoFallaId)
-                    .orElseThrow(() -> new IllegalArgumentException("El tipo de falla seleccionado no existe."));
+                    .orElseThrow(() -> new RecursoNoEncontradoException(
+                            "El tipo de falla seleccionado no existe."));
             fallas.save(new FallaEntidad(
                     guardada,
                     tipoFalla,
@@ -144,7 +147,8 @@ public class RegistroIncidenciaPersistenteServicio {
         }
 
         ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
-                .orElseThrow(() -> new IllegalArgumentException("No existe una computadora con ese código QR."));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe una computadora con ese código QR."));
         Pageable ordenado = PageRequest.of(
                 numeroPagina(pageable),
                 limitarTamanoPagina(pageable),

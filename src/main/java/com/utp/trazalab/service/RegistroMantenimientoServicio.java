@@ -1,7 +1,9 @@
 package com.utp.trazalab.service;
 
-import com.utp.trazalab.dto.MantenimientoResumenDto;
 import com.utp.trazalab.dto.FallaResumenDto;
+import com.utp.trazalab.dto.MantenimientoResumenDto;
+import com.utp.trazalab.exception.ConflictoNegocioException;
+import com.utp.trazalab.exception.RecursoNoEncontradoException;
 import com.utp.trazalab.persistence.jpa.entity.ComponenteEntidad;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.MantenimientoEntidad;
@@ -76,7 +78,8 @@ public class RegistroMantenimientoServicio {
         }
 
         ComputadoraEntidad computadora = computadoras.findByCodigoQrIgnoreCase(codigoQr.trim())
-                .orElseThrow(() -> new IllegalArgumentException("No existe una computadora con ese código QR."));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe una computadora con ese código QR."));
         if (tipo.equals("correctivo") && fallaId == null) {
             throw new IllegalArgumentException("Un mantenimiento correctivo debe asociarse a una falla.");
         }
@@ -89,7 +92,8 @@ public class RegistroMantenimientoServicio {
                     fallaId,
                     computadora.getId());
             if (!Boolean.TRUE.equals(fallaDelEquipo)) {
-                throw new IllegalArgumentException("La falla seleccionada no existe o pertenece a otro equipo.");
+                throw new ConflictoNegocioException(
+                        "La falla seleccionada no existe o pertenece a otro equipo.");
             }
         }
         LocalDateTime ahora = LocalDateTime.now(reloj);
@@ -179,7 +183,7 @@ public class RegistroMantenimientoServicio {
 
         ComponenteEntidad nuevo = crearComponenteNuevo(nombreNuevo, tipoNuevo, serieNueva);
         if (estaAsignado(nuevo.getId())) {
-            throw new IllegalArgumentException("El componente ya está instalado en otra computadora.");
+            throw new ConflictoNegocioException("El componente ya está instalado en otra computadora.");
         }
         instalarEnComputadora(computadoraId, nuevo.getId(), ahora);
         enlazarComponente(mantenimientoId, nuevo.getId(), "instalado");
@@ -190,7 +194,7 @@ public class RegistroMantenimientoServicio {
             throw new IllegalArgumentException("Ingresa la serie del componente instalado que se va a intervenir.");
         }
         ComponenteEntidad componente = componentes.findByNumeroSerieIgnoreCase(numeroSerie.trim())
-                .orElseThrow(() -> new IllegalArgumentException("No existe un componente con esa serie."));
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe un componente con esa serie."));
         Boolean asignado = jdbcTemplate.queryForObject(
                 "SELECT EXISTS (SELECT 1 FROM computadora_componente "
                         + "WHERE computadora_id = ? AND componente_id = ? AND fecha_retiro IS NULL)",
@@ -198,7 +202,8 @@ public class RegistroMantenimientoServicio {
                 computadoraId,
                 componente.getId());
         if (!Boolean.TRUE.equals(asignado)) {
-            throw new IllegalArgumentException("El componente no está instalado actualmente en el equipo indicado.");
+            throw new RecursoNoEncontradoException(
+                    "El componente no está instalado actualmente en el equipo indicado.");
         }
         return componente;
     }
@@ -212,7 +217,7 @@ public class RegistroMantenimientoServicio {
             throw new IllegalArgumentException("Los datos del componente superan la longitud permitida.");
         }
         if (componentes.findByNumeroSerieIgnoreCase(serie.trim()).isPresent()) {
-            throw new IllegalArgumentException("Ya existe un componente registrado con ese número de serie.");
+            throw new ConflictoNegocioException("Ya existe un componente registrado con ese número de serie.");
         }
         return componentes.saveAndFlush(new ComponenteEntidad(nombre.trim(), tipo.trim(), serie.trim()));
     }

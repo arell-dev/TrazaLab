@@ -28,20 +28,22 @@ El mantenimiento no cambia el estado operativo de la computadora ni cierra una i
 ```text
 Navegador
   → Spring MVC / Thymeleaf / Bootstrap 5.3.8
-  → controller + DTO de formulario
+  → controller (MVC/API) + DTO de formulario
   → service (reglas, transacción y eventos)
   → persistence.jpa.springdata / entity / converter
   → Hibernate / JPA
   → PostgreSQL
 ```
 
-Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguiendo la estructura usada por el proyecto ilustrativo Opalina. Los controladores MVC están en `controller`; no existe una capa adicional de «Adaptador Web».
+Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguiendo la estructura usada por el proyecto ilustrativo Opalina. Los controladores MVC están en `controller` y los REST en `controller/api`; no existe una capa adicional de «Adaptador Web». Los errores REST se centralizan en `exception`, mientras las pantallas MVC conservan sus validaciones de formulario.
 
 | Paquete o recurso | Responsabilidad |
 |---|---|
-| `controller` | Recibe solicitudes web, valida formularios y renderiza vistas. |
+| `controller` | Recibe solicitudes MVC, valida formularios y renderiza vistas. |
+| `controller.api` | Agrupa los controladores REST, incluida la comprobación de salud de PostgreSQL. |
 | `service` | Aplica reglas de negocio, transacciones y registro de eventos. |
 | `dto` | Separa datos de formulario, identidad demo y datos de respuesta. |
+| `exception` | Distingue recursos inexistentes y conflictos; genera respuestas `ProblemDetail` para la API REST. |
 | `persistence.jpa.entity` | Mapea entidades persistentes al esquema de PostgreSQL. |
 | `persistence.jpa.springdata` | Define las consultas y operaciones JPA. |
 | `persistence.jpa.converter` | Convierte estados entre Java y el esquema SQL. |

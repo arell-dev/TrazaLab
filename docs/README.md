@@ -20,6 +20,7 @@ Esta carpeta separa la arquitectura, la trazabilidad de requisitos, la evidencia
 - [`correcciones/OBS-04-retiro-exportacion-xlsx.md`](correcciones/OBS-04-retiro-exportacion-xlsx.md): Excel habilitado en Reportes y exportaciones retiradas de Incidencias.
 - [`correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md`](correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md): ajuste del diagnóstico al paquete disponible en Spring Boot 4.
 - [`correcciones/OBS-06-diagnosticos-editor-java.md`](correcciones/OBS-06-diagnosticos-editor-java.md): iterador del benchmark, ordenamiento tipado y recarga Maven del editor.
+- [`correcciones/OBS-07-estructura-controller-api-excepciones.md`](correcciones/OBS-07-estructura-controller-api-excepciones.md): separación de controladores REST, excepciones tipadas y manejo de errores.
 
 ## Criterios de estado
 
