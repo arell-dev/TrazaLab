@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "trazalab.seed.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Activa la carga opcional de datos de demostración."
+    },
+    {
+      "name": "trazalab.sede-activa",
+      "type": "java.lang.String",
+      "description": "Sede que limita las ubicaciones visibles en la instalación actual."
+    },
+    {
+      "name": "trazalab.demo.usuario-correo",
+      "type": "java.lang.String",
+      "description": "Correo configurado para el usuario de demostración."
+    },
+    {
+      "name": "trazalab.demo.mantenimiento-correo",
+      "type": "java.lang.String",
+      "description": "Correo configurado para el técnico de demostración."
+    }
+  ]
+}
