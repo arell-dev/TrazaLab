@@ -196,9 +196,17 @@ public class RegistroIncidenciaPersistenteServicio {
 
     private String convertirUbicacion(ComputadoraEntidad computadora) {
         String ubicacion = computadora.getUbicacion().getNombre();
+        String edificio = computadora.getUbicacion().getEdificio();
+        Integer piso = computadora.getUbicacion().getPiso();
         String detalle = computadora.getUbicacion().getDetalle();
+        if (edificio != null && !edificio.isBlank()) {
+            ubicacion += " · " + edificio;
+        }
+        if (piso != null) {
+            ubicacion += ", Piso " + piso;
+        }
         if (detalle != null && !detalle.isBlank()) {
-            ubicacion += " / " + detalle;
+            ubicacion += " · " + detalle;
         }
 
         return ubicacion;
@@ -234,7 +242,7 @@ public class RegistroIncidenciaPersistenteServicio {
 
     private boolean rolPuedeReportar(String nombreRol) {
         String normalizado = nombreRol.toLowerCase(Locale.ROOT);
-        return normalizado.equals("docente") || normalizado.equals("responsable")
+        return normalizado.equals("administrador") || normalizado.equals("docente") || normalizado.equals("responsable")
                 || normalizado.equals("técnico de soporte") || normalizado.equals("técnico de laboratorio");
     }
 

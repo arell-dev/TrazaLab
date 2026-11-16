@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Iniciar sesión')}"></head>
+
+<body class="login-vista">
+  <main class="login-vista__pagina">
+    <section class="login-vista__marca" aria-label="TrazaLab">
+      <img class="login-vista__logo" th:src="@{/images/utp-labtrace.svg}" alt="Universidad Tecnológica del Perú">
+      <div class="login-vista__mensaje">
+        <h1>TrazaLab</h1>
+        <p>Trazabilidad técnica para los laboratorios de la UTP.</p>
+      </div>
+      <p class="login-vista__institucion">Universidad Tecnológica del Perú · Sistemas Software</p>
+    </section>
+
+    <section class="login-vista__acceso" aria-labelledby="titulo-login">
+      <div class="login-vista__contenido">
+        <header class="login-vista__encabezado">
+          <h2 id="titulo-login">Iniciar sesión</h2>
+          <p>Ingresa con el correo y la contraseña de tu cuenta.</p>
+        </header>
+
+        <div class="alert alert-danger" role="alert" th:if="${param.error}">Correo o contraseña incorrectos, o cuenta inactiva.</div>
+        <div class="alert alert-success" role="status" th:if="${param.salio}">Se cerró la sesión.</div>
+
+        <form method="post" th:action="@{/usuarios/login}">
+          <div class="login-vista__campo">
+            <label class="form-label" for="username">Correo</label>
+            <input class="form-control" id="username" name="username" type="email" autocomplete="username" required>
+          </div>
+          <div class="login-vista__campo">
+            <label class="form-label" for="password">Contraseña</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Iniciar sesión</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>

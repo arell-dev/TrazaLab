@@ -74,6 +74,7 @@ class GlobalExceptionHandlerTest {
 
     private static class FormularioApi {
         public void registrar(String codigoQr) {
+            throw new UnsupportedOperationException();
         }
     }
 }

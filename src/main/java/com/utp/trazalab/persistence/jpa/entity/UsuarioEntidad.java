@@ -34,6 +34,9 @@ public class UsuarioEntidad {
     @Column(nullable = false, length = 15)
     private String estado;
 
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
+
     protected UsuarioEntidad() {
     }
 
@@ -43,6 +46,11 @@ public class UsuarioEntidad {
         this.apellidos = apellidos;
         this.correo = correo;
         this.estado = estado;
+    }
+
+    public UsuarioEntidad(RolEntidad rol, String nombres, String apellidos, String correo, String estado, String passwordHash) {
+        this(rol, nombres, apellidos, correo, estado);
+        this.passwordHash = passwordHash;
     }
 
     public Integer getId() {
@@ -67,5 +75,17 @@ public class UsuarioEntidad {
 
     public String getEstado() {
         return estado;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }
