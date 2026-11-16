@@ -3,10 +3,12 @@ package com.utp.trazalab.app;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.RolEntidad;
+import com.utp.trazalab.persistence.jpa.entity.SedeEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.RolJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.SedeJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import org.springframework.boot.CommandLineRunner;
@@ -20,14 +22,16 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "trazalab.seed.enabled", havingValue = "true")
 public class DatosInicialesPersistencia implements CommandLineRunner {
     private final RolJpaRepositorio roles;
+    private final SedeJpaRepositorio sedes;
     private final UsuarioJpaRepositorio usuarios;
     private final UbicacionJpaRepositorio ubicaciones;
     private final ComputadoraJpaRepositorio computadoras;
     private final String correoUsuarioDemostracion;
     private final String correoTecnicoDemostracion;
 
-    public DatosInicialesPersistencia(RolJpaRepositorio roles, UsuarioJpaRepositorio usuarios, UbicacionJpaRepositorio ubicaciones, ComputadoraJpaRepositorio computadoras, @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion, @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
+    public DatosInicialesPersistencia(RolJpaRepositorio roles, SedeJpaRepositorio sedes, UsuarioJpaRepositorio usuarios, UbicacionJpaRepositorio ubicaciones, ComputadoraJpaRepositorio computadoras, @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion, @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
         this.roles = roles;
+        this.sedes = sedes;
         this.usuarios = usuarios;
         this.ubicaciones = ubicaciones;
         this.computadoras = computadoras;
@@ -56,8 +60,10 @@ public class DatosInicialesPersistencia implements CommandLineRunner {
                         correoTecnicoDemostracion,
                         "activo")));
 
-        UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCase("LAB-01")
-                .orElseGet(() -> ubicaciones.save(new UbicacionEntidad("LAB-01", "Laboratorio de demostración")));
+        SedeEntidad sedePiura = sedes.findByNombreIgnoreCase("UTP Sede Piura")
+                .orElseThrow(() -> new IllegalStateException("Falta la sede UTP Sede Piura."));
+        UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("LAB-01", sedePiura.getNombre())
+                .orElseGet(() -> ubicaciones.save(new UbicacionEntidad("LAB-01", "Cómputo General", sedePiura, "Torre A", 3, "LABORATORIO")));
         computadoras.findByCodigoQrIgnoreCase("PC-001")
                 .orElseGet(() -> computadoras.save(new ComputadoraEntidad("PC-001", "TRAZALAB-DEMO-001", "HP", "EliteDesk", ubicacion, EstadoComputadora.OPERATIVA)));
     }
