@@ -2,26 +2,55 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
 <body>
-    <aside th:fragment="sidebar(activo)" class="app-sidebar">
-        <a class="app-brand" th:href="@{/incidencias}">
+    <aside id="navigationDrawer" th:fragment="sidebar(activo)" class="offcanvas-lg offcanvas-start app-sidebar"
+        tabindex="-1" aria-labelledby="titulo-navegacion">
+        <div class="offcanvas-header app-sidebar__mobile-header d-lg-none">
+            <div class="app-sidebar__mobile-brand">
+                <span class="app-sidebar__mobile-mark" aria-hidden="true">U</span>
+                <span>
+                    <strong id="titulo-navegacion">TrazaLab</strong>
+                    <span class="app-sidebar__mobile-caption">Gestión de laboratorios</span>
+                </span>
+            </div>
+            <button class="app-sidebar__close" type="button" data-bs-dismiss="offcanvas" data-bs-target="#navigationDrawer"
+                aria-label="Cerrar menú">
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            </button>
+        </div>
+
+        <a class="app-brand d-none d-lg-flex" th:href="@{/disponibilidad}">
             <img th:src="@{/images/utp-labtrace.svg}" alt="UTP Lab Traceability">
         </a>
 
         <nav class="nav flex-column app-navigation" aria-label="Navegación principal">
+            <a class="nav-link" th:classappend="${activo == 'disponibilidad'} ? 'active'"
+                th:href="@{/disponibilidad}" th:aria-current="${activo == 'disponibilidad'} ? 'page' : null">
+                <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+                Disponibilidad
+            </a>
+            <a class="nav-link" th:if="${puedeGestionarEquipos}" th:classappend="${activo == 'equipos'} ? 'active'"
+                th:href="@{/equipos/escaneo}" th:aria-current="${activo == 'equipos'} ? 'page' : null">
+                <span class="material-symbols-outlined" aria-hidden="true">precision_manufacturing</span>
+                Equipos
+            </a>
             <a class="nav-link" th:classappend="${activo == 'incidencias'} ? 'active'"
                 th:href="@{/incidencias}" th:aria-current="${activo == 'incidencias'} ? 'page' : null">
                 <span class="material-symbols-outlined" aria-hidden="true">report_problem</span>
                 Incidencias
             </a>
-            <a class="nav-link" th:classappend="${activo == 'mantenimientos'} ? 'active'"
+            <a class="nav-link" th:if="${puedeRegistrarMantenimiento}" th:classappend="${activo == 'mantenimientos'} ? 'active'"
                 th:href="@{/mantenimientos}" th:aria-current="${activo == 'mantenimientos'} ? 'page' : null">
                 <span class="material-symbols-outlined" aria-hidden="true">build_circle</span>
                 Mantenimientos
             </a>
-            <a class="nav-link" th:classappend="${activo == 'reportes'} ? 'active'"
+            <a class="nav-link" th:if="${puedeConsultarReportes}" th:classappend="${activo == 'reportes'} ? 'active'"
                 th:href="@{/reportes}" th:aria-current="${activo == 'reportes'} ? 'page' : null">
                 <span class="material-symbols-outlined" aria-hidden="true">monitoring</span>
                 Reportes
+            </a>
+            <a class="nav-link" th:if="${puedeGestionarUsuarios}" th:href="@{/usuarios}">
+                <span class="material-symbols-outlined" aria-hidden="true">manage_accounts</span>
+                Usuarios
             </a>
         </nav>
     </aside>

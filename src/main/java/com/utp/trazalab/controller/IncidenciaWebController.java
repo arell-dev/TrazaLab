@@ -3,10 +3,8 @@ package com.utp.trazalab.controller;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.RegistroIncidenciaDto;
 import com.utp.trazalab.dto.RegistroIncidenciaFormulario;
-import com.utp.trazalab.dto.UsuarioResumenDto;
 import com.utp.trazalab.service.IncidenciaAplicacionServicio;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
@@ -25,11 +23,8 @@ public class IncidenciaWebController {
     private static final int TAMANO_PAGINA = 25;
 
     private final IncidenciaAplicacionServicio servicio;
-    private final String correoUsuarioDemostracion;
-
-    public IncidenciaWebController(IncidenciaAplicacionServicio servicio, @Value("${trazalab.demo.usuario-correo}") String correoUsuarioDemostracion) {
+    public IncidenciaWebController(IncidenciaAplicacionServicio servicio) {
         this.servicio = servicio;
-        this.correoUsuarioDemostracion = correoUsuarioDemostracion;
     }
 
     @GetMapping
@@ -60,9 +55,9 @@ public class IncidenciaWebController {
         }
 
         try {
-            UsuarioResumenDto usuarioDemostracion = consultarUsuarioDemostracion();
+            var usuarioAutenticado = servicio.consultarUsuarioDemostracion(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
             RegistroIncidenciaDto solicitud = new RegistroIncidenciaDto();
-            solicitud.setUsuarioId(usuarioDemostracion.id());
+            solicitud.setUsuarioId(usuarioAutenticado.id());
             solicitud.setCodigoQr(formulario.getCodigoQr());
             solicitud.setDescripcion(formulario.getDescripcion());
             servicio.registrar(solicitud, formulario.getTipoFallaId());
@@ -77,9 +72,5 @@ public class IncidenciaWebController {
             model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
             return "incidencias/nueva";
         }
-    }
-
-    private UsuarioResumenDto consultarUsuarioDemostracion() {
-        return servicio.consultarUsuarioDemostracion(correoUsuarioDemostracion);
     }
 }

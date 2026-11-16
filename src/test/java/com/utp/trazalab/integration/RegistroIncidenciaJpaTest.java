@@ -1,9 +1,12 @@
 package com.utp.trazalab.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -14,6 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.utp.trazalab.dto.HistorialComputadoraDto;
 import com.utp.trazalab.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.dto.FallaRecurrenteDto;
+import com.utp.trazalab.dto.EventoHistorialTecnicoDto;
+import com.utp.trazalab.dto.UsuarioAltaFormulario;
 import java.io.ByteArrayInputStream;
 import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
@@ -22,6 +27,7 @@ import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.ComponenteEntidad;
 import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.RolEntidad;
+import com.utp.trazalab.persistence.jpa.entity.SedeEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
@@ -29,11 +35,14 @@ import com.utp.trazalab.persistence.jpa.springdata.ComponenteJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.IncidenciaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.TipoFallaJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.RolJpaRepositorio;
+import com.utp.trazalab.persistence.jpa.springdata.SedeJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UsuarioJpaRepositorio;
 import com.utp.trazalab.service.RegistroIncidenciaPersistenteServicio;
 import com.utp.trazalab.service.RegistroMantenimientoServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
+import com.utp.trazalab.service.AdministracionUsuariosServicio;
+import com.utp.trazalab.service.HistorialTecnicoConsultaServicio;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
@@ -63,6 +72,10 @@ import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
@@ -71,11 +84,14 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(properties = {
         "trazalab.seed.enabled=false",
+        "trazalab.admin.email=admin-test@trazalab.local",
+        "trazalab.admin.password=clave-segura-de-pruebas",
         "spring.jpa.hibernate.ddl-auto=validate",
         "logging.file.name="
 })
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
+@WithMockUser(username = "ana.torres.demo@trazalab.local", authorities = "ROLE_Responsable")
 @Transactional
 class RegistroIncidenciaJpaTest {
     @Container
@@ -90,6 +106,7 @@ class RegistroIncidenciaJpaTest {
 
     @Autowired private RegistroIncidenciaPersistenteServicio servicio;
     @Autowired private RolJpaRepositorio roles;
+    @Autowired private SedeJpaRepositorio sedes;
     @Autowired private UsuarioJpaRepositorio usuarios;
     @Autowired private UbicacionJpaRepositorio ubicaciones;
     @Autowired private ComputadoraJpaRepositorio computadoras;
@@ -98,12 +115,16 @@ class RegistroIncidenciaJpaTest {
     @Autowired private TipoFallaJpaRepositorio tiposFalla;
     @Autowired private RegistroMantenimientoServicio servicioMantenimiento;
     @Autowired private ReporteFallasServicio servicioReportes;
+    @Autowired private AdministracionUsuariosServicio servicioUsuarios;
+    @Autowired private HistorialTecnicoConsultaServicio servicioHistorialTecnico;
+    @Autowired private PasswordEncoder codificadorContrasenas;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MockMvc mockMvc;
 
     private UsuarioEntidad reportante;
     private UsuarioEntidad tecnico;
     private ComputadoraEntidad computadora;
+    private SedeEntidad sedePiura;
 
     @BeforeEach
     void prepararDatos() {
@@ -115,8 +136,194 @@ class RegistroIncidenciaJpaTest {
                 .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Técnico de Soporte", "Pruebas de mantenimiento.")));
         tecnico = usuarios.saveAndFlush(new UsuarioEntidad(
                 rolTecnico, "Luis", "Pérez", "tecnico.trazalab.demo@trazalab.local", "activo"));
-        UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración"));
+        sedePiura = sedes.findByNombreIgnoreCase("UTP Sede Piura").orElseThrow();
+        UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración", sedePiura, "Torre A", 3, "LABORATORIO"));
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));
+    }
+
+    @Test
+    @WithMockUser(username = "docente@trazalab.local", authorities = "ROLE_Docente")
+    void docenteNoPuedeConsultarReportesNiHistorialTecnico() throws Exception {
+        mockMvc.perform(get("/reportes"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/computadoras/historial")
+                        .param("codigoQr", "QR-TEST-001"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void usuarioAnonimoDebeIniciarSesionParaConsultarIncidencias() throws Exception {
+        mockMvc.perform(get("/incidencias"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios/login"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void loginDeUsuariosMuestraLaMarcaInstitucional() throws Exception {
+        mockMvc.perform(get("/usuarios/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/images/utp-labtrace.svg")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("action=\"/usuarios/login\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("rel=\"icon\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Trazabilidad técnica para los laboratorios de la UTP.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Iniciar sesión</button>")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("autofocus"))));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void muestraElErrorDeAutenticacionEnElFormularioDeAcceso() throws Exception {
+        mockMvc.perform(get("/usuarios/login").param("error", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Correo o contraseña incorrectos, o cuenta inactiva.")));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void loginCorrectoRedirigeAlPanelDeDisponibilidad() throws Exception {
+        mockMvc.perform(post("/usuarios/login")
+                        .with(csrf())
+                        .param("username", "admin-test@trazalab.local")
+                        .param("password", "clave-segura-de-pruebas"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/disponibilidad"));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void rechazaContrasenaIncorrectaYCuentaInactiva() throws Exception {
+        RolEntidad rolDocente = roles.findByNombreIgnoreCase("Docente").orElseThrow();
+        usuarios.saveAndFlush(new UsuarioEntidad(
+                rolDocente,
+                "Cuenta",
+                "Inactiva",
+                "cuenta.inactiva@trazalab.local",
+                "inactivo",
+                codificadorContrasenas.encode("contrasena-valida-123")));
+
+        mockMvc.perform(post("/usuarios/login")
+                        .with(csrf())
+                        .param("username", "admin-test@trazalab.local")
+                        .param("password", "incorrecta"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios/login?error"));
+
+        mockMvc.perform(post("/usuarios/login")
+                        .with(csrf())
+                        .param("username", "cuenta.inactiva@trazalab.local")
+                        .param("password", "contrasena-valida-123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios/login?error"));
+    }
+
+    @Test
+    void limitaLaAdministracionDeUsuariosAlRolAdministradorYExigeCsrf() throws Exception {
+        mockMvc.perform(get("/usuarios")
+                        .with(user("tecnico@trazalab.local")
+                                .authorities(new SimpleGrantedAuthority("ROLE_Técnico de Soporte"))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/usuarios")
+                        .with(user("admin-test@trazalab.local")
+                                .authorities(new SimpleGrantedAuthority("ROLE_Administrador"))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Administración de usuarios")));
+
+        mockMvc.perform(post("/usuarios")
+                        .with(user("admin-test@trazalab.local")
+                                .authorities(new SimpleGrantedAuthority("ROLE_Administrador")))
+                        .param("nombres", "Nueva")
+                        .param("apellidos", "Cuenta")
+                        .param("correo", "nueva.cuenta@trazalab.local")
+                        .param("contrasena", "clave-de-prueba-123")
+                        .param("rolId", roles.findByNombreIgnoreCase("Docente").orElseThrow().getId().toString()))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/usuarios")
+                        .with(user("tecnico@trazalab.local")
+                                .authorities(new SimpleGrantedAuthority("ROLE_Técnico de Soporte")))
+                        .with(csrf())
+                        .param("nombres", "Nueva")
+                        .param("apellidos", "Cuenta")
+                        .param("correo", "nueva.cuenta@trazalab.local")
+                        .param("contrasena", "clave-de-prueba-123")
+                        .param("rolId", roles.findByNombreIgnoreCase("Docente").orElseThrow().getId().toString()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void formularioAdministradorCreaUnaCuentaConCredencialCifrada() throws Exception {
+        Integer rolDocenteId = roles.findByNombreIgnoreCase("Docente").orElseThrow().getId();
+
+        mockMvc.perform(post("/usuarios")
+                        .with(user("admin-test@trazalab.local")
+                                .authorities(new SimpleGrantedAuthority("ROLE_Administrador")))
+                        .with(csrf())
+                        .param("nombres", "Elena")
+                        .param("apellidos", "Paredes")
+                        .param("correo", "elena.paredes@trazalab.local")
+                        .param("contrasena", "clave-de-prueba-123")
+                        .param("rolId", rolDocenteId.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios"));
+
+        UsuarioEntidad creada = usuarios.findByCorreoIgnoreCase("elena.paredes@trazalab.local").orElseThrow();
+        assertEquals("activo", creada.getEstado());
+        assertTrue(codificadorContrasenas.matches("clave-de-prueba-123", creada.getPasswordHash()));
+    }
+
+    @Test
+    void creaCuentasConContrasenaBcryptYRechazaCorreoDuplicado() {
+        RolEntidad rolDocente = roles.findByNombreIgnoreCase("Docente").orElseThrow();
+        UsuarioAltaFormulario formulario = new UsuarioAltaFormulario();
+        formulario.setNombres("  Carla ");
+        formulario.setApellidos(" Ríos ");
+        formulario.setCorreo(" Carla.Rios@trazalab.local ");
+        formulario.setContrasena("clave-de-prueba-123");
+        formulario.setRolId(rolDocente.getId());
+
+        servicioUsuarios.crear(formulario);
+
+        UsuarioEntidad creada = usuarios.findByCorreoIgnoreCase("carla.rios@trazalab.local").orElseThrow();
+        assertEquals("Carla", creada.getNombres());
+        assertEquals("Ríos", creada.getApellidos());
+        assertEquals("activo", creada.getEstado());
+        assertNotEquals("clave-de-prueba-123", creada.getPasswordHash());
+        assertTrue(codificadorContrasenas.matches("clave-de-prueba-123", creada.getPasswordHash()));
+
+        formulario.setCorreo("CARLA.RIOS@TRAZALAB.LOCAL");
+        assertThrows(IllegalArgumentException.class, () -> servicioUsuarios.crear(formulario));
+    }
+
+    @Test
+    void evitaContrasenasQueSuperanElLimiteUtf8YDesactivarAlUltimoAdministrador() {
+        RolEntidad rolDocente = roles.findByNombreIgnoreCase("Docente").orElseThrow();
+        UsuarioAltaFormulario formulario = new UsuarioAltaFormulario();
+        formulario.setNombres("Cuenta");
+        formulario.setApellidos("Con límite");
+        formulario.setCorreo("limite.contrasena@trazalab.local");
+        formulario.setContrasena("é".repeat(37));
+        formulario.setRolId(rolDocente.getId());
+        assertThrows(IllegalArgumentException.class, () -> servicioUsuarios.crear(formulario));
+
+        UsuarioEntidad administrador = usuarios.findByCorreoIgnoreCase("admin-test@trazalab.local").orElseThrow();
+        assertThrows(IllegalArgumentException.class, () -> servicioUsuarios.cambiarEstado(
+                administrador.getId(), "otro-administrador@trazalab.local"));
+        assertThrows(IllegalArgumentException.class, () -> servicioUsuarios.cambiarEstado(
+                administrador.getId(), administrador.getCorreo()));
+        assertFalse("inactivo".equalsIgnoreCase(administrador.getEstado()));
+    }
+
+    @Test
+    void cerrarSesionRegresaAlFormularioDeAcceso() throws Exception {
+        mockMvc.perform(post("/logout").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios/login?salio"));
     }
 
     @Test
@@ -144,7 +351,7 @@ class RegistroIncidenciaJpaTest {
         mockMvc.perform(get("/incidencias/nueva"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar incidencia")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Confirmación")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Revisa antes de guardar")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Incidencias recientes")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Verificar equipo")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
@@ -159,6 +366,7 @@ class RegistroIncidenciaJpaTest {
 
         mockMvc.perform(get("/incidencias"))
                 .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Cerrar sesión")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Historial de reportes")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("La pantalla no enciende.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/colores.css")))
@@ -170,7 +378,8 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("PDF"))));
 
-        mockMvc.perform(get("/mantenimientos"))
+        mockMvc.perform(get("/mantenimientos")
+                        .with(user(tecnico.getCorreo()).authorities(new SimpleGrantedAuthority("ROLE_Técnico de Soporte"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar intervención")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Intervenciones recientes")));
@@ -208,7 +417,7 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(jsonPath("$.codigoQr").value("QR-TEST-001"))
                 .andExpect(jsonPath("$.numeroSerie").value("SERIE-TEST-001"))
                 .andExpect(jsonPath("$.marca").value("HP"))
-                .andExpect(jsonPath("$.ubicacion").value("LAB-TEST / Prueba de integración"))
+                .andExpect(jsonPath("$.ubicacion").value("LAB-TEST · Torre A, Piso 3 · Prueba de integración"))
                 .andExpect(jsonPath("$.incidencias.length()").value(5))
                 .andExpect(jsonPath("$.incidencias[0].descripcion")
                         .value("Incidencia de prueba 6."))
@@ -223,6 +432,100 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Recurso no encontrado"))
                 .andExpect(jsonPath("$.detail").value("No existe una computadora con ese código QR."));
+    }
+
+    @Test
+    void buscaElEquipoPorQrYConservaLaEntradaManualDelEscaner() throws Exception {
+        mockMvc.perform(get("/equipos/escaneo"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-lector-iniciar")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-lector-entrada")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/equipos/buscar")));
+
+        mockMvc.perform(get("/equipos/buscar").param("codigoQr", " "))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/equipos/escaneo"));
+
+        mockMvc.perform(get("/equipos/buscar").param("codigoQr", computadora.getCodigoQr()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/equipos/QR-TEST-001"));
+    }
+
+    @Test
+    void fichaDeEquipoMuestraElHistorialTecnicoYLaUbicacion() throws Exception {
+        servicio.registrar(reportante.getId(), computadora.getCodigoQr(), "La fuente de poder no responde.");
+
+        mockMvc.perform(get("/equipos/{codigoQr}", computadora.getCodigoQr()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Historial técnico")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("La fuente de poder no responde.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("UTP Sede Piura")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Registrar mantenimiento")));
+    }
+
+    @Test
+    void panelDeDisponibilidadMuestraElEquipoDeLaUbicacionSeleccionada() throws Exception {
+        mockMvc.perform(get("/disponibilidad")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Disponibilidad de equipos")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("LAB-TEST")));
+    }
+
+    @Test
+    void consolidaIncidenciaFallaMantenimientoYComponenteConPaginacion() {
+        Integer tipoFallaId = tiposFalla.findAllByOrderByCategoria_NombreAscNombreAsc().getFirst().getId();
+        IncidenciaRegistradaDto incidencia = servicio.registrar(
+                reportante.getId(), computadora.getCodigoQr(), "Equipo reinicia sin aviso.", tipoFallaId);
+        Integer fallaId = jdbcTemplate.queryForObject(
+                "SELECT falla_id FROM falla WHERE incidencia_id = ?", Integer.class, incidencia.id());
+
+        servicioMantenimiento.registrar(
+                tecnico.getId(),
+                computadora.getCodigoQr(),
+                "correctivo",
+                fallaId,
+                "Se reemplazó el módulo de memoria.",
+                "instalado",
+                null,
+                "Memoria 16 GB",
+                "RAM",
+                "RAM-HIST-001");
+
+        Page<EventoHistorialTecnicoDto> primeraPagina = servicioHistorialTecnico.consultar(
+                computadora.getCodigoQr(), 0, 2);
+        Page<EventoHistorialTecnicoDto> segundaPagina = servicioHistorialTecnico.consultar(
+                computadora.getCodigoQr(), 1, 2);
+        List<EventoHistorialTecnicoDto> eventos = Stream.concat(
+                        primeraPagina.getContent().stream(), segundaPagina.getContent().stream())
+                .toList();
+        HashSet<String> clavesEvento = new HashSet<>();
+        HashSet<String> tiposEvento = new HashSet<>();
+        for (EventoHistorialTecnicoDto evento : eventos) {
+            clavesEvento.add(evento.tipo() + ":" + evento.id());
+            tiposEvento.add(evento.tipo());
+        }
+
+        assertEquals(4, primeraPagina.getTotalElements());
+        assertEquals(4, segundaPagina.getTotalElements());
+        assertEquals(2, primeraPagina.getContent().size());
+        assertEquals(2, segundaPagina.getContent().size());
+        assertEquals(4, clavesEvento.size());
+        assertTrue(tiposEvento.containsAll(List.of("INCIDENCIA", "FALLA", "MANTENIMIENTO", "COMPONENTE")));
+        assertTrue(eventos.stream().anyMatch(evento -> evento.descripcion().contains("RAM-HIST-001")));
+    }
+
+    @Test
+    void limitaElTamanoDePaginaDelHistorialTecnico() {
+        Page<EventoHistorialTecnicoDto> paginaNegativa = servicioHistorialTecnico.consultar(
+                computadora.getCodigoQr(), -2, 500);
+        Page<EventoHistorialTecnicoDto> paginaMinima = servicioHistorialTecnico.consultar(
+                computadora.getCodigoQr(), 0, 0);
+
+        assertEquals(0, paginaNegativa.getNumber());
+        assertEquals(50, paginaNegativa.getSize());
+        assertEquals(1, paginaMinima.getSize());
     }
 
     @Test
@@ -286,7 +589,8 @@ class RegistroIncidenciaJpaTest {
         assertEquals("registrada", jdbcTemplate.queryForObject(
                 "SELECT estado FROM incidencia WHERE incidencia_id = ?", String.class, incidencia.id()));
         assertEquals(1, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mantenimiento", Integer.class));
-        mockMvc.perform(get("/mantenimientos"))
+        mockMvc.perform(get("/mantenimientos")
+                        .with(user(tecnico.getCorreo()).authorities(new SimpleGrantedAuthority("ROLE_Técnico de Soporte"))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Se revisó el cable de video.")));
     }
@@ -327,7 +631,7 @@ class RegistroIncidenciaJpaTest {
         Integer fallaId = jdbcTemplate.queryForObject(
                 "SELECT falla_id FROM falla WHERE incidencia_id = ?", Integer.class, incidencia.id());
 
-        UbicacionEntidad otraUbicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-OTRO", "Equipo separado"));
+        UbicacionEntidad otraUbicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-OTRO", "Equipo separado", sedePiura, "Torre A", 4, "LABORATORIO"));
         ComputadoraEntidad otroEquipo = computadoras.saveAndFlush(new ComputadoraEntidad(
                 "QR-TEST-002", "SERIE-TEST-002", "Dell", "OptiPlex", otraUbicacion, EstadoComputadora.OPERATIVA));
 

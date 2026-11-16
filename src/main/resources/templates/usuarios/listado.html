@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Administración de usuarios')}"></head>
+<body>
+  <div class="app-layout">
+    <div th:replace="~{fragments/sidebar :: sidebar('usuarios')}"></div>
+    <div class="app-main">
+      <div th:replace="~{fragments/header :: header}"></div>
+      <main class="container-fluid app-content">
+        <div class="page-heading"><h1>Administración de usuarios</h1></div>
+        <div class="alert alert-success" th:if="${mensajeExito}" th:text="${mensajeExito}"></div>
+        <div class="alert alert-danger" th:if="${mensajeError}" th:text="${mensajeError}"></div>
+        <section class="card app-card mb-4">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Crear cuenta</h2>
+            <form method="post" th:action="@{/usuarios}" th:object="${usuarioAlta}" class="row g-3">
+              <div class="col-md-6"><label class="form-label" for="nombres">Nombres</label><input class="form-control" id="nombres" th:field="*{nombres}" required><div class="invalid-feedback d-block" th:errors="*{nombres}"></div></div>
+              <div class="col-md-6"><label class="form-label" for="apellidos">Apellidos</label><input class="form-control" id="apellidos" th:field="*{apellidos}" required><div class="invalid-feedback d-block" th:errors="*{apellidos}"></div></div>
+              <div class="col-md-6"><label class="form-label" for="correo">Correo</label><input class="form-control" id="correo" type="email" th:field="*{correo}" required><div class="invalid-feedback d-block" th:errors="*{correo}"></div></div>
+              <div class="col-md-6"><label class="form-label" for="contrasena">Contraseña (12 caracteres mínimo)</label><input class="form-control" id="contrasena" type="password" th:field="*{contrasena}" minlength="12" required><div class="invalid-feedback d-block" th:errors="*{contrasena}"></div></div>
+              <div class="col-md-6"><label class="form-label" for="rolId">Rol</label><select class="form-select" id="rolId" th:field="*{rolId}" required><option value="">Selecciona un rol</option><option th:each="rol : ${roles}" th:value="${rol.id}" th:text="${rol.nombre}"></option></select><div class="invalid-feedback d-block" th:errors="*{rolId}"></div></div>
+              <div class="col-12"><div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}" th:each="error : ${#fields.globalErrors()}" th:text="${error}"></div><button class="btn btn-primary" type="submit">Crear cuenta</button></div>
+            </form>
+          </div>
+        </section>
+        <section class="card app-card">
+          <div class="card-body">
+            <h2 class="h5 mb-3">Cuentas registradas</h2>
+            <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody><tr th:each="usuario : ${usuarios}"><td th:text="|${usuario.nombres} ${usuario.apellidos}|"></td><td th:text="${usuario.correo}"></td><td th:text="${usuario.rol.nombre}"></td><td th:text="${usuario.estado}"></td><td><form method="post" th:action="@{/usuarios/{id}/estado(id=${usuario.id})}"><button class="btn btn-sm btn-outline-secondary" type="submit" th:text="${usuario.estado == 'activo'} ? 'Desactivar' : 'Activar'"></button></form></td></tr></tbody>
+            </table></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+</html>
