@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Ficha de equipo')}"></head>
+
+<body>
+  <div class="app-layout">
+    <div th:replace="~{fragments/sidebar :: sidebar('equipos')}"></div>
+    <div class="app-main">
+      <div th:replace="~{fragments/header :: header}"></div>
+      <main class="container-fluid app-content">
+        <nav class="equipo-ficha__breadcrumb mb-3" aria-label="Ruta de navegación">
+          <a class="equipo-ficha__breadcrumb-link link-secondary text-decoration-none" th:href="@{/disponibilidad}">
+            <svg class="equipment-row__arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M19 12H5m6 6-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            Disponibilidad
+          </a>
+          <span class="text-body-tertiary" th:text="|/ ${computadora.ubicacion.nombre} / ${computadora.codigoQr}|">/ LAB-01 / PC-001</span>
+        </nav>
+
+        <section class="equipo-vista__hero mb-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <h1 class="display-6 fw-bold mb-0" th:text="${computadora.codigoQr}">PC-001</h1>
+                <th:block th:switch="${computadora.estado.name()}">
+                  <span class="status-badge status-badge--operativo" th:case="'OPERATIVA'">Operativa</span>
+                  <span class="status-badge status-badge--mantenimiento" th:case="'EN_MANTENIMIENTO'">En mantenimiento</span>
+                  <span class="status-badge status-badge--critico" th:case="'FUERA_DE_SERVICIO'">Fuera de servicio</span>
+                </th:block>
+              </div>
+              <p class="text-body-secondary mb-0" th:text="|${etiquetaUbicacion} · ${computadora.ubicacion.sede.nombre}|">LAB-01 · Torre A, Piso 3 · UTP Sede Piura</p>
+            </div>
+            <a class="btn btn-primary" th:href="@{/mantenimientos(codigoQr=${computadora.codigoQr})}"><span class="material-symbols-outlined align-middle me-1" aria-hidden="true">build</span>Registrar mantenimiento</a>
+          </div>
+        </section>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <section class="equipo-vista__dato">
+              <span class="material-symbols-outlined" aria-hidden="true">desktop_windows</span>
+              <div><small>Fabricante y modelo</small><strong th:text="|${computadora.marca} ${computadora.modelo}|">HP EliteDesk</strong></div>
+            </section>
+          </div>
+          <div class="col-md-4">
+            <section class="equipo-vista__dato">
+              <span class="material-symbols-outlined" aria-hidden="true">barcode_scanner</span>
+              <div><small>Número de serie</small><strong th:text="${computadora.numeroSerie}">TRAZALAB-DEMO-001</strong></div>
+            </section>
+          </div>
+          <div class="col-md-4">
+            <section class="equipo-vista__dato">
+              <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+              <div><small>Ubicación física</small><strong th:text="${etiquetaUbicacion}">LAB-01 · Torre A, Piso 3</strong></div>
+            </section>
+          </div>
+        </div>
+
+        <section class="equipo-vista__seccion" aria-labelledby="titulo-resumen-equipo">
+          <h2 class="h4 mb-4" id="titulo-resumen-equipo">Información del equipo</h2>
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="equipo-vista__subpanel">
+                <h3 class="h6 mb-3"><span class="material-symbols-outlined align-middle text-danger me-2" aria-hidden="true">devices</span>Identificación</h3>
+                <dl class="detail-list">
+                  <dt>Código QR</dt><dd th:text="${computadora.codigoQr}">PC-001</dd>
+                  <dt>Número de serie</dt><dd th:text="${computadora.numeroSerie}">TRAZALAB-DEMO-001</dd>
+                  <dt>Fabricante</dt><dd th:text="${computadora.marca}">HP</dd>
+                  <dt>Modelo</dt><dd th:text="${computadora.modelo}">EliteDesk</dd>
+                  <dt>Estado</dt><dd th:text="${computadora.estado.etiqueta()}">Operativa</dd>
+                </dl>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="equipo-vista__subpanel">
+                <h3 class="h6 mb-3"><span class="material-symbols-outlined align-middle text-danger me-2" aria-hidden="true">location_on</span>Ubicación</h3>
+                <dl class="detail-list">
+                  <dt>Sede</dt><dd th:text="${computadora.ubicacion.sede.nombre}">UTP Sede Piura</dd>
+                  <dt>Tipo de ubicación</dt><dd th:text="${computadora.ubicacion.tipo}">LABORATORIO</dd>
+                  <dt>Torre</dt><dd th:text="${computadora.ubicacion.edificio ?: 'No registrada'}">Torre A</dd>
+                  <dt>Piso</dt><dd th:text="${computadora.ubicacion.piso != null ? 'Piso ' + computadora.ubicacion.piso : 'No registrado'}">Piso 3</dd>
+                  <dt>Espacio</dt><dd th:text="${computadora.ubicacion.detalle ?: computadora.ubicacion.nombre}">Cómputo General</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+          <hr class="my-4">
+          <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+            <div>
+              <h3 class="h5 mb-1">Historial técnico</h3>
+              <p class="small text-body-secondary mb-0" th:text="|${historialTecnico.totalElements} eventos registrados|">0 eventos registrados</p>
+            </div>
+          </div>
+          <div class="alert alert-light border mb-0" role="status" th:if="${historialTecnico.empty}">Este equipo aún no tiene incidencias, diagnósticos ni mantenimientos registrados.</div>
+          <ol class="list-group list-group-flush" th:if="${!historialTecnico.empty}">
+            <li class="list-group-item px-0 py-3" th:each="evento : ${historialTecnico.content}">
+              <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                <div>
+                  <span class="badge text-bg-light border me-1" th:text="${evento.tipo}">INCIDENCIA</span>
+                  <strong th:text="${evento.titulo}">Incidencia reportada</strong>
+                </div>
+                <time class="small text-body-secondary" th:datetime="${evento.fecha}" th:text="${#temporals.format(evento.fecha, 'dd/MM/yyyy HH:mm')}">16/11/2026 10:30</time>
+              </div>
+              <p class="mb-1" th:text="${evento.descripcion}">Descripción del evento técnico.</p>
+              <span class="small text-body-secondary" th:text="${evento.estado}">Registrada</span>
+            </li>
+          </ol>
+          <nav class="d-flex justify-content-between align-items-center gap-3 mt-3" aria-label="Páginas del historial" th:if="${historialTecnico.totalPages > 1}">
+            <a class="btn btn-outline-secondary btn-sm" th:classappend="${historialTecnico.first} ? ' disabled'"
+               th:href="@{/equipos/{codigoQr}(codigoQr=${computadora.codigoQr}, paginaHistorial=${historialTecnico.number - 1})}"
+               th:attr="aria-disabled=${historialTecnico.first}">Más recientes</a>
+            <span class="small text-body-secondary" th:text="|Página ${historialTecnico.number + 1} de ${historialTecnico.totalPages}|">Página 1 de 2</span>
+            <a class="btn btn-outline-secondary btn-sm" th:classappend="${historialTecnico.last} ? ' disabled'"
+               th:href="@{/equipos/{codigoQr}(codigoQr=${computadora.codigoQr}, paginaHistorial=${historialTecnico.number + 1})}"
+               th:attr="aria-disabled=${historialTecnico.last}">Anteriores</a>
+          </nav>
+        </section>
+      </main>
+    </div>
+  </div>
+  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>

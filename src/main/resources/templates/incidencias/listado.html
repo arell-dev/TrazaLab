@@ -4,71 +4,110 @@
 <head th:replace="~{fragments/head :: head('Incidencias')}"></head>
 
 <body>
-    <div class="app-layout">
-        <div th:replace="~{fragments/sidebar :: sidebar('incidencias')}"></div>
+  <div class="app-layout">
+    <div th:replace="~{fragments/sidebar :: sidebar('incidencias')}"></div>
 
-        <div class="app-main">
-            <div th:replace="~{fragments/header :: header}"></div>
+    <div class="app-main">
+      <div th:replace="~{fragments/header :: header}"></div>
 
-            <main class="container-fluid app-content">
-                <div class="page-heading">
-                    <div>
-                        <p class="page-overline">Trazabilidad técnica</p>
-                        <h1>Incidencias</h1>
-                        <p class="text-body-secondary mb-0">Consulta los reportes y registra una falla observada en un equipo.</p>
-                    </div>
-                    <a class="btn btn-primary" th:href="@{/incidencias/nueva}">Registrar incidencia</a>
+      <main class="container-fluid app-content incidencias-pagina">
+        <header class="incidencias-encabezado">
+          <div class="incidencias-encabezado__contenido">
+            <div class="flujo-encabezado">
+              <span class="flujo-encabezado__icono material-symbols-outlined" aria-hidden="true">report_problem</span>
+              <h1>Incidencias</h1>
+            </div>
+            <p>Registra y consulta reportes asociados al historial técnico de cada equipo.</p>
+          </div>
+          <a class="btn btn-primary incidencias-encabezado__accion" th:href="@{/incidencias/nueva}">
+            <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+            Registrar incidencia
+          </a>
+        </header>
+
+        <div th:replace="~{fragments/mensajes :: mensajes}"></div>
+
+        <section class="incidencias-acceso card app-card mb-4" aria-labelledby="titulo-registro-guiado">
+          <div class="incidencias-acceso__intro">
+            <span class="incidencias-acceso__eyebrow">REGISTRO GUIADO</span>
+            <h2 id="titulo-registro-guiado">Reporta una anomalía del equipo</h2>
+            <p>Identifica la computadora, describe lo observado y revisa el reporte antes de guardarlo.</p>
+          </div>
+          <ol class="incidencias-acceso__pasos" aria-label="Pasos del registro de incidencia">
+            <li><span>01</span><span>Equipo</span></li>
+            <li><span>02</span><span>Incidencia</span></li>
+            <li><span>03</span><span>Confirmación</span></li>
+          </ol>
+        </section>
+
+        <section class="flujo-panel incidencias-historial" aria-labelledby="titulo-lista-incidencias">
+          <div class="flujo-panel__cabecera incidencias-historial__cabecera">
+            <div>
+              <span class="incidencias-historial__eyebrow">SEGUIMIENTO TÉCNICO</span>
+              <h2 class="h5" id="titulo-lista-incidencias">Historial de reportes</h2>
+            </div>
+            <span class="incidencias-historial__contador">
+              <strong th:text="${incidencias.totalElements}">0</strong>
+              <span th:text="${incidencias.totalElements == 1} ? 'registro' : 'registros'">registros</span>
+            </span>
+          </div>
+
+          <div class="registro-lista" th:unless="${incidencias.empty}">
+            <article class="registro-item incidencias-registro" th:each="incidencia : ${incidencias.content}">
+              <span class="registro-item__icono material-symbols-outlined" aria-hidden="true">desktop_windows</span>
+              <div class="registro-item__contenido">
+                <div class="registro-item__cabecera">
+                  <span class="incidencias-registro__etiqueta">Equipo</span>
+                  <strong th:text="${incidencia.codigoQr}">PC-001</strong>
+                  <span class="registro-item__estado" th:text="${incidencia.estado}">registrada</span>
                 </div>
+                <p class="registro-item__descripcion" th:text="${incidencia.descripcion}">Descripción de la incidencia</p>
+                <div class="registro-item__meta">
+                  <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                  <span>Reportada por <strong th:text="${incidencia.reportante}">Reportante</strong></span>
+                </div>
+              </div>
+              <time class="incidencias-registro__fecha" th:datetime="${incidencia.fechaRegistro}"
+                th:text="${#temporals.format(incidencia.fechaRegistro, 'dd/MM/yyyy · HH:mm')}">Fecha</time>
+            </article>
+          </div>
 
-                <div th:replace="~{fragments/mensajes :: mensajes}"></div>
+          <div class="registro-vacio incidencias-vacio" th:if="${incidencias.empty}">
+            <span class="material-symbols-outlined" aria-hidden="true">assignment_add</span>
+            <h3>Aún no hay reportes</h3>
+            <p>Cuando registres una incidencia, aparecerá aquí con el equipo, el reportante y la fecha.</p>
+            <a class="btn btn-primary" th:href="@{/incidencias/nueva}">Registrar primera incidencia</a>
+          </div>
 
-                <section class="card app-card" aria-labelledby="titulo-lista-incidencias">
-                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <div>
-                            <h2 class="h5 mb-1" id="titulo-lista-incidencias">Historial de reportes</h2>
-                            <p class="small text-body-secondary mb-0" th:text="|${incidencias.totalElements} incidencias registradas|">Incidencias</p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Fecha</th>
-                                    <th scope="col">Equipo</th>
-                                    <th scope="col">Descripción</th>
-                                    <th scope="col">Reportante</th>
-                                    <th scope="col">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="incidencia : ${incidencias.content}">
-                                    <td class="text-nowrap" th:text="${#temporals.format(incidencia.fechaRegistro, 'dd/MM/yyyy HH:mm')}">Fecha</td>
-                                    <td class="fw-semibold" th:text="${incidencia.codigoQr}">PC-001</td>
-                                    <td class="incidencia-descripcion" th:text="${incidencia.descripcion}">Descripción</td>
-                                    <td th:text="${incidencia.reportante}">Reportante</td>
-                                    <td><span class="badge text-bg-light border" th:text="${incidencia.estado}">registrada</span></td>
-                                </tr>
-                                <tr th:if="${incidencias.empty}">
-                                    <td colspan="5" class="empty-state">Todavía no hay incidencias registradas.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="card-footer d-flex justify-content-between align-items-center" th:if="${incidencias.totalPages > 1}">
-                        <a class="btn btn-outline-secondary btn-sm" th:classappend="${incidencias.first} ? 'disabled'"
-                            th:href="@{/incidencias(pagina=${incidencias.number - 1})}" aria-label="Página anterior">Anterior</a>
-                        <span class="small text-body-secondary" th:text="|Página ${incidencias.number + 1} de ${incidencias.totalPages}|">Página</span>
-                        <a class="btn btn-outline-secondary btn-sm" th:classappend="${incidencias.last} ? 'disabled'"
-                            th:href="@{/incidencias(pagina=${incidencias.number + 1})}" aria-label="Página siguiente">Siguiente</a>
-                    </div>
-                </section>
-            </main>
-        </div>
+          <nav class="incidencias-paginacion" aria-label="Paginación del historial" th:if="${incidencias.totalPages > 1}">
+            <span class="small text-body-secondary" th:text="|Página ${incidencias.number + 1} de ${incidencias.totalPages}|">Página</span>
+            <div class="incidencias-paginacion__acciones">
+              <a class="btn btn-outline-secondary btn-sm" th:if="${!incidencias.first}"
+                th:href="@{/incidencias(pagina=${incidencias.number - 1})}" aria-label="Página anterior">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                Anterior
+              </a>
+              <span class="btn btn-outline-secondary btn-sm disabled" th:if="${incidencias.first}" aria-disabled="true">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                Anterior
+              </span>
+              <a class="btn btn-outline-secondary btn-sm" th:if="${!incidencias.last}"
+                th:href="@{/incidencias(pagina=${incidencias.number + 1})}" aria-label="Página siguiente">
+                Siguiente
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m10 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </a>
+              <span class="btn btn-outline-secondary btn-sm disabled" th:if="${incidencias.last}" aria-disabled="true">
+                Siguiente
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m10 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </span>
+            </div>
+          </nav>
+        </section>
+      </main>
     </div>
+  </div>
 
-    <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
 </body>
 
 </html>

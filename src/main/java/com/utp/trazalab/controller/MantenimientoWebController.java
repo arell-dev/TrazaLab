@@ -4,13 +4,14 @@ import com.utp.trazalab.dto.RegistroMantenimientoFormulario;
 import com.utp.trazalab.service.IncidenciaAplicacionServicio;
 import com.utp.trazalab.service.RegistroMantenimientoServicio;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -19,18 +20,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class MantenimientoWebController {
     private final RegistroMantenimientoServicio mantenimientos;
     private final IncidenciaAplicacionServicio incidencias;
-    private final String correoTecnicoDemostracion;
 
-    public MantenimientoWebController(RegistroMantenimientoServicio mantenimientos, IncidenciaAplicacionServicio incidencias, @Value("${trazalab.demo.mantenimiento-correo}") String correoTecnicoDemostracion) {
+    public MantenimientoWebController(RegistroMantenimientoServicio mantenimientos, IncidenciaAplicacionServicio incidencias) {
         this.mantenimientos = mantenimientos;
         this.incidencias = incidencias;
-        this.correoTecnicoDemostracion = correoTecnicoDemostracion;
     }
 
     @GetMapping
-    public String listar(Model model) {
+    public String listar(@RequestParam(required = false) String codigoQr, Model model) {
         prepararModelo(model);
-        model.addAttribute("registroMantenimiento", new RegistroMantenimientoFormulario());
+        RegistroMantenimientoFormulario formulario = new RegistroMantenimientoFormulario();
+        formulario.setCodigoQr(codigoQr);
+        model.addAttribute("registroMantenimiento", formulario);
         return "mantenimientos/listado";
     }
 
@@ -42,7 +43,8 @@ public class MantenimientoWebController {
         }
 
         try {
-            int usuarioId = incidencias.consultarUsuarioDemostracion(correoTecnicoDemostracion).id();
+            String correo = SecurityContextHolder.getContext().getAuthentication().getName();
+            int usuarioId = incidencias.consultarUsuarioDemostracion(correo).id();
             mantenimientos.registrar(
                     usuarioId,
                     formulario.getCodigoQr(),

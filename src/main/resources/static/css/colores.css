@@ -15,4 +15,16 @@
   --trazalab-surface: #fff;
   --trazalab-border: #e5e7eb;
   --trazalab-muted-surface: #f6f3f2;
+  --trazalab-ink: #1c1b1b;
+  --trazalab-ink-muted: #5b4040;
+  --trazalab-success: #059669;
+  --trazalab-success-bg: #ecfdf5;
+  --trazalab-warning: #d97706;
+  --trazalab-warning-bg: #fffbeb;
+  --trazalab-danger: #dc2626;
+  --trazalab-danger-bg: #fef2f2;
+  --trazalab-info: #2563eb;
+  --trazalab-info-bg: #eff6ff;
+  --trazalab-navigation: #06183e;
+  --trazalab-mobile-canvas: #f8f9fa;
 }
