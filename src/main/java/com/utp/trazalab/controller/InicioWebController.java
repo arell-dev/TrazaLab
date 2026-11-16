@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class InicioWebController {
     @GetMapping("/")
     public String inicio() {
-        return "redirect:/incidencias";
+        return "redirect:/disponibilidad";
     }
 }

@@ -28,6 +28,89 @@ const inicializarAvisos = () => {
     });
 };
 
+const inicializarLectorQr = () => {
+    const formulario = document.querySelector("[data-lector-form]");
+
+    if (!formulario) {
+        return;
+    }
+
+    const video = formulario.closest("main")?.querySelector("[data-lector-video]");
+    const mensaje = formulario.closest("main")?.querySelector("[data-lector-mensaje]");
+    const entrada = formulario.querySelector("[data-lector-entrada]");
+    const iniciar = formulario.closest("main")?.querySelector("[data-lector-iniciar]");
+    const detener = formulario.closest("main")?.querySelector("[data-lector-detener]");
+    const placeholder = formulario.closest("main")?.querySelector("[data-lector-placeholder]");
+
+    if (!video || !mensaje || !entrada || !iniciar || !detener || !placeholder) {
+        return;
+    }
+
+    let controlesLector = null;
+
+    const detenerCamara = () => {
+        if (controlesLector) {
+            controlesLector.stop();
+            controlesLector = null;
+        }
+
+        video.srcObject?.getTracks().forEach((pista) => pista.stop());
+        video.srcObject = null;
+        video.hidden = true;
+        placeholder.hidden = false;
+        iniciar.hidden = false;
+        detener.hidden = true;
+    };
+
+    iniciar.addEventListener("click", async () => {
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+            mensaje.textContent = "La cámara requiere HTTPS o localhost. Puedes ingresar el código manualmente.";
+            return;
+        }
+
+        if (!window.ZXingBrowser?.BrowserQRCodeReader) {
+            mensaje.textContent = "No se pudo cargar el lector QR. Puedes ingresar el código manualmente.";
+            return;
+        }
+
+        iniciar.disabled = true;
+        mensaje.textContent = "Solicitando permiso para usar la cámara…";
+
+        try {
+            const lector = new window.ZXingBrowser.BrowserQRCodeReader();
+            video.hidden = false;
+            placeholder.hidden = true;
+            iniciar.hidden = true;
+            detener.hidden = false;
+            mensaje.textContent = "Centra el código QR dentro del recuadro.";
+            controlesLector = await lector.decodeFromVideoDevice(undefined, video, (resultado) => {
+                if (!resultado) {
+                    return;
+                }
+
+                entrada.value = resultado.getText().trim();
+                mensaje.textContent = "Código detectado. Abriendo la ficha del equipo…";
+                detenerCamara();
+                formulario.requestSubmit();
+            });
+        } catch (error) {
+            detenerCamara();
+            mensaje.textContent = error.name === "NotAllowedError"
+                ? "No se concedió permiso para usar la cámara. Puedes ingresar el código manualmente."
+                : "No se pudo iniciar la cámara. Puedes ingresar el código manualmente.";
+        } finally {
+            iniciar.disabled = false;
+        }
+    });
+
+    detener.addEventListener("click", () => {
+        detenerCamara();
+        mensaje.textContent = "Cámara detenida. Puedes volver a iniciarla o escribir el código.";
+    });
+    formulario.addEventListener("submit", detenerCamara);
+    window.addEventListener("pagehide", detenerCamara);
+};
+
 const crearElementoTexto = (nombre, clases, texto) => {
     const elemento = document.createElement(nombre);
     elemento.className = clases;
@@ -132,6 +215,7 @@ const inicializarFormularioIncidencia = () => {
 
     const actualizarResumen = () => {
         const resumenEquipo = formulario.querySelector("[data-resumen-equipo]");
+        const resumenUbicacion = formulario.querySelector("[data-resumen-ubicacion]");
         const resumenTipo = formulario.querySelector("[data-resumen-tipo]");
         const resumenDescripcion = formulario.querySelector("[data-resumen-descripcion]");
 
@@ -147,11 +231,15 @@ const inicializarFormularioIncidencia = () => {
         resumenEquipo.textContent = equipoVerificado
             ? [equipoVerificado.codigoQr, fabricanteModelo].filter(Boolean).join(" · ")
             : entradaEquipo.value.trim() || "Sin código";
+        if (resumenUbicacion) {
+            resumenUbicacion.textContent = equipoVerificado?.ubicacion || "No registrada";
+        }
         resumenTipo.textContent = selectorTipo.selectedOptions[0]?.textContent.trim() || "Sin clasificar";
         resumenDescripcion.textContent = entradaDescripcion.value.trim() || "Sin descripción";
     };
 
     const mostrarPaso = (numero) => {
+        const pasoAnterior = pasoActual;
         pasoActual = numero;
 
         paneles.forEach((panel) => {
@@ -162,6 +250,11 @@ const inicializarFormularioIncidencia = () => {
             const paso = Number(indicador.dataset.stepIndicator);
             indicador.classList.toggle("is-active", paso === pasoActual);
             indicador.classList.toggle("is-complete", paso < pasoActual);
+            const numeroIndicador = indicador.querySelector(".incidencia-stepper__number");
+
+            if (numeroIndicador) {
+                numeroIndicador.textContent = paso < pasoActual ? "✓" : String(paso);
+            }
 
             if (paso === pasoActual) {
                 indicador.setAttribute("aria-current", "step");
@@ -181,6 +274,14 @@ const inicializarFormularioIncidencia = () => {
 
         if (pasoActual === paneles.length) {
             actualizarResumen();
+        }
+
+        if (pasoAnterior !== pasoActual) {
+            const encabezadoPaso = paneles
+                .find((panel) => Number(panel.dataset.stepPanel) === pasoActual)
+                ?.querySelector("h2");
+            encabezadoPaso?.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
         }
     };
 
@@ -330,4 +431,5 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarContadores();
     inicializarAvisos();
     inicializarFormularioIncidencia();
+    inicializarLectorQr();
 });

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Escanear equipo')}"></head>
+
+<body>
+  <div class="app-layout">
+    <div th:replace="~{fragments/sidebar :: sidebar('equipos')}"></div>
+    <div class="app-main">
+      <div th:replace="~{fragments/header :: header}"></div>
+      <main class="container-fluid app-content app-content--narrow">
+        <div class="page-heading">
+          <h1>Identificar equipo</h1>
+        </div>
+
+        <div class="row g-4 align-items-start">
+          <div class="col-lg-7">
+            <section class="equipo-vista__seccion">
+              <video class="lector-camara" data-lector-video autoplay muted playsinline aria-label="Vista de la cámara para escanear el código QR" hidden></video>
+              <div class="lector-marco" data-lector-placeholder role="img" aria-label="Vista de la cámara del lector QR">
+                <span class="material-symbols-outlined lector-marco__codigo" aria-hidden="true">qr_code_2</span>
+                <span class="lector-marco__linea" aria-hidden="true"></span>
+              </div>
+              <p class="text-body-secondary mt-3 mb-3" data-lector-mensaje role="status" aria-live="polite">Inicia la cámara o escribe el código del equipo.</p>
+              <button class="btn btn-outline-primary" type="button" data-lector-iniciar>
+                <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">photo_camera</span>Iniciar cámara
+              </button>
+              <button class="btn btn-outline-secondary" type="button" data-lector-detener hidden>Detener cámara</button>
+            </section>
+          </div>
+
+          <div class="col-lg-5">
+            <section class="equipo-vista__seccion" aria-labelledby="titulo-identificar-manual">
+              <h2 class="h5 mb-3" id="titulo-identificar-manual">Buscar por código</h2>
+              <p class="text-body-secondary">Puedes escribir el código QR si no tienes cámara disponible.</p>
+              <form method="get" th:action="@{/equipos/buscar}" data-lector-form>
+                <label for="codigo-qr-equipo" class="form-label">Código QR</label>
+                <div class="input-group">
+                  <input id="codigo-qr-equipo" class="form-control" name="codigoQr" type="text" maxlength="100" autocomplete="off" required data-lector-entrada>
+                  <button class="btn btn-primary" type="submit">Ver equipo</button>
+                </div>
+              </form>
+              <p class="small text-body-secondary mt-3 mb-0">La cámara solo se activa cuando presionas “Iniciar cámara”.</p>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script th:src="@{/js/vendor/zxing-browser-0.2.1.min.js}" defer></script>
+  <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+</body>
+
+</html>
