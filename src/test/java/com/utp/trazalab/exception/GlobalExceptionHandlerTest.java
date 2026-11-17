@@ -3,6 +3,8 @@ package com.utp.trazalab.exception;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import com.utp.trazalab.controller.IncidenciaWebController;
+import com.utp.trazalab.dto.RegistroIncidenciaFormulario;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -12,9 +14,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 class GlobalExceptionHandlerTest {
     private final GlobalExceptionHandler manejador = new GlobalExceptionHandler();
@@ -49,10 +54,15 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void agrupaErroresDeValidacionPorCampo() throws Exception {
-        Method metodo = FormularioApi.class.getDeclaredMethod("registrar", String.class);
+        Method metodo = IncidenciaWebController.class.getDeclaredMethod(
+                "registrar",
+                RegistroIncidenciaFormulario.class,
+                BindingResult.class,
+                Model.class,
+                RedirectAttributes.class);
         MethodParameter parametro = new MethodParameter(metodo, 0);
-        BeanPropertyBindingResult resultado = new BeanPropertyBindingResult("", "formulario");
-        resultado.addError(new FieldError("formulario", "codigoQr", "Ingresa el QR."));
+        BeanPropertyBindingResult resultado = new BeanPropertyBindingResult("", "registroIncidencia");
+        resultado.addError(new FieldError("registroIncidencia", "codigoQr", "Ingresa el QR."));
         MethodArgumentNotValidException error = new MethodArgumentNotValidException(parametro, resultado);
 
         ResponseEntity<ProblemDetail> respuesta = manejador.manejarValidacion(error);
@@ -72,9 +82,4 @@ class GlobalExceptionHandlerTest {
         assertEquals("La operación entra en conflicto con datos existentes.", respuesta.getBody().getDetail());
     }
 
-    private static class FormularioApi {
-        public void registrar(String codigoQr) {
-            throw new UnsupportedOperationException();
-        }
-    }
 }
