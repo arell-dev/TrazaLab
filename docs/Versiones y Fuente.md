@@ -10,7 +10,7 @@ Inventario contrastado con el proyecto local el 06/11/2026. Las bibliotecas sin 
 | Thymeleaf | Administrado por Spring Boot 4.1.2 | `spring-boot-starter-thymeleaf`; vistas y fragmentos |
 | Bootstrap | 5.3.8 | CSS y JS referenciados por `templates/fragments/head.html` y `scripts.html` |
 | Spring Data JPA e Hibernate ORM | Administrados por Spring Boot 4.1.2 | Repositorios, entidades y validación del esquema |
-| Spring Security | Administrado por Spring Boot 4.1.2 | CSRF habilitado; rutas permitidas sin login en etapa demo |
+| Spring Security | Administrado por Spring Boot 4.1.2 | Login por formulario, hash BCrypt consultado en PostgreSQL, CSRF y autorización por rol |
 | Spring Validation | Administrado por Spring Boot 4.1.2 | Validación del formulario de registro de incidencias |
 | SLF4J y Logback | Administrados por Spring Boot 4.1.2 | `LoggingAplicacion` y [`logback-spring.xml`](../src/main/resources/logback-spring.xml) |
 | Driver JDBC PostgreSQL | Administrado por Spring Boot 4.1.2 | Persistencia JPA sobre PostgreSQL |

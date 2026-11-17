@@ -16,7 +16,9 @@ Desde la raíz de `trazalab`, con Docker Desktop activo:
 .\mvnw.cmd -q test
 ```
 
-`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. `GlobalExceptionHandlerTest` comprueba los estados y cuerpos `ProblemDetail` para validación, recursos inexistentes y conflictos. En la revisión de esta rama, `clean test` terminó con **25 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** (07/11/2026). Esto no altera el volumen de la base local ni acredita un piloto real.
+`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. `GlobalExceptionHandlerTest` comprueba los estados y cuerpos `ProblemDetail` para validación, recursos inexistentes y conflictos. La ejecución histórica del 07/11/2026 terminó con **25 pruebas aprobadas**. El 17/11/2026, `mvn -q test` terminó con **41 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** (36 de integración y 5 unitarias), incluidas las pruebas de autenticación y autorización descritas abajo. Las pruebas usan PostgreSQL temporal; no alteran el volumen local ni acreditan un piloto real.
+
+La suite también contiene pruebas para login correcto con una cuenta insertada en PostgreSQL, contraseña incorrecta, cuenta inactiva, redirección de usuarios anónimos y autorización de la gestión de usuarios por rol. La configuración de prueba crea el hash BCrypt en la base temporal; no configura credenciales administrativas mediante propiedades. El alta inicial interactiva bajo el perfil `crear-administrador` todavía requiere una comprobación manual desde una consola con base de datos descartable.
 
 Los resultados por clase quedan en `target/surefire-reports`. No se informa un porcentaje JaCoCo porque el proyecto aún no configura ese agente o informe.
 
@@ -29,7 +31,7 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | RF-05, recurso inexistente | `mantieneElFormularioCuandoElCodigoQrNoExiste` | Devuelve el error al formulario y confirma que no persiste la incidencia. | Ejecutado |
 | RF-01 / RF-02, QR válido | `consultaEquipoYUltimasCincoIncidenciasPorCodigoQr` | Devuelve los datos del equipo y las cinco incidencias más recientes en orden descendente sin exponer el reportante. | Ejecutado |
 | RF-01 / RF-02, QR inexistente | `responde404CuandoElQrDelEquipoNoExiste` | Devuelve `ProblemDetail` 404 para un equipo inexistente. | Ejecutado |
-| RNF-02, identidad de demostración | `registraLaIncidenciaConUsuarioFijadoPorElServidor` | Ignora un `usuarioId` enviado por navegador y usa el usuario configurado en servidor. | Ejecutado |
+| RNF-02, identidad de la sesión | `registraLaIncidenciaConUsuarioFijadoPorElServidor` | Ignora un `usuarioId` enviado por navegador y obtiene la cuenta desde el principal autenticado en la sesión. | Ejecutado |
 | UI, paneles | `renderizaLosPanelesWebActivos` | Renderiza listado de incidencias, registro de mantenimiento e informe de recurrencias. | Ejecutado |
 | RF-03, invariantes de mantenimiento | `registraMantenimientoSinCambiarEstadoNiCerrarIncidencia` | Conserva el estado operativo y el estado registrado de la incidencia asociada. | Ejecutado |
 | RF-03, componentes | `instalarYReemplazarComponenteMantieneHistorialDeAsignaciones` | Cierra la asignación anterior, crea la nueva y registra las acciones ligadas a mantenimientos. | Ejecutado |
@@ -39,12 +41,14 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | EXT-01, alcance de exportación | `renderizaLosPanelesWebActivos` | Comprueba que la lista de incidencias no muestra enlaces ni controles de exportación. | Ejecutado |
 | OBS-01, paginación de historial | `recorrePorPaginasUnHistorialDeCincoMilIncidencias` | Recorre 5 000 incidencias en 50 páginas y valida orden estable sin duplicados. | Ejecutado |
 | API REST, errores | `GlobalExceptionHandlerTest` | Verifica respuestas `ProblemDetail` y estados HTTP 400, 404 y 409 sin filtrar detalles internos de PostgreSQL. | Ejecutado |
+| RNF-02, autenticación desde PostgreSQL | `loginCorrectoRedirigeAlPanelDeDisponibilidad` y `rechazaContrasenaIncorrectaYCuentaInactiva` | Crea una cuenta activa con hash BCrypt en la base temporal y comprueba login correcto, clave incorrecta y cuenta inactiva. | Ejecutado (17/11/2026) |
+| RNF-02, autorización por rol | `limitaLaAdministracionDeUsuariosAlRolAdministradorYExigeCsrf` | Comprueba que el rol administrador accede a usuarios y que otros roles reciben 403; verifica CSRF en POST. | Ejecutado (17/11/2026) |
 
-La suite también cubre paginación estable, límites de página, historial por QR, asociación del usuario activo y validación del usuario de demostración. La salida efectiva se debe volver a consultar después de cada cambio; esta matriz no sustituye el XML de Surefire.
+La suite también cubre paginación estable, límites de página, historial por QR y asociación del usuario autenticado. La salida efectiva se debe volver a consultar después de cada cambio; esta matriz no sustituye el XML de Surefire.
 
 ## Límites conocidos
 
 - No se prueba la cámara ni el lector físico de QR: el flujo usa texto manual.
-- No se prueba autenticación, sesión ni autorización web por rol; las rutas permanecen abiertas en modo demo. El esquema sí exige rol técnico al persistir un mantenimiento.
+- La sesión identifica la cuenta que registra el evento, pero no verifica quién usa físicamente el equipo; aún no hay validación de piloto.
 - La recurrencia solo incluye incidencias clasificadas, porque la clasificación de nuevas incidencias es opcional.
 - Se usan datos sintéticos en una base temporal; no se declara evidencia de uso piloto.

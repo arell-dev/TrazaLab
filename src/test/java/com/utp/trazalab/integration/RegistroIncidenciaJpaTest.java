@@ -84,8 +84,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(properties = {
         "trazalab.seed.enabled=false",
-        "trazalab.admin.email=admin-test@trazalab.local",
-        "trazalab.admin.password=clave-segura-de-pruebas",
         "spring.jpa.hibernate.ddl-auto=validate",
         "logging.file.name="
 })
@@ -136,6 +134,14 @@ class RegistroIncidenciaJpaTest {
                 .orElseGet(() -> roles.saveAndFlush(new RolEntidad("Técnico de Soporte", "Pruebas de mantenimiento.")));
         tecnico = usuarios.saveAndFlush(new UsuarioEntidad(
                 rolTecnico, "Luis", "Pérez", "tecnico.trazalab.demo@trazalab.local", "activo"));
+        RolEntidad rolAdministrador = roles.findByNombreIgnoreCase("Administrador").orElseThrow();
+        usuarios.saveAndFlush(new UsuarioEntidad(
+                rolAdministrador,
+                "Admin",
+                "Pruebas",
+                "admin-test@trazalab.local",
+                "activo",
+                codificadorContrasenas.encode("clave-segura-de-pruebas")));
         sedePiura = sedes.findByNombreIgnoreCase("UTP Sede Piura").orElseThrow();
         UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración", sedePiura, "Torre A", 3, "LABORATORIO"));
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));

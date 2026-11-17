@@ -65,11 +65,11 @@ public class IncidenciaAplicacionServicio {
                 List::size);
     }
 
-    public UsuarioResumenDto consultarUsuarioDemostracion(String correo) {
+    public UsuarioResumenDto consultarUsuarioAutenticado(String correo) {
         return ejecutar(
-                "usuario.demostracion",
+                "usuario.autenticado",
                 "usuario",
-                () -> servicio.consultarUsuarioDemostracion(correo),
+                () -> servicio.consultarUsuarioAutenticado(correo),
                 usuario -> "id=" + usuario.id(),
                 usuario -> null);
     }

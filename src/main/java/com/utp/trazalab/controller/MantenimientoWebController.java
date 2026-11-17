@@ -44,7 +44,7 @@ public class MantenimientoWebController {
 
         try {
             String correo = SecurityContextHolder.getContext().getAuthentication().getName();
-            int usuarioId = incidencias.consultarUsuarioDemostracion(correo).id();
+            int usuarioId = incidencias.consultarUsuarioAutenticado(correo).id();
             mantenimientos.registrar(
                     usuarioId,
                     formulario.getCodigoQr(),

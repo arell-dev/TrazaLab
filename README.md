@@ -13,12 +13,13 @@ TrazaLab registra la trazabilidad técnica de computadoras de laboratorio. La ap
 
 | Capacidad | Descripción |
 |---|---|
-| Registro de incidencias | El formulario verifica el QR antes de avanzar, muestra los datos básicos del equipo y sus cinco incidencias más recientes; el servidor fija el reportante de demostración. |
+| Registro de incidencias | El formulario verifica el QR antes de avanzar y muestra los datos básicos del equipo y sus cinco incidencias más recientes; el servidor atribuye el registro a la cuenta autenticada. |
 | Clasificación | Se puede clasificar una incidencia por categoría y tipo de falla para alimentar los reportes de recurrencia. |
 | Consulta de incidencias | Presenta los registros más recientes primero, en páginas de 25 filas. |
 | Exportación | Descarga reportes de recurrencias en CSV, Excel o PDF. El listado de incidencias no ofrece exportación. |
 | Mantenimientos | Registra intervenciones preventivas o correctivas y acciones de instalación, intervención, reemplazo o retiro de componentes. |
 | Reportes | Filtra recurrencias por periodo, equipo y tipo; considera recurrentes dos o más fallas del mismo tipo en el equipo. Exporta CSV, Excel y PDF. |
+| Acceso y usuarios | Autentica cuentas activas desde PostgreSQL con contraseñas BCrypt y restringe las rutas según el rol almacenado. |
 | Logging de aplicación | Escribe eventos de operación mediante SLF4J y Logback. |
 
 El mantenimiento no cambia el estado operativo de la computadora ni cierra una incidencia. Los mantenimientos correctivos requieren asociar una falla del mismo equipo.
@@ -42,7 +43,7 @@ Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguie
 | `controller` | Recibe solicitudes MVC, valida formularios y renderiza vistas. |
 | `controller.api` | Agrupa los controladores REST, incluida la comprobación de salud de PostgreSQL. |
 | `service` | Aplica reglas de negocio, transacciones y registro de eventos. |
-| `dto` | Separa datos de formulario, identidad demo y datos de respuesta. |
+| `dto` | Separa datos de formulario, identidad resuelta desde la sesión y datos de respuesta. |
 | `exception` | Distingue recursos inexistentes y conflictos; genera respuestas `ProblemDetail` para la API REST. |
 | `persistence.jpa.entity` | Mapea entidades persistentes al esquema de PostgreSQL. |
 | `persistence.jpa.springdata` | Define las consultas y operaciones JPA. |
@@ -64,14 +65,14 @@ La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implement
 | Bootstrap 5.3.8 | Componentes y diseño responsivo. |
 | Spring Data JPA, Hibernate y PostgreSQL 16 | Persistencia y validación del esquema. |
 | Flyway | Versionado del esquema SQL. |
-| Spring Security | CSRF habilitado; autenticación desactivada en la etapa demo. |
+| Spring Security | Login por formulario, sesiones, CSRF y autorización por rol. Las cuentas se consultan desde PostgreSQL. |
 | JUnit y Testcontainers | Pruebas con PostgreSQL temporal. |
 | Apache PDFBox 3.0.8 | Reportes PDF. |
 | Apache POI 5.5.1 | Reportes Excel (XLSX). |
 | Apache Commons CSV 1.14.1 | Exportación CSV. |
 | SLF4J y Logback | Registro de eventos de aplicación. |
 
-Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). La autenticación todavía no forma parte de esta etapa.
+Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). El login valida el estado, el hash BCrypt y el rol de cada cuenta en la tabla `usuario`.
 
 ## Requisitos
 
@@ -94,17 +95,25 @@ Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). La auten
    docker compose --env-file .env up -d
    ```
 
-4. Arranca TrazaLab:
+4. Solo para una base nueva sin cuentas administradoras, crea la primera cuenta desde una consola interactiva:
+
+   ```powershell
+   .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=crear-administrador"
+   ```
+
+   Ejecuta el comando desde una consola PowerShell interactiva; solicita los datos y oculta la contraseña mientras se escribe. La cuenta y su hash BCrypt se guardan en PostgreSQL. Cuando aparezca el mensaje de confirmación, detén la aplicación con `Ctrl+C` antes de arrancarla normalmente. Si ya existe una cuenta administradora con contraseña, el comando se detiene; si quedó una fila administradora sin hash, permite completarla. Las credenciales `SPRING_DATASOURCE_*` de `.env` solo permiten conectar con PostgreSQL; no sirven para iniciar sesión en TrazaLab.
+
+5. Arranca TrazaLab:
 
    ```powershell
    .\database\run.ps1
    ```
 
-5. Abre `http://localhost:8080/incidencias`.
+6. Abre `http://localhost:8080/usuarios/login` e inicia sesión con una cuenta activa registrada en la base de datos.
 
 También se puede iniciar directamente con `.\mvnw.cmd spring-boot:run`. Spring Boot carga las variables desde `.env` y conecta con PostgreSQL.
 
-El usuario reportante demo se selecciona mediante `TRAZALAB_DEMO_USER_EMAIL` o usa `ana.torres.demo@trazalab.local` por defecto. El responsable de mantenimiento se selecciona mediante `TRAZALAB_DEMO_TECH_EMAIL` o usa `tecnico.trazalab.demo@trazalab.local`. Debe ser un usuario activo con rol técnico, según las reglas del esquema. La opción de insertar datos demo está desactivada por defecto para no modificar bases existentes; se activa explícitamente con `TRAZALAB_SEED_ENABLED=true` solo en un entorno preparado para ello. El sembrado crea el usuario técnico demo si no existe.
+La carga opcional de datos demo usa los correos predeterminados de `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` en `application.properties` para crear cuentas de muestra. Esos correos solo pertenecen al sembrado; no son credenciales de login ni determinan quién registra incidencias o mantenimientos. Los formularios atribuyen esas acciones a la cuenta activa de la sesión. La carga está desactivada por defecto y solo se activa con `TRAZALAB_SEED_ENABLED=true` en una base preparada para datos demo.
 
 Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate utiliza `spring.jpa.hibernate.ddl-auto=validate` y no crea ni actualiza tablas. Para una base que ya tenía datos antes de Flyway, sigue [`database/README.md`](database/README.md#migraciones-y-volumenes-existentes); el procedimiento genera un respaldo antes de registrar la línea base y conserva el volumen.
 
@@ -128,7 +137,7 @@ El 07/11/2026, `./mvnw.cmd -q clean test` terminó con 25 pruebas aprobadas, 0 f
 
 ## Alcance y documentación
 
-Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara ni autenticación. El registro consulta los datos básicos del equipo y sus cinco incidencias más recientes; la consulta técnica integral, incluidas intervenciones y asignaciones de componentes, sigue pendiente.
+Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara. El login, la autorización por rol y la atribución de incidencias y mantenimientos usan la cuenta activa almacenada en PostgreSQL y asociada a la sesión. El registro consulta los datos básicos del equipo y sus cinco incidencias más recientes; la consulta técnica integral, incluidas intervenciones y asignaciones de componentes, sigue pendiente.
 
 - [Índice de documentación](docs/README.md)
 - [Arquitectura](docs/Arquitectura.md)

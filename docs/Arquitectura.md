@@ -26,7 +26,7 @@ Navegador
   → PostgreSQL
 ```
 
-`RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador consulta el usuario demo configurado y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida que el usuario esté activo y tenga un rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
+`RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador obtiene el correo del principal autenticado, resuelve la cuenta activa en PostgreSQL y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida el rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
 
 Antes de avanzar desde el primer paso, la interfaz consulta `GET /api/computadoras/historial?codigoQr=...`. `ComputadoraApiController` delega en el servicio de aplicación y el servicio JPA devuelve una ficha breve del equipo junto con las cinco incidencias más recientes, ordenadas por fecha e identificador descendente. La respuesta usa DTO de lista estable y no incluye el nombre del reportante. Un QR vacío devuelve 400 y uno inexistente devuelve 404 mediante `ProblemDetail`.
 
@@ -77,12 +77,13 @@ static/
 | `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
 | `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
 | `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
+| `config` | Configurar sesión, autenticación, autorización y codificación de contraseñas | Login por formulario; las cuentas y roles se leen de PostgreSQL |
 | `export` | Generar XLSX del informe de recurrencias | Reportes: CSV, XLSX y PDF; incidencias: sin exportaciones |
-| `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; preserva asignaciones temporales de componentes |
+| `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; identifica al técnico desde la sesión y preserva asignaciones temporales |
 | `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; CSV, XLSX y PDF; dos o más fallas clasificadas del mismo tipo por equipo |
 | Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
 
-La aplicación web de esta etapa es de demostración: Spring Security conserva CSRF y permite las rutas sin autenticación; no se implementan login ni sesión. `trazalab.demo.usuario-correo` fija la identidad reportante y `trazalab.demo.mantenimiento-correo` fija la identidad técnica del servidor. La base exige que el responsable técnico esté activo y tenga rol técnico. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
+Spring Security autentica el login mediante `UsuarioAutenticacionServicio`, que consulta cuentas activas y su hash BCrypt en PostgreSQL. Las rutas se autorizan por el rol asociado a la cuenta; `ROLE_Administrador` accede a la gestión de usuarios. El primer administrador se registra de forma interactiva bajo el perfil `crear-administrador`; el arranque normal no crea cuentas ni recibe credenciales administrativas por configuración. Los correos `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` solo identifican las cuentas que crea el sembrado opcional; las acciones web se atribuyen al principal autenticado. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
 
 ## Persistencia y ejecución
 
@@ -105,8 +106,9 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 
 | Elemento | Correspondencia | Estado |
 |---|---|---|
-| RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: registro web funcional en modo demo; autenticación pendiente |
-| RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones de componentes implementadas; identidad demo con rol técnico |
+| RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: login implementado y reportante tomado de la sesión; el historial técnico integral sigue pendiente |
+| RNF-02 | `/usuarios/login` → `UsuarioAutenticacionServicio` → `UsuarioJpaRepositorio` → PostgreSQL | Login y autorización por rol implementados; el alta del primer administrador requiere el perfil interactivo |
+| RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones implementadas; el responsable se toma de la cuenta autenticada con rol técnico |
 | RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y `ExportadorReporteFallasExcel` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | `/api/computadoras/historial?codigoQr=...` → servicio de aplicación → repositorio JPA | Ficha del equipo y cinco incidencias recientes visibles en el registro; historial técnico integral y lector físico pendientes |
 | EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |

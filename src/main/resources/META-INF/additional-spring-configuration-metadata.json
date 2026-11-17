@@ -11,14 +11,14 @@
       "description": "Sede que limita las ubicaciones visibles en la instalación actual."
     },
     {
-      "name": "trazalab.demo.usuario-correo",
+      "name": "trazalab.seed.usuario-correo",
       "type": "java.lang.String",
-      "description": "Correo configurado para el usuario de demostración."
+      "description": "Correo usado por la carga opcional para el usuario reportante de demostración."
     },
     {
-      "name": "trazalab.demo.mantenimiento-correo",
+      "name": "trazalab.seed.tecnico-correo",
       "type": "java.lang.String",
-      "description": "Correo configurado para el técnico de demostración."
+      "description": "Correo usado por la carga opcional para el técnico de demostración."
     }
   ]
 }

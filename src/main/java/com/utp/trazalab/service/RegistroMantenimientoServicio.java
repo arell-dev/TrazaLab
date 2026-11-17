@@ -45,11 +45,11 @@ public class RegistroMantenimientoServicio {
     public MantenimientoResumenDto registrar(Integer usuarioId, String codigoQr, String tipo, Integer fallaId, String descripcion, String accionComponente, String serieComponenteActual, String nombreComponenteNuevo, String tipoComponenteNuevo, String serieComponenteNuevo) {
         UsuarioEntidad usuario = usuarios.findById(usuarioId)
                 .filter(persona -> "activo".equalsIgnoreCase(persona.getEstado()))
-                .orElseThrow(() -> new IllegalArgumentException("El usuario de demostración no existe o está inactivo."));
+                .orElseThrow(() -> new IllegalArgumentException("El usuario autenticado no existe o está inactivo."));
         String rol = usuario.getRol().getNombre();
         if (!"Técnico de Soporte".equalsIgnoreCase(rol)
                 && !"Técnico de Laboratorio".equalsIgnoreCase(rol)) {
-            throw new IllegalArgumentException("La identidad de demostración del mantenimiento debe tener un rol técnico.");
+            throw new IllegalArgumentException("El usuario autenticado debe tener un rol técnico para registrar mantenimientos.");
         }
         if (codigoQr == null || codigoQr.isBlank()) {
             throw new IllegalArgumentException("Ingresa el código QR del equipo.");

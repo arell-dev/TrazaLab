@@ -4,6 +4,8 @@
 **Rama:** `refactor/arquitectura-opalina`
 **Estado:** corregido; verificado con la suite de integración.
 
+> Nota de vigencia: este registro describe la corrección realizada el 05/11/2026. La aplicación ahora usa autenticación y autorización por rol; consulta la arquitectura y la matriz de trazabilidad actuales para el estado vigente.
+
 ## Hallazgo
 
 | Causa | Impacto | Prioridad |
