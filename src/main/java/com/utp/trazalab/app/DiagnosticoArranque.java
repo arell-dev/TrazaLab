@@ -41,7 +41,7 @@ public class DiagnosticoArranque {
 
     private void verificarBaseDeDatos() {
         String nombreBaseDatos = jdbcTemplate.queryForObject("SELECT current_database()", String.class);
-        LOGGER.info("Conexión a la base de datos '{}': ✅", nombreBaseDatos);
+        LOGGER.info("Conexión a la base de datos '{}': [OK]", nombreBaseDatos);
     }
 
     private void verificarApi(int puerto) {
@@ -56,13 +56,13 @@ public class DiagnosticoArranque {
             boolean disponible = respuesta.statusCode() == 200 && respuesta.body().contains("disponible");
 
             if (disponible) {
-                LOGGER.info("Conectividad a la API ({}): ✅", endpoint);
+                LOGGER.info("Conectividad a la API ({}): [OK]", endpoint);
                 return;
             }
 
-            LOGGER.warn("Conectividad a la API ({}): ❌ HTTP {}", endpoint, respuesta.statusCode());
+            LOGGER.warn("Conectividad a la API ({}): [ERROR] HTTP {}", endpoint, respuesta.statusCode());
         } catch (IOException error) {
-            LOGGER.warn("Conectividad a la API ({}): ❌ {}", endpoint, error.getMessage());
+            LOGGER.warn("Conectividad a la API ({}): [ERROR] {}", endpoint, error.getMessage());
         } catch (InterruptedException error) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Conectividad a la API ({}): interrumpida", endpoint, error);

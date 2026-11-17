@@ -7,11 +7,12 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioJpaRepositorio extends JpaRepository<UsuarioEntidad, Integer> {
-    boolean existsByEstadoIgnoreCaseAndPasswordHashIsNotNull(String estado);
-
     @Override
     @EntityGraph(attributePaths = "rol")
     List<UsuarioEntidad> findAll();
+
+    @EntityGraph(attributePaths = "rol")
+    List<UsuarioEntidad> findAllByRol_NombreIgnoreCase(String nombreRol);
 
     @EntityGraph(attributePaths = "rol")
     Optional<UsuarioEntidad> findByCorreoIgnoreCase(String correo);

@@ -7,7 +7,7 @@ Esta carpeta separa la arquitectura, la trazabilidad de requisitos, la evidencia
 - [Arquitectura](Arquitectura.md): estructura de paquetes, flujo MVC/JPA y límites actuales.
 - [Matriz de trazabilidad](Matriz%20Trazabilidad.md): correspondencia entre requisitos, código, persistencia y pruebas.
 - [Pruebas de aplicación](testing/README.md): estrategia tomada del laboratorio del docente y resultados de TrazaLab.
-- [Seguridad y límites](Seguridad%20y%20Limites.md): modo demo, protección CSRF y datos personales.
+- [Seguridad y límites](Seguridad%20y%20Limites.md): login desde PostgreSQL, roles, protección CSRF y límites del modo demo.
 - [Versiones y fuentes](Versiones%20y%20Fuente.md): dependencias, referencias y herramientas.
 - [Guía PostgreSQL](../database/README.md): ejecución con el Compose de la raíz, migraciones y volúmenes existentes.
 - [Diagrama](TrazaLab_Arquitectura_Trazabilidad.drawio): flujo editable de la arquitectura.

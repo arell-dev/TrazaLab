@@ -14,6 +14,10 @@
 | La prueba MockMvc añadida llamó métodos que lanzan `Exception` sin declararla; además, esperaba dos resultados aunque los dos casos forman un solo grupo recurrente. | Maven detuvo la ejecución durante `testCompile`; la suite no llegó a ejecutarse en ese intento. | La prueba declara `throws Exception`, conserva la frecuencia de dos casos y espera un grupo («1 resultado»). El panel también pluraliza el contador. La ejecución posterior aprobó 16/16. |
 | La exportación PDF escribía cada recurrencia en una sola línea sin medir el ancho de sus campos. | Códigos QR, series o nombres largos podían quedar recortados fuera del borde de la página. | Se ajustan las filas al ancho útil, se repite el encabezado al paginar y una prueba verifica las posiciones del texto en una fila extensa. La suite final aprobó 17/17. |
 
+## Seguimiento de autenticación y sembrado · 16/11/2026
+
+La referencia a `TRAZALAB_DEMO_TECH_EMAIL` en el hallazgo anterior describe la configuración de esa fecha. En el estado actual, los correos `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` son valores fijos de `application.properties` usados únicamente por la carga opcional de cuentas demo, desactivada por defecto. No autentican ni seleccionan al responsable de acciones. El login consulta cuentas activas, hash BCrypt y rol en PostgreSQL; incidencias y mantenimientos toman el usuario de la sesión. Las pruebas no se ejecutaron durante este seguimiento.
+
 ## Trazabilidad
 
 - Servicio de mantenimiento: [`RegistroMantenimientoServicio`](../../src/main/java/com/utp/trazalab/service/RegistroMantenimientoServicio.java).

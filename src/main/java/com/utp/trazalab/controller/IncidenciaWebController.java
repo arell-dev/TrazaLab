@@ -55,7 +55,7 @@ public class IncidenciaWebController {
         }
 
         try {
-            var usuarioAutenticado = servicio.consultarUsuarioDemostracion(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
+            var usuarioAutenticado = servicio.consultarUsuarioAutenticado(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
             RegistroIncidenciaDto solicitud = new RegistroIncidenciaDto();
             solicitud.setUsuarioId(usuarioAutenticado.id());
             solicitud.setCodigoQr(formulario.getCodigoQr());

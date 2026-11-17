@@ -40,7 +40,7 @@
                 <mxCell id="collectorFlow" edge="1" parent="1" source="collector" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#60A5FA;strokeWidth=2;fontSize=12;labelBackgroundColor=#FFFFFF;dashed=1;dashPattern=6 4;" target="mvc" value="transferencia por definir">
                     <mxGeometry relative="1" as="geometry" />
                 </mxCell>
-                <mxCell id="cross0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Spring Security&lt;br&gt;CSRF activo · sin login demo" vertex="1">
+                <mxCell id="cross0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Spring Security&lt;br&gt;Login y roles desde PostgreSQL" vertex="1">
                     <mxGeometry height="64" width="180" x="345" y="435" as="geometry" />
                 </mxCell>
                 <mxCell id="cross1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#F28B91;strokeWidth=1.5;fontColor=#FFFFFF;fontSize=13;align=center;verticalAlign=middle;spacing=8;" value="Bean Validation&lt;br&gt;formularios web" vertex="1">

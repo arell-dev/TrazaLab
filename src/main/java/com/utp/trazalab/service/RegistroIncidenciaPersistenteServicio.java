@@ -120,18 +120,18 @@ public class RegistroIncidenciaPersistenteServicio {
     }
 
     @Transactional(readOnly = true)
-    public UsuarioResumenDto consultarUsuarioDemostracion(String correo) {
+    public UsuarioResumenDto consultarUsuarioAutenticado(String correo) {
         if (correo == null || correo.isBlank()) {
-            throw new IllegalStateException("Configura un correo para el usuario de demostración.");
+            throw new IllegalStateException("No se encontró el correo del usuario autenticado.");
         }
 
         UsuarioEntidad usuario = usuarios.findByCorreoIgnoreCase(correo.trim())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No existe el usuario de demostración configurado en la base de datos."));
+                        "La cuenta autenticada no existe en la base de datos."));
         if (!"activo".equalsIgnoreCase(usuario.getEstado())
                 || !rolPuedeReportar(usuario.getRol().getNombre())) {
             throw new IllegalStateException(
-                    "El usuario de demostración debe estar activo y tener un rol que pueda reportar incidencias.");
+                    "La cuenta autenticada debe estar activa y tener un rol autorizado para registrar incidencias.");
         }
 
         return convertirUsuario(usuario);
