@@ -44,10 +44,15 @@ const inicializarSelectoresUbicacion = () => {
         }
 
         if (autocompletar && !selectorPiso.value) {
-            selectorPiso.value = pisosVisibles[0]?.value || "";
+            if (pisosVisibles[0]) {
+                pisosVisibles[0].selected = true;
+            }
         }
 
-        const pisoSeleccionado = selectorPiso.value;
+        const pisoVisibleSeleccionado = selectorPiso.selectedOptions[0];
+        const pisoSeleccionado = pisoVisibleSeleccionado && !pisoVisibleSeleccionado.hidden
+            ? pisoVisibleSeleccionado.value
+            : "";
         opcionesDeAula.forEach((opcion) => {
             opcion.hidden = opcion.dataset.torre !== edificioSeleccionado
                 || opcion.dataset.piso !== pisoSeleccionado;

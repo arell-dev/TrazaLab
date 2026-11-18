@@ -523,8 +523,8 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"piso\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"ubicacionId\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Selecciona una torre")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula 01")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula 08")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula A0301")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula B0608")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("LAB-TEST</option>"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
     }
@@ -574,6 +574,7 @@ class RegistroIncidenciaJpaTest {
     @Test
     void migraDesdeVersionCincoYReasignaSoloElEquipoDemoA0301() throws Exception {
         String esquema = "prueba_rf04_" + UUID.randomUUID().toString().replace("-", "");
+        String prefijoEsquema = "\"" + esquema + "\".";
 
         try {
             Flyway.configure()
@@ -585,22 +586,18 @@ class RegistroIncidenciaJpaTest {
                     .migrate();
 
             try (Connection conexion = dataSource.getConnection()) {
-                try (Statement sentencia = conexion.createStatement()) {
-                    sentencia.execute("SET search_path TO \"" + esquema + "\"");
-                }
-
                 JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
                 jdbcEsquema.update(
-                        "INSERT INTO computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
-                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM ubicacion WHERE nombre = ?",
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
                         "PC-001",
                         "TRAZALAB-DEMO-001",
                         "HP",
                         "EliteDesk",
                         "LAB-01");
                 jdbcEsquema.update(
-                        "INSERT INTO computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
-                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM ubicacion WHERE nombre = ?",
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
                         "PC-LEGACY-001",
                         "SERIE-LEGACY-001",
                         "Dell",
@@ -616,21 +613,65 @@ class RegistroIncidenciaJpaTest {
                     .migrate();
 
             try (Connection conexion = dataSource.getConnection()) {
-                try (Statement sentencia = conexion.createStatement()) {
-                    sentencia.execute("SET search_path TO \"" + esquema + "\"");
-                }
-
                 JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
                 assertEquals("A0301", jdbcEsquema.queryForObject(
-                        "SELECT ubicacion.nombre FROM computadora "
-                                + "JOIN ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
                         String.class,
                         "PC-001"));
                 assertEquals("LAB-01", jdbcEsquema.queryForObject(
-                        "SELECT ubicacion.nombre FROM computadora "
-                                + "JOIN ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
                         String.class,
                         "PC-LEGACY-001"));
+            }
+        } finally {
+            try (Connection conexion = dataSource.getConnection(); Statement sentencia = conexion.createStatement()) {
+                sentencia.execute("DROP SCHEMA IF EXISTS \"" + esquema + "\" CASCADE");
+            }
+        }
+    }
+
+    @Test
+    void noReasignaPc001CuandoYaEstaEnOtraUbicacion() throws Exception {
+        String esquema = "prueba_rf04_" + UUID.randomUUID().toString().replace("-", "");
+        String prefijoEsquema = "\"" + esquema + "\".";
+
+        try {
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .target(MigrationVersion.fromVersion("5"))
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                jdbcEsquema.update(
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
+                        "PC-001",
+                        "TRAZALAB-DEMO-001",
+                        "HP",
+                        "EliteDesk",
+                        "LAB-02");
+            }
+
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                assertEquals("LAB-02", jdbcEsquema.queryForObject(
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        String.class,
+                        "PC-001"));
             }
         } finally {
             try (Connection conexion = dataSource.getConnection(); Statement sentencia = conexion.createStatement()) {
