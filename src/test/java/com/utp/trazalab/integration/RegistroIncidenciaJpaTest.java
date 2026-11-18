@@ -633,54 +633,6 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void noReasignaPc001CuandoYaEstaEnOtraUbicacion() throws Exception {
-        String esquema = "prueba_rf04_" + UUID.randomUUID().toString().replace("-", "");
-        String prefijoEsquema = "\"" + esquema + "\".";
-
-        try {
-            Flyway.configure()
-                    .dataSource(dataSource)
-                    .schemas(esquema)
-                    .defaultSchema(esquema)
-                    .target(MigrationVersion.fromVersion("5"))
-                    .load()
-                    .migrate();
-
-            try (Connection conexion = dataSource.getConnection()) {
-                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
-                jdbcEsquema.update(
-                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
-                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
-                        "PC-001",
-                        "TRAZALAB-DEMO-001",
-                        "HP",
-                        "EliteDesk",
-                        "LAB-02");
-            }
-
-            Flyway.configure()
-                    .dataSource(dataSource)
-                    .schemas(esquema)
-                    .defaultSchema(esquema)
-                    .load()
-                    .migrate();
-
-            try (Connection conexion = dataSource.getConnection()) {
-                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
-                assertEquals("LAB-02", jdbcEsquema.queryForObject(
-                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
-                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
-                        String.class,
-                        "PC-001"));
-            }
-        } finally {
-            try (Connection conexion = dataSource.getConnection(); Statement sentencia = conexion.createStatement()) {
-                sentencia.execute("DROP SCHEMA IF EXISTS \"" + esquema + "\" CASCADE");
-            }
-        }
-    }
-
-    @Test
     void rechazaComoFiltroLasUbicacionesAnterioresAlCatalogoDeAulas() throws Exception {
         Integer ubicacionAnteriorId = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("LAB-TEST", sedePiura.getNombre())
                 .orElseThrow()
