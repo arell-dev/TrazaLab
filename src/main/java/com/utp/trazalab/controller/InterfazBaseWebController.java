@@ -6,17 +6,16 @@ import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
 import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
 import com.utp.trazalab.service.HistorialTecnicoConsultaServicio;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.nio.charset.StandardCharsets;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -48,16 +47,63 @@ public class InterfazBaseWebController {
     }
 
     @GetMapping("/disponibilidad")
-    public String disponibilidad(@RequestParam(required = false) Integer ubicacionId, @RequestParam(required = false) String buscar, @RequestParam(defaultValue = "0") int pagina, Model model) {
+    public String disponibilidad(@RequestParam(required = false) Integer ubicacionId, @RequestParam(required = false) String edificio, @RequestParam(required = false) Integer piso, @RequestParam(required = false) String buscar, @RequestParam(defaultValue = "0") int pagina, Model model) {
         List<UbicacionEntidad> todasLasUbicaciones = ubicaciones.findAllBySede_NombreIgnoreCaseOrderByEdificioAscPisoAscNombreAsc(sedeActiva);
         Set<Integer> idsUbicacionesConEquipos = todasLasUbicaciones.isEmpty()
                 ? Set.of()
                 : new HashSet<>(computadoras.findIdsDeUbicacionConEquipos(todasLasUbicaciones.getFirst().getSede().getId()));
-        List<UbicacionEntidad> ubicacionesDisponibles = filtrarUbicacionesDelMenu(todasLasUbicaciones, idsUbicacionesConEquipos);
-        UbicacionEntidad ubicacionSeleccionada = seleccionarUbicacion(ubicacionId, ubicacionesDisponibles);
-        Map<String, List<UbicacionEntidad>> ubicacionesAgrupadas = agruparUbicaciones(ubicacionesDisponibles);
+        List<UbicacionEntidad> aulasDisponibles = todasLasUbicaciones.stream()
+                .filter(ubicacion -> "AULA".equals(ubicacion.getTipo()))
+                .filter(aula -> aula.getEdificio() != null && aula.getPiso() != null)
+                .toList();
+        UbicacionEntidad ubicacionSeleccionada = seleccionarUbicacion(ubicacionId, aulasDisponibles);
+        Map<String, List<Integer>> pisosPorTorre = obtenerPisosPorTorre(aulasDisponibles);
+        String edificioSeleccionado = seleccionarEdificio(edificio, pisosPorTorre);
+        Integer pisoSeleccionado = seleccionarPiso(piso, edificioSeleccionado, pisosPorTorre);
+        boolean ubicacionNoDisponible = (edificio != null && edificioSeleccionado == null)
+                || (piso != null && pisoSeleccionado == null)
+                || (ubicacionId != null && ubicacionSeleccionada == null);
+
+        if (ubicacionSeleccionada == null && ubicacionId == null && !ubicacionNoDisponible && edificioSeleccionado != null) {
+            List<Integer> pisosDisponibles = pisosPorTorre.getOrDefault(edificioSeleccionado, List.of());
+            if (pisoSeleccionado == null && piso == null && !pisosDisponibles.isEmpty()) {
+                pisoSeleccionado = pisosDisponibles.getFirst();
+            }
+
+            if (pisoSeleccionado != null) {
+                String edificioFinal = edificioSeleccionado;
+                Integer pisoFinal = pisoSeleccionado;
+                ubicacionSeleccionada = aulasDisponibles.stream()
+                        .filter(aula -> aula.getEdificio() != null && aula.getEdificio().equalsIgnoreCase(edificioFinal))
+                        .filter(aula -> pisoFinal.equals(aula.getPiso()))
+                        .findFirst()
+                        .orElse(null);
+            }
+        }
+
+        if (ubicacionSeleccionada != null) {
+            if (ubicacionNoDisponible
+                    || (edificioSeleccionado != null && !edificioSeleccionado.equalsIgnoreCase(ubicacionSeleccionada.getEdificio()))
+                    || (pisoSeleccionado != null && !pisoSeleccionado.equals(ubicacionSeleccionada.getPiso()))) {
+                ubicacionNoDisponible = true;
+                ubicacionSeleccionada = null;
+            } else {
+                edificioSeleccionado = ubicacionSeleccionada.getEdificio();
+                pisoSeleccionado = ubicacionSeleccionada.getPiso();
+            }
+        }
+        List<Integer> idsUbicacionesPorVerificar = todasLasUbicaciones.stream()
+                .filter(ubicacion -> !"AULA".equals(ubicacion.getTipo())
+                        || ubicacion.getEdificio() == null
+                        || ubicacion.getPiso() == null)
+                .map(UbicacionEntidad::getId)
+                .filter(idsUbicacionesConEquipos::contains)
+                .toList();
+        long equiposConUbicacionPorVerificar = idsUbicacionesPorVerificar.isEmpty()
+                ? 0
+                : computadoras.countByUbicacion_IdIn(idsUbicacionesPorVerificar);
         Map<Integer, String> etiquetasEquipos = new HashMap<>();
-        List<Integer> idsUbicacion = ubicacionSeleccionada == null ? List.of() : buscarIdsUbicacion(ubicacionSeleccionada);
+        List<Integer> idsUbicacion = ubicacionSeleccionada == null ? List.of() : List.of(ubicacionSeleccionada.getId());
         String busqueda = buscar == null || buscar.isBlank() ? null : buscar.strip();
         Page<ComputadoraEntidad> paginaEquipos = Page.empty();
         long totalEquipos = 0;
@@ -87,9 +133,14 @@ public class InterfazBaseWebController {
         long inicioResultados = paginaEquipos.hasContent() ? (long) paginaEquipos.getNumber() * TAMANO_PAGINA + 1 : 0;
         long finResultados = paginaEquipos.hasContent() ? inicioResultados + paginaEquipos.getNumberOfElements() - 1 : 0;
 
-        model.addAttribute("ubicacionesAgrupadas", ubicacionesAgrupadas);
+        model.addAttribute("aulasDisponibles", aulasDisponibles);
+        model.addAttribute("pisosPorTorre", pisosPorTorre);
+        model.addAttribute("edificioSeleccionado", edificioSeleccionado);
+        model.addAttribute("pisoSeleccionado", pisoSeleccionado);
         model.addAttribute("ubicacionSeleccionada", ubicacionSeleccionada);
         model.addAttribute("etiquetaUbicacionSeleccionada", etiquetaUbicacion(ubicacionSeleccionada));
+        model.addAttribute("ubicacionNoDisponible", ubicacionNoDisponible);
+        model.addAttribute("equiposConUbicacionPorVerificar", equiposConUbicacionPorVerificar);
         model.addAttribute("etiquetasEquipos", etiquetasEquipos);
         model.addAttribute("paginaEquipos", paginaEquipos);
         model.addAttribute("busqueda", busqueda == null ? "" : busqueda);
@@ -134,63 +185,50 @@ public class InterfazBaseWebController {
         return "equipos/ficha";
     }
 
-    private UbicacionEntidad seleccionarUbicacion(Integer ubicacionId, List<UbicacionEntidad> ubicacionesDisponibles) {
-        if (ubicacionId != null) {
-            UbicacionEntidad solicitada = ubicacionesDisponibles.stream()
-                    .filter(ubicacion -> ubicacion.getId().equals(ubicacionId))
-                    .findFirst()
-                    .orElse(null);
-
-            if (solicitada != null) {
-                return solicitada;
-            }
+    private UbicacionEntidad seleccionarUbicacion(Integer ubicacionId, List<UbicacionEntidad> aulasDisponibles) {
+        if (ubicacionId == null) {
+            return null;
         }
 
-        return ubicacionesDisponibles.stream()
-                .filter(ubicacion -> "LAB-01".equalsIgnoreCase(ubicacion.getNombre()))
+        return aulasDisponibles.stream()
+                .filter(aula -> aula.getId().equals(ubicacionId))
                 .findFirst()
-                .orElse(ubicacionesDisponibles.isEmpty() ? null : ubicacionesDisponibles.getFirst());
+                .orElse(null);
     }
 
-    private Map<String, List<UbicacionEntidad>> agruparUbicaciones(List<UbicacionEntidad> ubicacionesDisponibles) {
-        Map<String, List<UbicacionEntidad>> ubicacionesAgrupadas = new LinkedHashMap<>();
+    private Map<String, List<Integer>> obtenerPisosPorTorre(List<UbicacionEntidad> aulasDisponibles) {
+        Map<String, Set<Integer>> pisosPorTorre = new LinkedHashMap<>();
 
-        for (UbicacionEntidad ubicacion : ubicacionesDisponibles) {
-            String grupo = grupoUbicacion(ubicacion);
-            ubicacionesAgrupadas.computeIfAbsent(grupo, clave -> new ArrayList<>()).add(ubicacion);
+        for (UbicacionEntidad aula : aulasDisponibles) {
+            pisosPorTorre.computeIfAbsent(aula.getEdificio(), clave -> new TreeSet<>()).add(aula.getPiso());
         }
 
-        return ubicacionesAgrupadas;
+        Map<String, List<Integer>> pisosOrdenadosPorTorre = new LinkedHashMap<>();
+        pisosPorTorre.forEach((torre, pisos) -> pisosOrdenadosPorTorre.put(torre, new ArrayList<>(pisos)));
+
+        return pisosOrdenadosPorTorre;
     }
 
-    private List<UbicacionEntidad> filtrarUbicacionesDelMenu(List<UbicacionEntidad> todasLasUbicaciones, Set<Integer> idsUbicacionesConEquipos) {
-        return todasLasUbicaciones.stream()
-                .filter(ubicacion -> debeMostrarUbicacion(ubicacion, idsUbicacionesConEquipos))
-                .toList();
-    }
-
-    private boolean debeMostrarUbicacion(UbicacionEntidad ubicacion, Set<Integer> idsUbicacionesConEquipos) {
-        if ("TORRE".equals(ubicacion.getTipo()) || "PISO".equals(ubicacion.getTipo())) {
-            return idsUbicacionesConEquipos.contains(ubicacion.getId());
+    private String seleccionarEdificio(String edificio, Map<String, List<Integer>> pisosPorTorre) {
+        if (edificio == null || edificio.isBlank()) {
+            return null;
         }
 
-        return true;
+        return pisosPorTorre.keySet().stream()
+                .filter(torre -> torre.equalsIgnoreCase(edificio.strip()))
+                .findFirst()
+                .orElse(null);
     }
 
-    private List<Integer> buscarIdsUbicacion(UbicacionEntidad ubicacion) {
-        Collection<UbicacionEntidad> ubicacionesDelNivel;
-        if ("TORRE".equals(ubicacion.getTipo())) {
-            String edificio = ubicacion.getEdificio() == null ? ubicacion.getNombre() : ubicacion.getEdificio();
-            ubicacionesDelNivel = ubicaciones.findAllBySede_IdAndEdificioIgnoreCase(ubicacion.getSede().getId(), edificio);
-        } else if ("PISO".equals(ubicacion.getTipo()) && ubicacion.getPiso() != null && ubicacion.getEdificio() != null) {
-            ubicacionesDelNivel = ubicaciones.findAllBySede_IdAndEdificioIgnoreCaseAndPiso(ubicacion.getSede().getId(), ubicacion.getEdificio(), ubicacion.getPiso());
-        } else {
-            ubicacionesDelNivel = List.of(ubicacion);
+    private Integer seleccionarPiso(Integer piso, String edificio, Map<String, List<Integer>> pisosPorTorre) {
+        if (piso == null || edificio == null) {
+            return null;
         }
 
-        return ubicacionesDelNivel.stream()
-                .map(UbicacionEntidad::getId)
-                .toList();
+        return pisosPorTorre.get(edificio).stream()
+                .filter(pisoDisponible -> pisoDisponible.equals(piso))
+                .findFirst()
+                .orElse(null);
     }
 
     private Page<ComputadoraEntidad> consultarEquipos(Collection<Integer> ubicacionIds, String busqueda, Pageable pageable) {
@@ -201,30 +239,9 @@ public class InterfazBaseWebController {
         return computadoras.buscarPorUbicaciones(ubicacionIds, busqueda, pageable);
     }
 
-    private String grupoUbicacion(UbicacionEntidad ubicacion) {
-        if ("TORRE".equals(ubicacion.getTipo())) {
-            return ubicacion.getSede().getNombre().toUpperCase(Locale.ROOT);
-        }
-
-        String torre = ubicacion.getEdificio() == null ? "Torre por asignar" : ubicacion.getEdificio();
-        if (ubicacion.getPiso() == null) {
-            return torre.toUpperCase(Locale.ROOT);
-        }
-
-        return "PISO " + ubicacion.getPiso() + " · " + torre.toUpperCase(Locale.ROOT);
-    }
-
     private String etiquetaUbicacion(UbicacionEntidad ubicacion) {
         if (ubicacion == null) {
-            return "Selecciona una ubicación";
-        }
-
-        if ("TORRE".equals(ubicacion.getTipo())) {
-            return ubicacion.getNombre();
-        }
-
-        if ("PISO".equals(ubicacion.getTipo())) {
-            return ubicacion.getNombre() + " · " + ubicacion.getEdificio();
+            return "Selecciona un aula";
         }
 
         String etiqueta = ubicacion.getNombre();
@@ -232,7 +249,7 @@ public class InterfazBaseWebController {
             etiqueta += " · " + ubicacion.getEdificio();
         }
         if (ubicacion.getPiso() != null) {
-            etiqueta += ", Piso " + ubicacion.getPiso();
+            etiqueta += ", piso " + ubicacion.getPiso();
         }
         if (ubicacion.getEdificio() == null && ubicacion.getPiso() == null && ubicacion.getDetalle() != null) {
             etiqueta += " · " + ubicacion.getDetalle();

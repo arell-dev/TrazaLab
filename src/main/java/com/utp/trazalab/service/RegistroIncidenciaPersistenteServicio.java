@@ -203,7 +203,7 @@ public class RegistroIncidenciaPersistenteServicio {
             ubicacion += " · " + edificio;
         }
         if (piso != null) {
-            ubicacion += ", Piso " + piso;
+            ubicacion += ", piso " + piso;
         }
         if (detalle != null && !detalle.isBlank()) {
             ubicacion += " · " + detalle;

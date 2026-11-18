@@ -15,6 +15,69 @@ const inicializarContadores = () => {
     });
 };
 
+const inicializarSelectoresUbicacion = () => {
+    const formulario = document.querySelector("[data-ubicacion-selectores]");
+
+    if (!formulario) {
+        return;
+    }
+
+    const selectorEdificio = formulario.querySelector("#edificio");
+    const selectorPiso = formulario.querySelector("#piso");
+    const selectorAula = formulario.querySelector("#ubicacion-id");
+    const opcionesDePiso = Array.from(selectorPiso.querySelectorAll("option[data-torre]"));
+    const opcionesDeAula = Array.from(selectorAula.querySelectorAll("option[data-torre]"));
+
+    const actualizarOpcionesDependientes = (autocompletar = false) => {
+        const edificioSeleccionado = selectorEdificio.value;
+        opcionesDePiso.forEach((opcion) => {
+            opcion.hidden = opcion.dataset.torre !== edificioSeleccionado;
+        });
+
+        selectorPiso.disabled = !edificioSeleccionado;
+        const pisosVisibles = opcionesDePiso.filter((opcion) => !opcion.hidden);
+
+        const pisoValido = pisosVisibles.some((opcion) => opcion.value === selectorPiso.value);
+
+        if (!pisoValido) {
+            selectorPiso.value = "";
+        }
+
+        if (autocompletar && !selectorPiso.value) {
+            selectorPiso.value = pisosVisibles[0]?.value || "";
+        }
+
+        const pisoSeleccionado = selectorPiso.value;
+        opcionesDeAula.forEach((opcion) => {
+            opcion.hidden = opcion.dataset.torre !== edificioSeleccionado
+                || opcion.dataset.piso !== pisoSeleccionado;
+        });
+
+        selectorAula.disabled = !edificioSeleccionado || !pisoSeleccionado;
+
+        const aulasVisibles = opcionesDeAula.filter((opcion) => !opcion.hidden);
+        if (selectorAula.selectedOptions[0]?.hidden || !selectorAula.value) {
+            selectorAula.value = "";
+        }
+
+        if (autocompletar && !selectorAula.value) {
+            selectorAula.value = aulasVisibles[0]?.value || "";
+        }
+    };
+
+    selectorEdificio.addEventListener("change", () => {
+        selectorPiso.value = "";
+        selectorAula.value = "";
+        actualizarOpcionesDependientes(true);
+    });
+    selectorPiso.addEventListener("change", () => {
+        selectorAula.value = "";
+        actualizarOpcionesDependientes(true);
+    });
+
+    actualizarOpcionesDependientes();
+};
+
 const inicializarAvisos = () => {
     document.querySelectorAll("[data-toast]").forEach((toast) => {
         const cerrar = () => {
@@ -429,6 +492,7 @@ const inicializarFormularioIncidencia = () => {
 
 document.addEventListener("DOMContentLoaded", () => {
     inicializarContadores();
+    inicializarSelectoresUbicacion();
     inicializarAvisos();
     inicializarFormularioIncidencia();
     inicializarLectorQr();
