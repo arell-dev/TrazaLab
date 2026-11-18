@@ -14,33 +14,57 @@
         </div>
 
         <section class="ubicacion-selector mb-4" aria-labelledby="ubicacion-fisica-label">
-          <span class="ubicacion-selector__label" id="ubicacion-fisica-label">Ubicación física</span>
-          <div class="dropdown">
-            <button class="btn ubicacion-selector__button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-labelledby="ubicacion-fisica-label ubicacion-seleccionada" th:disabled="${ubicacionesAgrupadas.isEmpty()}">
-              <svg class="ubicacion-selector__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M4 3.75h16v16.5H4zM8 7.75v1m4-1v1m4-1v1m-8 3v1m4-1v1m4-1v1m-8 3v1m4-1v1m4-1v1M10 20.25v-4h4v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              <span class="ubicacion-selector__value" id="ubicacion-seleccionada" th:text="${etiquetaUbicacionSeleccionada}">LAB-01 · Torre A, Piso 3</span>
-              <svg class="ubicacion-selector__chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            </button>
-            <div class="dropdown-menu ubicacion-selector__menu">
-              <div th:each="grupo : ${ubicacionesAgrupadas}">
-                <h2 class="dropdown-header" th:text="${grupo.key}">PISO 3 · TORRE A</h2>
-                <a class="dropdown-item ubicacion-selector__option" th:each="ubicacion : ${grupo.value}"
-                   th:href="@{/disponibilidad(ubicacionId=${ubicacion.id})}"
-                   th:classappend="${ubicacionSeleccionada != null and ubicacion.id == ubicacionSeleccionada.id} ? 'active'"
-                   th:attr="aria-current=${ubicacionSeleccionada != null and ubicacion.id == ubicacionSeleccionada.id} ? 'true' : null">
-                  <span>
-                    <span th:if="${ubicacion.tipo == 'TORRE'}">Toda la torre · <span th:text="${ubicacion.nombre}">Torre A</span></span>
-                    <span th:if="${ubicacion.tipo == 'PISO'}">Todo el piso · <span th:text="${ubicacion.nombre}">Piso 3</span></span>
-                    <span th:if="${ubicacion.tipo != 'TORRE' and ubicacion.tipo != 'PISO'}" th:text="${ubicacion.nombre}">LAB-01</span>
-                    <span th:if="${ubicacion.detalle != null}" th:text="| · ${ubicacion.detalle}|"> · Cómputo General</span>
-                  </span>
-                  <svg class="ubicacion-selector__check" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                </a>
+          <form method="get" th:action="@{/disponibilidad}" data-ubicacion-selectores>
+            <h2 class="visually-hidden" id="ubicacion-fisica-label">Filtrar equipos por ubicación</h2>
+            <div class="ubicacion-selector__controls">
+              <div class="ubicacion-selector__field">
+                <label class="ubicacion-selector__label" for="edificio">Torre</label>
+                <select class="form-select" id="edificio" name="edificio" required>
+                  <option value="" th:selected="${edificioSeleccionado == null}">Selecciona una torre</option>
+                  <option th:each="torre : ${pisosPorTorre}"
+                          th:value="${torre.key}"
+                          th:selected="${torre.key == edificioSeleccionado}"
+                          th:text="${torre.key}">Torre A</option>
+                </select>
               </div>
-              <p class="ubicacion-selector__empty mb-0" th:if="${ubicacionesAgrupadas.isEmpty()}">No hay ubicaciones configuradas para esta sede.</p>
+              <div class="ubicacion-selector__field">
+                <label class="ubicacion-selector__label" for="piso">Piso</label>
+                <select class="form-select" id="piso" name="piso" required>
+                  <option value="" th:selected="${pisoSeleccionado == null}">Selecciona un piso</option>
+                  <th:block th:each="torre : ${pisosPorTorre}">
+                    <option th:each="numeroPiso : ${torre.value}"
+                            th:value="${numeroPiso}"
+                            th:attr="data-torre=${torre.key}"
+                            th:selected="${numeroPiso == pisoSeleccionado and torre.key == edificioSeleccionado}"
+                            th:text="|Piso ${#numbers.formatInteger(numeroPiso, 2)}|">Piso 03</option>
+                  </th:block>
+                </select>
+              </div>
+              <div class="ubicacion-selector__field">
+                <label class="ubicacion-selector__label" for="ubicacion-id">Aula</label>
+                <select class="form-select" id="ubicacion-id" name="ubicacionId" required>
+                  <option value="" th:selected="${ubicacionSeleccionada == null}">Selecciona un aula</option>
+                  <option th:each="aula : ${aulasDisponibles}"
+                          th:value="${aula.id}"
+                          th:attr="data-torre=${aula.edificio},data-piso=${aula.piso}"
+                          th:selected="${ubicacionSeleccionada != null and aula.id == ubicacionSeleccionada.id}"
+                          th:text="|Aula ${aula.nombre}|">Aula A0301</option>
+                </select>
+              </div>
+              <div class="ubicacion-selector__field">
+                <button class="btn btn-outline-primary" type="submit">Aplicar ubicación</button>
+              </div>
             </div>
-          </div>
+          </form>
         </section>
+
+        <div class="alert alert-warning" role="status" th:if="${ubicacionNoDisponible}">
+          La combinación de torre, piso y aula no está disponible. Selecciona opciones válidas.
+        </div>
+        <div class="alert alert-info" role="status" th:if="${equiposConUbicacionPorVerificar > 0}">
+          <span th:if="${equiposConUbicacionPorVerificar == 1}">1 equipo conserva una ubicación anterior y requiere validar su aula.</span>
+          <span th:if="${equiposConUbicacionPorVerificar != 1}" th:text="|${equiposConUbicacionPorVerificar} equipos conservan ubicaciones anteriores y requieren validar su aula.|">Equipos con ubicaciones previas requieren validar sus aulas.</span>
+        </div>
 
         <div class="row g-3 mb-4">
           <div class="col-6 col-xl-3">
@@ -82,9 +106,9 @@
               <input type="hidden" name="ubicacionId" th:if="${ubicacionSeleccionada != null}" th:value="${ubicacionSeleccionada.id}">
               <div class="input-group equipment-search__field">
                 <span class="input-group-text"><span class="material-symbols-outlined" aria-hidden="true">search</span></span>
-                <input class="form-control" id="buscar-equipo" name="buscar" type="search" th:value="${busqueda}" placeholder="Buscar por código de equipo, serie o modelo..." aria-label="Buscar equipo por código, serie o modelo">
+                <input class="form-control" id="buscar-equipo" name="buscar" type="search" th:value="${busqueda}" placeholder="Buscar por código de equipo, serie o modelo..." aria-label="Buscar equipo por código, serie o modelo" th:disabled="${ubicacionSeleccionada == null}">
               </div>
-              <button class="btn btn-light equipment-filter-button" type="submit">
+              <button class="btn btn-light equipment-filter-button" type="submit" th:disabled="${ubicacionSeleccionada == null}">
                 <span class="material-symbols-outlined" aria-hidden="true">tune</span>
                 <span>Filtrar</span>
                 <span class="equipment-filter-button__count" th:text="${busqueda.isBlank()} ? 0 : 1">0</span>
@@ -118,7 +142,7 @@
             </div>
             <span class="equipment-row__note small text-body-secondary">
               <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
-              <span th:text="${etiquetasEquipos[computadora.id]}">LAB-01 · Torre A, Piso 3</span>
+              <span th:text="${etiquetasEquipos[computadora.id]}">A0301 · Torre A, piso 3</span>
             </span>
             <a class="equipment-row__action text-decoration-none" th:href="@{/equipos/{codigoQr}(codigoQr=${computadora.codigoQr})}">
               Ver equipo
@@ -127,14 +151,16 @@
           </article>
           <div class="equipment-empty-state" th:if="${paginaEquipos.empty}">
             <span class="material-symbols-outlined" aria-hidden="true">desktop_access_disabled</span>
-            <p th:if="${busqueda.isBlank()}">No hay equipos registrados en esta ubicación.</p>
+            <p th:if="${ubicacionSeleccionada == null and ubicacionNoDisponible}">Selecciona un aula válida para consultar sus equipos.</p>
+            <p th:if="${ubicacionSeleccionada == null and !ubicacionNoDisponible}">Selecciona un aula para consultar sus equipos.</p>
+            <p th:if="${ubicacionSeleccionada != null and busqueda.isBlank()}">No hay equipos registrados en esta aula.</p>
             <p th:unless="${busqueda.isBlank()}">No se encontraron equipos con ese criterio.</p>
           </div>
         </section>
 
         <div class="lista-equipos-pie" th:if="${ubicacionSeleccionada != null}">
           <p class="lista-equipos-pie__resumen">
-            Mostrando <strong th:text="${inicioResultados}">0</strong>–<strong th:text="${finResultados}">0</strong> de <strong th:text="${paginaEquipos.totalElements}">0</strong> equipos en <strong th:text="${ubicacionSeleccionada.nombre}">LAB-01</strong>
+            Mostrando <strong th:text="${inicioResultados}">0</strong>–<strong th:text="${finResultados}">0</strong> de <strong th:text="${paginaEquipos.totalElements}">0</strong> equipos en <strong th:text="${ubicacionSeleccionada.nombre}">A0301</strong>
           </p>
           <nav aria-label="Paginación de equipos" th:if="${paginaEquipos.totalPages > 1}">
             <ul class="pagination pagination-sm">

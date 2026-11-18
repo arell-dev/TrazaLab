@@ -14,20 +14,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.utp.trazalab.dto.HistorialComputadoraDto;
-import com.utp.trazalab.dto.IncidenciaRegistradaDto;
-import com.utp.trazalab.dto.FallaRecurrenteDto;
-import com.utp.trazalab.dto.EventoHistorialTecnicoDto;
-import com.utp.trazalab.dto.UsuarioAltaFormulario;
 import java.io.ByteArrayInputStream;
-import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
+import javax.sql.DataSource;
 import com.utp.trazalab.domain.enums.EstadoComputadora;
 import com.utp.trazalab.domain.enums.EstadoIncidencia;
-import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
+import com.utp.trazalab.dto.EventoHistorialTecnicoDto;
+import com.utp.trazalab.dto.FallaRecurrenteDto;
+import com.utp.trazalab.dto.HistorialComputadoraDto;
+import com.utp.trazalab.dto.IncidenciaRegistradaDto;
+import com.utp.trazalab.dto.UsuarioAltaFormulario;
+import com.utp.trazalab.persistence.jpa.entity.ComputadoraEntidad;
 import com.utp.trazalab.persistence.jpa.entity.ComponenteEntidad;
-import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
+import com.utp.trazalab.persistence.jpa.entity.IncidenciaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.RolEntidad;
 import com.utp.trazalab.persistence.jpa.entity.SedeEntidad;
+import com.utp.trazalab.persistence.jpa.entity.TipoFallaEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UbicacionEntidad;
 import com.utp.trazalab.persistence.jpa.entity.UsuarioEntidad;
 import com.utp.trazalab.persistence.jpa.springdata.ComputadoraJpaRepositorio;
@@ -43,16 +57,6 @@ import com.utp.trazalab.service.RegistroMantenimientoServicio;
 import com.utp.trazalab.service.ReporteFallasServicio;
 import com.utp.trazalab.service.AdministracionUsuariosServicio;
 import com.utp.trazalab.service.HistorialTecnicoConsultaServicio;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.sql.PreparedStatement;
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.stream.Stream;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -60,9 +64,12 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.domain.Page;
@@ -70,13 +77,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -117,6 +125,7 @@ class RegistroIncidenciaJpaTest {
     @Autowired private HistorialTecnicoConsultaServicio servicioHistorialTecnico;
     @Autowired private PasswordEncoder codificadorContrasenas;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private DataSource dataSource;
     @Autowired private MockMvc mockMvc;
 
     private UsuarioEntidad reportante;
@@ -143,8 +152,10 @@ class RegistroIncidenciaJpaTest {
                 "activo",
                 codificadorContrasenas.encode("clave-segura-de-pruebas")));
         sedePiura = sedes.findByNombreIgnoreCase("UTP Sede Piura").orElseThrow();
-        UbicacionEntidad ubicacion = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración", sedePiura, "Torre A", 3, "LABORATORIO"));
+        UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("A0301", sedePiura.getNombre()).orElseThrow();
         computadora = computadoras.saveAndFlush(new ComputadoraEntidad("QR-TEST-001", "SERIE-TEST-001", "HP", "Mini", ubicacion, EstadoComputadora.OPERATIVA));
+        UbicacionEntidad ubicacionAnterior = ubicaciones.saveAndFlush(new UbicacionEntidad("LAB-TEST", "Prueba de integración", sedePiura, "Torre A", 3, "LABORATORIO"));
+        computadoras.saveAndFlush(new ComputadoraEntidad("QR-LEGACY-001", "SERIE-LEGACY-001", "Dell", "OptiPlex", ubicacionAnterior, EstadoComputadora.OPERATIVA));
     }
 
     @Test
@@ -423,7 +434,7 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(jsonPath("$.codigoQr").value("QR-TEST-001"))
                 .andExpect(jsonPath("$.numeroSerie").value("SERIE-TEST-001"))
                 .andExpect(jsonPath("$.marca").value("HP"))
-                .andExpect(jsonPath("$.ubicacion").value("LAB-TEST · Torre A, Piso 3 · Prueba de integración"))
+                .andExpect(jsonPath("$.ubicacion").value("A0301 · Torre A, piso 3"))
                 .andExpect(jsonPath("$.incidencias.length()").value(5))
                 .andExpect(jsonPath("$.incidencias[0].descripcion")
                         .value("Incidencia de prueba 6."))
@@ -476,7 +487,227 @@ class RegistroIncidenciaJpaTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Disponibilidad de equipos")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("LAB-TEST")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("A0301 · Torre A, piso 3")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1 equipo conserva una ubicación anterior")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("QR-LEGACY-001"))));
+    }
+
+    @Test
+    void panelDeDisponibilidadOmiteAulasSinTorreOPisoYAdvierteQueRequierenValidacion() throws Exception {
+        UbicacionEntidad aulaIncompleta = ubicaciones.saveAndFlush(new UbicacionEntidad(
+                "A0901", null, sedePiura, null, null, "AULA"));
+        computadoras.saveAndFlush(new ComputadoraEntidad(
+                "QR-AULA-INCOMPLETA", "SERIE-AULA-INCOMPLETA", "Dell", "OptiPlex", aulaIncompleta, EstadoComputadora.OPERATIVA));
+
+        mockMvc.perform(get("/disponibilidad"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "2 equipos conservan ubicaciones anteriores y requieren validar su aula.")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Aula 0901"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("QR-AULA-INCOMPLETA"))));
+    }
+
+    @Test
+    void panelDeDisponibilidadMuestraSoloLasAulasDelCatalogoYNoSeleccionaUnaPorDefecto() throws Exception {
+        assertEquals(List.of(
+                        "A0301", "A0302", "A0303", "A0305", "A0307", "A0308", "A0310", "A0311", "A0312",
+                        "B0605", "B0606", "B0607", "B0608"),
+                ubicaciones.findAllBySede_NombreIgnoreCaseOrderByEdificioAscPisoAscNombreAsc(sedePiura.getNombre()).stream()
+                        .filter(ubicacion -> "AULA".equals(ubicacion.getTipo()))
+                        .map(UbicacionEntidad::getNombre)
+                        .toList());
+
+        mockMvc.perform(get("/disponibilidad"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"edificio\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"piso\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"ubicacionId\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Selecciona una torre")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula A0301")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula B0608")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("LAB-TEST</option>"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
+    }
+
+    @Test
+    void aceptaElAulaCuandoCoincideConLaTorreYElPisoSeleccionados() throws Exception {
+        mockMvc.perform(get("/disponibilidad")
+                        .param("edificio", "Torre A")
+                        .param("piso", "3")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("A0301 · Torre A, piso 3")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())));
+    }
+
+    @Test
+    void rechazaElAulaCuandoNoCoincideConLaTorreSeleccionada() throws Exception {
+        mockMvc.perform(get("/disponibilidad")
+                        .param("edificio", "Torre B")
+                        .param("piso", "6")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "La combinación de torre, piso y aula no está disponible.")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
+
+        mockMvc.perform(get("/disponibilidad")
+                        .param("edificio", "Torre A")
+                        .param("piso", "6")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "La combinación de torre, piso y aula no está disponible.")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
+    }
+
+    @Test
+    void impideRegistrarDosVecesElMismoCodigoDeAulaEnUnaSede() {
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update(
+                "INSERT INTO ubicacion (nombre, detalle, sede_id, edificio, piso, tipo) VALUES (?, NULL, ?, ?, ?, 'AULA')",
+                "A0301",
+                sedePiura.getId(),
+                "Torre A",
+                3));
+    }
+
+    @Test
+    void migraDesdeVersionCincoYReasignaSoloElEquipoDemoA0301() throws Exception {
+        String esquema = "prueba_rf04_" + UUID.randomUUID().toString().replace("-", "");
+        String prefijoEsquema = "\"" + esquema + "\".";
+
+        try {
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .target(MigrationVersion.fromVersion("5"))
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                jdbcEsquema.update(
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
+                        "PC-001",
+                        "TRAZALAB-DEMO-001",
+                        "HP",
+                        "EliteDesk",
+                        "LAB-01");
+                jdbcEsquema.update(
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
+                        "PC-LEGACY-001",
+                        "SERIE-LEGACY-001",
+                        "Dell",
+                        "OptiPlex",
+                        "LAB-01");
+            }
+
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                assertEquals("A0301", jdbcEsquema.queryForObject(
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        String.class,
+                        "PC-001"));
+                assertEquals("LAB-01", jdbcEsquema.queryForObject(
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        String.class,
+                        "PC-LEGACY-001"));
+            }
+        } finally {
+            try (Connection conexion = dataSource.getConnection(); Statement sentencia = conexion.createStatement()) {
+                sentencia.execute("DROP SCHEMA IF EXISTS \"" + esquema + "\" CASCADE");
+            }
+        }
+    }
+
+    @Test
+    void noReasignaPc001CuandoYaEstaEnOtraUbicacion() throws Exception {
+        String esquema = "prueba_rf04_" + UUID.randomUUID().toString().replace("-", "");
+        String prefijoEsquema = "\"" + esquema + "\".";
+
+        try {
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .target(MigrationVersion.fromVersion("5"))
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                jdbcEsquema.update(
+                        "INSERT INTO " + prefijoEsquema + "computadora (codigo_qr, numero_serie, marca, modelo, ubicacion_id) "
+                                + "SELECT ?, ?, ?, ?, ubicacion_id FROM " + prefijoEsquema + "ubicacion WHERE nombre = ?",
+                        "PC-001",
+                        "TRAZALAB-DEMO-001",
+                        "HP",
+                        "EliteDesk",
+                        "LAB-02");
+            }
+
+            Flyway.configure()
+                    .dataSource(dataSource)
+                    .schemas(esquema)
+                    .defaultSchema(esquema)
+                    .load()
+                    .migrate();
+
+            try (Connection conexion = dataSource.getConnection()) {
+                JdbcTemplate jdbcEsquema = new JdbcTemplate(new SingleConnectionDataSource(conexion, true));
+                assertEquals("LAB-02", jdbcEsquema.queryForObject(
+                        "SELECT ubicacion.nombre FROM " + prefijoEsquema + "computadora "
+                                + "JOIN " + prefijoEsquema + "ubicacion USING (ubicacion_id) WHERE codigo_qr = ?",
+                        String.class,
+                        "PC-001"));
+            }
+        } finally {
+            try (Connection conexion = dataSource.getConnection(); Statement sentencia = conexion.createStatement()) {
+                sentencia.execute("DROP SCHEMA IF EXISTS \"" + esquema + "\" CASCADE");
+            }
+        }
+    }
+
+    @Test
+    void rechazaComoFiltroLasUbicacionesAnterioresAlCatalogoDeAulas() throws Exception {
+        Integer ubicacionAnteriorId = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("LAB-TEST", sedePiura.getNombre())
+                .orElseThrow()
+                .getId();
+
+        mockMvc.perform(get("/disponibilidad").param("ubicacionId", ubicacionAnteriorId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "La combinación de torre, piso y aula no está disponible.")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("QR-LEGACY-001"))));
+    }
+
+    @Test
+    void panelDeDisponibilidadSeparaLasAulasPorTorre() throws Exception {
+        UbicacionEntidad aulaTorreB = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("B0605", sedePiura.getNombre()).orElseThrow();
+        ComputadoraEntidad equipoTorreB = computadoras.saveAndFlush(new ComputadoraEntidad(
+                "QR-TORRE-B-001", "SERIE-TORRE-B-001", "Lenovo", "ThinkCentre", aulaTorreB, EstadoComputadora.OPERATIVA));
+
+        mockMvc.perform(get("/disponibilidad").param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(equipoTorreB.getCodigoQr()))));
+
+        mockMvc.perform(get("/disponibilidad").param("ubicacionId", aulaTorreB.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(equipoTorreB.getCodigoQr())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
     }
 
     @Test

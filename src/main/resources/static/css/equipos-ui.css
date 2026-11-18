@@ -74,112 +74,42 @@
 }
 
 .ubicacion-selector {
-  display: grid;
-  width: min(100%, 22rem);
-  gap: 0.45rem;
+  width: 100%;
 }
 
 .ubicacion-selector__label {
+  display: block;
+  margin-bottom: 0.35rem;
   color: var(--trazalab-ink);
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-.ubicacion-selector__button {
-  display: flex;
-  width: 100%;
-  min-height: 2.75rem;
-  align-items: center;
+.ubicacion-selector__controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
   gap: 0.75rem;
-  padding: 0.625rem 0.875rem;
-  color: var(--trazalab-ink);
-  text-align: left;
-  background: var(--trazalab-surface);
-  border: 1px solid var(--trazalab-border);
-  border-radius: var(--bs-border-radius);
 }
 
-.ubicacion-selector__button::after {
-  display: none;
-}
-
-.ubicacion-selector__button:hover,
-.ubicacion-selector__button:focus-visible {
-  color: var(--trazalab-ink);
-  background: var(--trazalab-surface);
-  border-color: var(--bs-primary);
-}
-
-.ubicacion-selector__icon {
-  width: 1.2rem;
-  height: 1.2rem;
-  flex: 0 0 auto;
-  color: var(--bs-primary);
-}
-
-.ubicacion-selector__value {
+.ubicacion-selector__field {
   min-width: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.ubicacion-selector__chevron {
-  width: 1rem;
-  height: 1rem;
-  flex: 0 0 auto;
+.ubicacion-selector__field .form-select {
+  background-color: var(--trazalab-surface);
 }
 
-.ubicacion-selector__menu {
-  width: 100%;
-  max-height: min(26rem, 65vh);
-  overflow-y: auto;
-  padding-block: 0.35rem;
+@media (max-width: 767.98px) {
+  .ubicacion-selector__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.ubicacion-selector__menu .dropdown-header {
-  padding: 0.65rem 1rem 0.45rem;
-  color: var(--trazalab-ink-muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.035em;
-}
-
-.ubicacion-selector__option {
-  display: flex;
-  min-height: 2.75rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 1rem;
-  color: var(--trazalab-ink);
-}
-
-.ubicacion-selector__option.active {
-  color: var(--bs-primary);
-  background: #fff1f2;
-}
-
-.ubicacion-selector__option:focus-visible {
-  outline: 2px solid var(--bs-primary);
-  outline-offset: -2px;
-}
-
-.ubicacion-selector__check {
-  display: none;
-  width: 1rem;
-  height: 1rem;
-  flex: 0 0 auto;
-}
-
-.ubicacion-selector__option.active .ubicacion-selector__check {
-  display: block;
-}
-
-.ubicacion-selector__empty {
-  padding: 0.75rem 1rem;
-  color: var(--trazalab-ink-muted);
-  font-size: 0.875rem;
+@media (max-width: 399.98px) {
+  .ubicacion-selector__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .equipment-search__field {
