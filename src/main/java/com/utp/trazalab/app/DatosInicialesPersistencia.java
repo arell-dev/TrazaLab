@@ -62,8 +62,8 @@ public class DatosInicialesPersistencia implements CommandLineRunner {
 
         SedeEntidad sedePiura = sedes.findByNombreIgnoreCase("UTP Sede Piura")
                 .orElseThrow(() -> new IllegalStateException("Falta la sede UTP Sede Piura."));
-        UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("LAB-01", sedePiura.getNombre())
-                .orElseGet(() -> ubicaciones.save(new UbicacionEntidad("LAB-01", "Cómputo General", sedePiura, "Torre A", 3, "LABORATORIO")));
+        UbicacionEntidad ubicacion = ubicaciones.findByNombreIgnoreCaseAndSede_NombreIgnoreCase("A0301", sedePiura.getNombre())
+                .orElseThrow(() -> new IllegalStateException("Falta el aula A0301 en la sede UTP Sede Piura."));
         computadoras.findByCodigoQrIgnoreCase("PC-001")
                 .orElseGet(() -> computadoras.save(new ComputadoraEntidad("PC-001", "TRAZALAB-DEMO-001", "HP", "EliteDesk", ubicacion, EstadoComputadora.OPERATIVA)));
     }
