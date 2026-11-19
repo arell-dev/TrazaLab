@@ -3,22 +3,12 @@
     {
       "name": "trazalab.seed.enabled",
       "type": "java.lang.Boolean",
-      "description": "Activa la carga opcional de datos de demostración."
+      "description": "Activa la carga opcional de la computadora de demostración."
     },
     {
       "name": "trazalab.sede-activa",
       "type": "java.lang.String",
       "description": "Sede que limita las ubicaciones visibles en la instalación actual."
-    },
-    {
-      "name": "trazalab.seed.usuario-correo",
-      "type": "java.lang.String",
-      "description": "Correo usado por la carga opcional para el usuario reportante de demostración."
-    },
-    {
-      "name": "trazalab.seed.tecnico-correo",
-      "type": "java.lang.String",
-      "description": "Correo usado por la carga opcional para el técnico de demostración."
     }
   ]
 }

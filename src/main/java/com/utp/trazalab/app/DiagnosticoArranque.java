@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DiagnosticoArranque {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DiagnosticoArranque.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger("trazalab.chequeos");
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(3))
             .build();

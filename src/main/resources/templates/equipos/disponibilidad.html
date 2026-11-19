@@ -139,9 +139,9 @@
                 <div class="filtro-equipos__panel" id="filtros-estado" data-panel-filtros hidden>
                   <fieldset>
                     <legend>Estado</legend>
-                    <label><input type="checkbox" name="estado" value="OPERATIVA" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).OPERATIVA)}"> Operativa</label>
-                    <label><input type="checkbox" name="estado" value="EN_MANTENIMIENTO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).EN_MANTENIMIENTO)}"> En mantenimiento</label>
-                    <label><input type="checkbox" name="estado" value="FUERA_DE_SERVICIO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).FUERA_DE_SERVICIO)}"> Fuera de servicio</label>
+                    <label><input type="checkbox" name="estado" value="OPERATIVA" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.trazabilidad.model.EstadoComputadora).OPERATIVA)}"> Operativa</label>
+                    <label><input type="checkbox" name="estado" value="EN_MANTENIMIENTO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.trazabilidad.model.EstadoComputadora).EN_MANTENIMIENTO)}"> En mantenimiento</label>
+                    <label><input type="checkbox" name="estado" value="FUERA_DE_SERVICIO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.trazabilidad.model.EstadoComputadora).FUERA_DE_SERVICIO)}"> Fuera de servicio</label>
                   </fieldset>
                   <button type="button" class="btn btn-outline-secondary btn-sm filtro-equipos__limpiar" data-limpiar-filtros>Limpiar filtros</button>
                 </div>

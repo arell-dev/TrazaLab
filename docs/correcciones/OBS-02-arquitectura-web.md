@@ -37,5 +37,5 @@ La primera compilación tras mover las entidades detectó imports faltantes de `
 ## Trazabilidad
 
 - Código: [`src/main/java/com/utp/trazalab/controller`](../../src/main/java/com/utp/trazalab/controller), [`src/main/java/com/utp/trazalab/persistence/jpa`](../../src/main/java/com/utp/trazalab/persistence/jpa) y [`src/main/resources/templates`](../../src/main/resources/templates).
-- Pruebas: [`RegistroIncidenciaJpaTest`](../../src/test/java/com/utp/trazalab/integration/RegistroIncidenciaJpaTest.java).
+- Pruebas: la clase histórica `RegistroIncidenciaJpaTest` se dividió por flujo; los casos actuales están en [pruebas de integración](../../src/test/java/com/utp/trazalab/integration/).
 - Rama y PR: [`refactor/arquitectura-opalina` · PR #5](https://github.com/arell-dev/TrazaLab/pull/5).

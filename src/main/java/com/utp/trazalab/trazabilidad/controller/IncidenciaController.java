@@ -1,0 +1,76 @@
+package com.utp.trazalab.trazabilidad.controller;
+
+import com.utp.trazalab.trazabilidad.dto.IncidenciaRegistradaDto;
+import com.utp.trazalab.trazabilidad.dto.IncidenciaSolicitudDto;
+import com.utp.trazalab.trazabilidad.controller.form.IncidenciaForm;
+import com.utp.trazalab.trazabilidad.service.IncidenciaService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+@RequestMapping("/incidencias")
+public class IncidenciaController {
+    private static final int TAMANO_PAGINA = 25;
+
+    private final IncidenciaService servicio;
+    public IncidenciaController(IncidenciaService servicio) {
+        this.servicio = servicio;
+    }
+
+    @GetMapping
+    public String listar(@RequestParam(defaultValue = "0") int pagina, Model model) {
+        int paginaActual = Math.max(pagina, 0);
+        Page<IncidenciaRegistradaDto> incidencias = servicio.consultarIncidencias(
+                PageRequest.of(paginaActual, TAMANO_PAGINA));
+        if (paginaActual > 0 && paginaActual >= incidencias.getTotalPages()) {
+            return "redirect:/incidencias";
+        }
+
+        model.addAttribute("incidencias", incidencias);
+        return "incidencias/listado";
+    }
+
+    @GetMapping("/nueva")
+    public String nueva(Model model) {
+        model.addAttribute("registroIncidencia", new IncidenciaForm());
+        model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
+        return "incidencias/nueva";
+    }
+
+    @PostMapping
+    public String registrar(@Valid @ModelAttribute("registroIncidencia") IncidenciaForm formulario, BindingResult errores, Model model, RedirectAttributes redireccion) {
+        if (errores.hasErrors()) {
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
+            return "incidencias/nueva";
+        }
+
+        try {
+            var usuarioAutenticado = servicio.consultarUsuarioAutenticado(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName());
+            IncidenciaSolicitudDto solicitud = new IncidenciaSolicitudDto();
+            solicitud.setUsuarioId(usuarioAutenticado.id());
+            solicitud.setCodigoQr(formulario.getCodigoQr());
+            solicitud.setDescripcion(formulario.getDescripcion());
+            servicio.registrar(solicitud, formulario.getTipoFallaId());
+            redireccion.addFlashAttribute("mensajeExito", "Incidencia registrada.");
+            return "redirect:/incidencias";
+        } catch (IllegalArgumentException error) {
+            errores.reject("incidencia.invalida", error.getMessage());
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
+            return "incidencias/nueva";
+        } catch (IllegalStateException error) {
+            errores.reject("incidencia.no-disponible", "No se pudo registrar el reporte con la configuración actual.");
+            model.addAttribute("tiposFalla", servicio.consultarTiposFalla());
+            return "incidencias/nueva";
+        }
+    }
+}

@@ -104,7 +104,7 @@
                   <h2 id="titulo-recurrencias">Fallas recurrentes</h2>
                   <p>Ordenadas por frecuencia en el periodo.</p>
                 </div>
-                <span class="reportes-contador" th:text="|${#lists.size(recurrencias)} ${#lists.size(recurrencias) == 1 ? 'resultado' : 'resultados'}|">0 resultados</span>
+                <span class="reportes-contador" th:text="|${cantidadPatrones} ${cantidadPatrones == 1 ? 'resultado' : 'resultados'}|">0 resultados</span>
               </div>
 
               <div class="reportes-lista" th:unless="${#lists.isEmpty(recurrencias)}">
@@ -133,6 +133,20 @@
                   </div>
                 </article>
               </div>
+
+              <nav th:if="${paginaRecurrencias.totalPages > 1}" aria-label="Paginación de fallas recurrentes" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                  <li class="page-item" th:classappend="${paginaRecurrencias.first} ? 'disabled'">
+                    <span class="page-link" th:if="${paginaRecurrencias.first}">Anterior</span>
+                    <a class="page-link" th:unless="${paginaRecurrencias.first}" th:href="@{/reportes(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId}, pagina=${paginaRecurrencias.number - 1})}">Anterior</a>
+                  </li>
+                  <li class="page-item active"><span class="page-link" aria-current="page" th:text="|${paginaRecurrencias.number + 1} / ${paginaRecurrencias.totalPages}|">1 / 1</span></li>
+                  <li class="page-item" th:classappend="${paginaRecurrencias.last} ? 'disabled'">
+                    <span class="page-link" th:if="${paginaRecurrencias.last}">Siguiente</span>
+                    <a class="page-link" th:unless="${paginaRecurrencias.last}" th:href="@{/reportes(desde=${desde}, hasta=${hasta}, codigoQr=${codigoQr}, tipoFallaId=${tipoFallaId}, pagina=${paginaRecurrencias.number + 1})}">Siguiente</a>
+                  </li>
+                </ul>
+              </nav>
 
               <div class="reportes-vacio" th:if="${#lists.isEmpty(recurrencias)}">
                 <span class="material-symbols-outlined" aria-hidden="true">search_off</span>

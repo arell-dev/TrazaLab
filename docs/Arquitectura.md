@@ -1,12 +1,12 @@
 # Arquitectura de TrazaLab
 
-El diagrama editable actualizado está en [`TrazaLab_Arquitectura_Trazabilidad.drawio`](TrazaLab_Arquitectura_Trazabilidad.drawio). Describe los flujos web activos y deja como futuro el contrato con el recolector C++.
+El [diagrama editable de arquitectura](TrazaLab_Arquitectura_Trazabilidad.drawio) refleja los módulos web, servicios, persistencia y comprobaciones de salud de la estructura actual. La integración con el agente de monitoreo figura como propuesta pendiente. Se verificaron su estructura XML, referencias internas y presentación de sus tres páginas en draw.io.
 
 ## Criterio de diseño
 
-La aplicación sigue una estructura MVC con servicios de aplicación y persistencia JPA organizada, tomando como referencia la estructura de Opalina. Los controladores de páginas y formularios están en `controller`; los controladores REST están en `controller/api`. No se agrega una capa separada de «Adaptador Web». Las entidades, conversores y repositorios Spring Data se ubican en `persistence.jpa`.
+La aplicación sigue una estructura MVC con servicios y persistencia JPA. El código se agrupa por capacidad en `usuarios`, `trazabilidad` y `reportes`, con paquetes hermanos para controladores, servicios, repositorios y modelos donde corresponde. Las clases transversales permanecen en `app`, `config`, `exception` y `logging`.
 
-Los DTO permanecen agrupados en `dto`, con formularios y respuestas planas por caso de uso. `exception` contiene excepciones de recursos inexistentes y conflictos de negocio, además de `GlobalExceptionHandler`, que limita las respuestas RFC 9457 `ProblemDetail` al paquete REST. Los controladores MVC mantienen sus mensajes y validaciones de formulario.
+Los formularios y DTO se ubican junto a su módulo. `ApiExceptionHandler` limita las respuestas REST `ProblemDetail` mediante el alcance configurado en la propia clase. Los controladores MVC mantienen sus mensajes y validaciones de formulario.
 
 La interfaz actual está construida con Spring MVC, Thymeleaf y Bootstrap 5.3.8. Los fragmentos compartidos están en `templates/fragments`, las pantallas en carpetas por módulo y los recursos del cliente en `static/css` y `static/js`.
 
@@ -17,40 +17,42 @@ El esquema PostgreSQL se versiona con migraciones Flyway en `src/main/resources/
 ```text
 Navegador
   → Thymeleaf / Bootstrap
-  → IncidenciaWebController
-  → RegistroIncidenciaFormulario + Bean Validation
-  → IncidenciaAplicacionServicio (registro de eventos)
-  → RegistroIncidenciaPersistenteServicio (reglas y transacción)
-  → persistence.jpa.springdata
+  → IncidenciaController
+  → IncidenciaForm + Bean Validation
+  → IncidenciaService (registro de eventos)
+  → RegistroIncidencia (reglas y transacción)
+  → trazabilidad.repository
   → Hibernate / JPA
   → PostgreSQL
 ```
 
-`RegistroIncidenciaFormulario` solo recibe el código QR y la descripción. El controlador obtiene el correo del principal autenticado, resuelve la cuenta activa en PostgreSQL y construye el DTO de aplicación; no acepta un `usuarioId` enviado desde el navegador. El servicio valida el rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
+`IncidenciaForm` recibe el código QR, la descripción y un tipo de falla opcional. El controlador obtiene el correo del principal autenticado, resuelve la cuenta activa en PostgreSQL y construye `IncidenciaSolicitudDto`; no acepta un `usuarioId` enviado desde el navegador. El servicio valida el rol reportante, resuelve el QR y guarda la incidencia dentro de una transacción.
 
 Antes de avanzar desde el primer paso, la interfaz consulta `GET /api/computadoras/historial?codigoQr=...`. `ComputadoraApiController` delega en el servicio de aplicación y el servicio JPA devuelve una ficha breve del equipo junto con las cinco incidencias más recientes, ordenadas por fecha e identificador descendente. La respuesta usa DTO de lista estable y no incluye el nombre del reportante. Un QR vacío devuelve 400 y uno inexistente devuelve 404 mediante `ProblemDetail`.
 
 La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Los archivos CSV, XLSX y PDF se generan únicamente desde Reportes y respetan los filtros activos.
 
-`IncidenciaAplicacionServicio` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
+Las cuentas y las recurrencias se presentan en páginas de 20 registros. Los indicadores y la distribución de Reportes se calculan sobre todas las recurrencias que cumplen los filtros; las descargas incluyen el conjunto completo. Las mediciones locales y sus límites se describen en [OBS-10](correcciones/OBS-10-paginacion-y-escalabilidad.md).
+
+`IncidenciaService` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
 
 ## Distribución de módulos
 
 ```text
 com.utp.trazalab
-├── config                  Reloj y configuración web / seguridad
-├── controller              Controladores de páginas y formularios MVC
-│   └── api                 Controladores REST
-├── domain.enums            Estados del dominio sin anotaciones JPA
-├── dto                     Formularios y datos de entrada / salida
-├── exception               Errores de dominio y respuestas de error REST
-├── export                  Exportador Excel de informes
-├── logging                 Contrato y registro de eventos de aplicación
-├── persistence.jpa
-│   ├── converter           Conversión entre estados y columnas SQL
-│   ├── entity              Entidades mapeadas al esquema PostgreSQL
-│   └── springdata          Interfaces Spring Data JPA
-└── service                 Casos de uso, reglas y transacciones
+|-- app                  Arranque, pagina inicial y salud
+|-- config               Configuracion de reloj
+|-- exception            Excepciones y respuestas REST
+|-- logging              Eventos de aplicacion
+|-- usuarios             Cuentas, roles y seguridad
+|-- trazabilidad         Equipos, incidencias, historial y mantenimientos
+|   |-- controller       Solicitudes MVC y API de equipos
+|   |   `-- form         Formularios web de incidencias y mantenimiento
+|   |-- dto              Datos de solicitud y respuesta de los flujos tecnicos
+|   |-- model            Entidades y estados del dominio
+|   |-- repository       Spring Data y conversores de estados
+|   `-- service          Reglas, consultas y transacciones
+`-- reportes             Controlador, servicio, consulta SQL, DTO y exportadores
 ```
 
 Los recursos web están organizados así:
@@ -58,9 +60,11 @@ Los recursos web están organizados así:
 ```text
 templates/
 ├── fragments/              Encabezado, navegación, mensajes y scripts
+├── equipos/                Disponibilidad, escaneo y ficha técnica
 ├── incidencias/            Consulta y formulario de incidencias
 ├── mantenimientos/         Registro de intervenciones y componentes
-└── reportes/               Filtros y resultados de recurrencias
+├── reportes/               Filtros y resultados de recurrencias
+└── usuarios/               Acceso y gestión de cuentas
 static/
 ├── css/                    colores.css (tokens y Bootstrap) y componentes.css
 └── js/                     Interacciones pequeñas de la interfaz
@@ -70,20 +74,13 @@ static/
 
 | Módulo | Responsabilidad | Estado actual |
 |---|---|---|
-| `controller` | Recibir solicitudes MVC, validar formularios y devolver vistas o archivos | Incidencias, mantenimientos y reportes |
-| `controller.api` | Publicar endpoints REST y entregar respuestas JSON | Salud PostgreSQL y consulta de equipo por QR con cinco incidencias recientes |
-| `dto` | Separar datos de formulario de la identidad y de las entidades persistentes | Formularios, fallas recurrentes, mantenimiento y ficha reciente del equipo |
-| `exception` | Clasificar errores REST y construir respuestas `ProblemDetail` | Validación 400, recurso 404 y conflictos 409; acotado a `controller.api` |
-| `service` | Aplicar reglas de negocio, transacciones y consultas | Incidencias, clasificación, mantenimientos y recurrencias |
-| `persistence.jpa.entity` | Mapear entidades del esquema existente | Equipos, incidencias, fallas, mantenimientos, componentes, catálogos y usuarios |
-| `persistence.jpa.springdata` | Consultar y guardar entidades con Spring Data JPA | Flujos web activos |
-| `config` | Configurar sesión, autenticación, autorización y codificación de contraseñas | Login por formulario; las cuentas y roles se leen de PostgreSQL |
-| `export` | Generar XLSX del informe de recurrencias | Reportes: CSV, XLSX y PDF; incidencias: sin exportaciones |
-| `mantenimientos` | Registrar intervenciones y componentes sin cerrar incidencias ni cambiar el estado de computadora | Implementado; identifica al técnico desde la sesión y preserva asignaciones temporales |
-| `reportes` | Filtrar y exportar recurrencias por periodo, equipo y tipo | Implementado; CSV, XLSX y PDF; dos o más fallas clasificadas del mismo tipo por equipo |
-| Integración con recolector C++ | Recibir información de la aplicación independiente | Diseñado; contrato pendiente |
+| `usuarios` | Sesión, cuentas y roles | Acceso con cuentas persistidas en PostgreSQL |
+| `trazabilidad` | Disponibilidad, QR, incidencias, historial, fallas y mantenimientos | Flujos web y API en el código |
+| `reportes` | Consulta y exportación de recurrencias | CSV, XLSX y PDF para fallas clasificadas |
+| `app`, `config`, `exception`, `logging` | Arranque, reloj, errores y eventos transversales | Implementación compartida |
+| Integración con agente | Recibir información de una aplicación independiente | Diseñado; contrato pendiente |
 
-Spring Security autentica el login mediante `UsuarioAutenticacionServicio`, que consulta cuentas activas y su hash BCrypt en PostgreSQL. Las rutas se autorizan por el rol asociado a la cuenta; `ROLE_Administrador` accede a la gestión de usuarios. El primer administrador se registra de forma interactiva bajo el perfil `crear-administrador`; el arranque normal no crea cuentas ni recibe credenciales administrativas por configuración. Los correos `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` solo identifican las cuentas que crea el sembrado opcional; las acciones web se atribuyen al principal autenticado. La carga de datos de demostración está desactivada por defecto para preservar el contenido existente.
+Spring Security autentica el login mediante `UsuarioDetailsService`, que consulta cuentas activas y su hash BCrypt en PostgreSQL. Las rutas se autorizan por el rol asociado a la cuenta; `ROLE_Administrador` accede a la gestión de usuarios. Las cuentas de acceso deben existir en la base de datos recuperada. Las acciones web se atribuyen al principal autenticado. La carga opcional de equipos de ejemplo está desactivada por defecto.
 
 ## Persistencia y ejecución
 
@@ -98,7 +95,9 @@ Spring Security autentica el login mediante `UsuarioAutenticacionServicio`, que 
 - La clasificación de incidencias es opcional; el reporte solo considera fallas clasificadas.
 - Un mantenimiento correctivo requiere una falla de una incidencia del mismo equipo.
 
-Las entidades principales se guardan con Spring Data JPA. `RegistroMantenimientoServicio` usa `JdbcTemplate` en la misma transacción para el historial temporal de asignaciones y la relación de acciones de componentes. `ReporteFallasServicio` usa una consulta SQL agrupada y parametrizada para contar fallas y filtrar periodo, equipo y tipo.
+Las entidades principales se guardan con Spring Data JPA. `MantenimientoService` coordina la transacción y `AsignacionComponenteRepository` usa `JdbcTemplate` para el historial temporal de asignaciones y la relación de acciones de componentes. `ReporteRepository` usa una consulta SQL agrupada y parametrizada para contar fallas y filtrar periodo, equipo y tipo.
+
+`HealthController` expone `/health` para comprobar la respuesta de la aplicación, `/db-health` para consultar PostgreSQL y `/api/health` como comprobación conjunta. Los registros de arranque, actividad, errores y chequeos se distribuyen según `logback-spring.xml`; los comandos y rutas se describen en el [README](../README.md#verificaciones-y-logs).
 
 Para el arranque local y la guía de base de datos, consulta [`README.md`](../README.md) y [`database/README.md`](../database/README.md).
 
@@ -106,12 +105,14 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 
 | Elemento | Correspondencia | Estado |
 |---|---|---|
-| RF-05 | Formulario Thymeleaf → `IncidenciaWebController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: login implementado y reportante tomado de la sesión; el historial técnico integral sigue pendiente |
-| RNF-02 | `/usuarios/login` → `UsuarioAutenticacionServicio` → `UsuarioJpaRepositorio` → PostgreSQL | Login y autorización por rol implementados; el alta del primer administrador requiere el perfil interactivo |
-| RF-03 | `/mantenimientos` → `MantenimientoWebController` → `RegistroMantenimientoServicio` → JPA e historial de componentes | Intervenciones y acciones implementadas; el responsable se toma de la cuenta autenticada con rol técnico |
-| RF-06 | `/reportes` → `ReporteWebController` → `ReporteFallasServicio` y `ExportadorReporteFallasExcel` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
-| RF-01 / RF-02 | `/api/computadoras/historial?codigoQr=...` → servicio de aplicación → repositorio JPA | Ficha del equipo y cinco incidencias recientes visibles en el registro; historial técnico integral y lector físico pendientes |
-| EXT-01 | `/reportes/exportar/{formato}` → `ReporteWebController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |
-| Suite | `RegistroIncidenciaJpaTest` con MockMvc y PostgreSQL Testcontainers | 25 pruebas aprobadas el 07/11/2026; incluye historial reciente por QR, mantenimiento, componentes, recurrencias y exportación |
+| RF-05 | Formulario Thymeleaf → `IncidenciaController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: login implementado y reportante tomado de la sesión; la validación del flujo integral en piloto está pendiente |
+| RNF-02 | `/usuarios/login` → `UsuarioDetailsService` → `UsuarioRepository` → PostgreSQL | Login y autorización por rol implementados; las cuentas de acceso deben estar en la base de datos recuperada |
+| RF-03 | `/mantenimientos` → `MantenimientoController` → `MantenimientoService` → JPA e historial de componentes | Intervenciones y acciones implementadas; el responsable se toma de la cuenta autenticada con rol técnico |
+| RF-06 | `/reportes` → `ReporteController` → `ReporteService` y `ExcelExporter` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
+| RF-01 / RF-02 | `/api/computadoras/historial?codigoQr=...` → servicio de aplicación → repositorio JPA | Ficha del equipo y cinco incidencias recientes visibles en el registro; cronología web de eventos técnicos implementada; validación integral en piloto pendiente |
+| EXT-01 | `/reportes/exportar/{formato}` → `ReporteController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |
+| Suite | Pruebas unitarias y de integración con MockMvc y PostgreSQL Testcontainers | Los informes locales del 19/11/2026 registran 64 pruebas aprobadas sin fallos, errores ni omisiones; no acreditan un piloto |
+
+La refactorización de paquetes está en curso. La cifra de pruebas refleja los informes locales disponibles en `target/surefire-reports`; los cambios realizados después de esa ejecución requieren una nueva verificación. Las pruebas históricas corresponden a la versión ejecutada en su fecha.
 
 La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).
