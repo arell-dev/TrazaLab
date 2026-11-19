@@ -51,7 +51,7 @@ Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguie
 | `templates/fragments` | Comparte encabezado, menú, mensajes y scripts. |
 | `templates/incidencias` | Contiene las vistas de consulta y registro. |
 | `templates/mantenimientos`, `templates/reportes` | Contiene los paneles de registro técnico y consulta de recurrencias. |
-| `static/css`, `static/js` | `colores.css` reúne tokens y variables Bootstrap; `componentes.css` define la interfaz y `app.js` sus interacciones. |
+| `static/css`, `static/js` | `colores.css` reúne tokens y variables Bootstrap; `componentes.css` define la interfaz. JavaScript se organiza por componentes y por pantalla en `componentes`, `equipos` e `incidencias`; `app.js` inicia los avisos compartidos. |
 | `export` | Genera la salida Excel del informe de fallas recurrentes. CSV y PDF pertenecen al servicio de reportes. |
 
 La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.

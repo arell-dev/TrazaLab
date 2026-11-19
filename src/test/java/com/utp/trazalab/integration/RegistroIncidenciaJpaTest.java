@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -482,7 +483,7 @@ class RegistroIncidenciaJpaTest {
 
     @Test
     void panelDeDisponibilidadMuestraElEquipoDeLaUbicacionSeleccionada() throws Exception {
-        mockMvc.perform(get("/disponibilidad")
+        mockMvc.perform(get("/disponibilidad").param("completo", "true")
                         .param("ubicacionId", computadora.getUbicacion().getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Disponibilidad de equipos")))
@@ -499,7 +500,7 @@ class RegistroIncidenciaJpaTest {
         computadoras.saveAndFlush(new ComputadoraEntidad(
                 "QR-AULA-INCOMPLETA", "SERIE-AULA-INCOMPLETA", "Dell", "OptiPlex", aulaIncompleta, EstadoComputadora.OPERATIVA));
 
-        mockMvc.perform(get("/disponibilidad"))
+        mockMvc.perform(get("/disponibilidad").param("completo", "true"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "2 equipos conservan ubicaciones anteriores y requieren validar su aula.")))
@@ -508,7 +509,7 @@ class RegistroIncidenciaJpaTest {
     }
 
     @Test
-    void panelDeDisponibilidadMuestraSoloLasAulasDelCatalogoYNoSeleccionaUnaPorDefecto() throws Exception {
+    void panelDeDisponibilidadSeleccionaLaPrimeraUbicacionDelCatalogo() throws Exception {
         assertEquals(List.of(
                         "A0301", "A0302", "A0303", "A0305", "A0307", "A0308", "A0310", "A0311", "A0312",
                         "B0605", "B0606", "B0607", "B0608"),
@@ -517,21 +518,114 @@ class RegistroIncidenciaJpaTest {
                         .map(UbicacionEntidad::getNombre)
                         .toList());
 
-        mockMvc.perform(get("/disponibilidad"))
+        mockMvc.perform(get("/disponibilidad").param("completo", "true"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"edificio\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"piso\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"ubicacionId\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Selecciona una torre")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula A0301")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Aula B0608")))
+                .andExpect(model().attribute("edificioSeleccionado", "Torre A"))
+                .andExpect(model().attribute("pisoSeleccionado", 3))
+                .andExpect(model().attribute("ubicacionSeleccionada", org.hamcrest.Matchers.hasProperty("nombre", org.hamcrest.Matchers.is("A0301"))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("A0301")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("B0608")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("LAB-TEST</option>"))))
-                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())));
+    }
+
+    @Test
+    void resultadosDeDisponibilidadPaginanDiezEquipos() throws Exception {
+        for (int numero = 0; numero < 10; numero++) {
+            String codigo = "QR-PAGINA-" + String.format("%02d", numero);
+            computadoras.saveAndFlush(new ComputadoraEntidad(codigo, "SERIE-" + codigo, "HP", "Mini", computadora.getUbicacion(), EstadoComputadora.OPERATIVA));
+        }
+
+        var primera = mockMvc.perform(get("/disponibilidad/resultados").param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().isOk()).andReturn();
+        var segunda = mockMvc.perform(get("/disponibilidad/resultados").param("ubicacionId", computadora.getUbicacion().getId().toString()).param("pagina", "1"))
+                .andExpect(status().isOk()).andReturn();
+        var diez = mockMvc.perform(get("/disponibilidad/resultados").param("ubicacionId", computadora.getUbicacion().getId().toString()).param("buscar", "QR-PAGINA"))
+                .andExpect(status().isOk()).andReturn();
+        Page<?> primeraPagina = (Page<?>) primera.getModelAndView().getModel().get("paginaEquipos");
+        Page<?> segundaPagina = (Page<?>) segunda.getModelAndView().getModel().get("paginaEquipos");
+        assertEquals(10, primeraPagina.getNumberOfElements());
+        assertEquals(1, segundaPagina.getNumberOfElements());
+        assertEquals(11, segundaPagina.getTotalElements());
+        Page<?> paginaFiltrada = (Page<?>) diez.getModelAndView().getModel().get("paginaEquipos");
+        assertEquals(10, paginaFiltrada.getNumberOfElements());
+        assertEquals(1, paginaFiltrada.getTotalPages());
+    }
+
+    @Test
+    void disponibilidadConservaPaginadorEnCadaLimite() throws Exception {
+        int cantidadRegistrada = 0;
+        for (int cantidad : new int[] {0, 1, 10, 11, 20, 21, 31}) {
+            while (cantidadRegistrada < cantidad) {
+                String codigo = "QR-LIMITE-" + String.format("%02d", cantidadRegistrada);
+                computadoras.saveAndFlush(new ComputadoraEntidad(codigo, "SERIE-" + codigo, "HP", "Mini", computadora.getUbicacion(), EstadoComputadora.OPERATIVA));
+                cantidadRegistrada++;
+            }
+
+            int paginas = (cantidad + 9) / 10;
+            int ultimaPagina = Math.max(0, paginas - 1);
+            var resultado = mockMvc.perform(get("/disponibilidad/resultados")
+                            .param("ubicacionId", computadora.getUbicacion().getId().toString())
+                            .param("buscar", "QR-LIMITE")
+                            .param("pagina", Integer.toString(ultimaPagina)))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            Page<?> pagina = (Page<?>) resultado.getModelAndView().getModel().get("paginaEquipos");
+            assertEquals(cantidad, pagina.getTotalElements());
+            assertEquals(paginas, pagina.getTotalPages());
+            assertEquals(cantidad == 0 ? 0 : cantidad - ultimaPagina * 10, pagina.getNumberOfElements());
+
+            String contenido = resultado.getResponse().getContentAsString();
+            org.junit.jupiter.api.Assertions.assertTrue(contenido.contains("aria-label=\"Paginación de equipos\""));
+            if (cantidad == 0) {
+                org.junit.jupiter.api.Assertions.assertTrue(contenido.contains("aria-disabled=\"true\">1</span>"));
+            } else {
+                org.junit.jupiter.api.Assertions.assertTrue(contenido.contains("aria-current=\"page\""));
+            }
+            if (paginas < 3) {
+                org.junit.jupiter.api.Assertions.assertTrue(contenido.contains("aria-disabled=\"true\">3</span>"));
+            }
+        }
+    }
+
+    @Test
+    void disponibilidadCombinaEstadosBusquedaYUbicacion() throws Exception {
+        computadoras.saveAndFlush(new ComputadoraEntidad("QR-FILTRO-01", "SERIE-FILTRO-01", "HP", "Mini", computadora.getUbicacion(), EstadoComputadora.EN_MANTENIMIENTO));
+        computadoras.saveAndFlush(new ComputadoraEntidad("QR-FILTRO-02", "SERIE-FILTRO-02", "HP", "Mini", computadora.getUbicacion(), EstadoComputadora.FUERA_DE_SERVICIO));
+        computadoras.saveAndFlush(new ComputadoraEntidad("QR-FILTRO-03", "SERIE-FILTRO-03", "HP", "Mini", computadora.getUbicacion(), EstadoComputadora.OPERATIVA));
+
+        var resultado = mockMvc.perform(get("/disponibilidad/resultados")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString())
+                        .param("buscar", "QR-FILTRO")
+                        .param("estado", "EN_MANTENIMIENTO", "FUERA_DE_SERVICIO"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Page<?> pagina = (Page<?>) resultado.getModelAndView().getModel().get("paginaEquipos");
+        assertEquals(2, pagina.getTotalElements());
+        mockMvc.perform(get("/disponibilidad/resultados")
+                        .param("ubicacionId", computadora.getUbicacion().getId().toString())
+                        .param("estado", "ESTADO_INVALIDO"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void resultadosDeDisponibilidadExigenRolAutorizado() throws Exception {
+        mockMvc.perform(get("/disponibilidad/resultados").param("ubicacionId", computadora.getUbicacion().getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/usuarios/login"));
+        mockMvc.perform(get("/disponibilidad/resultados").with(user("docente").authorities(new SimpleGrantedAuthority("ROLE_Docente"))))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/disponibilidad/resultados").with(user("externo").authorities(new SimpleGrantedAuthority("ROLE_Externo"))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void aceptaElAulaCuandoCoincideConLaTorreYElPisoSeleccionados() throws Exception {
-        mockMvc.perform(get("/disponibilidad")
+        mockMvc.perform(get("/disponibilidad").param("completo", "true")
                         .param("edificio", "Torre A")
                         .param("piso", "3")
                         .param("ubicacionId", computadora.getUbicacion().getId().toString()))
@@ -542,7 +636,7 @@ class RegistroIncidenciaJpaTest {
 
     @Test
     void rechazaElAulaCuandoNoCoincideConLaTorreSeleccionada() throws Exception {
-        mockMvc.perform(get("/disponibilidad")
+        mockMvc.perform(get("/disponibilidad").param("completo", "true")
                         .param("edificio", "Torre B")
                         .param("piso", "6")
                         .param("ubicacionId", computadora.getUbicacion().getId().toString()))
@@ -551,7 +645,7 @@ class RegistroIncidenciaJpaTest {
                         "La combinación de torre, piso y aula no está disponible.")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));
 
-        mockMvc.perform(get("/disponibilidad")
+        mockMvc.perform(get("/disponibilidad").param("completo", "true")
                         .param("edificio", "Torre A")
                         .param("piso", "6")
                         .param("ubicacionId", computadora.getUbicacion().getId().toString()))
@@ -638,7 +732,7 @@ class RegistroIncidenciaJpaTest {
                 .orElseThrow()
                 .getId();
 
-        mockMvc.perform(get("/disponibilidad").param("ubicacionId", ubicacionAnteriorId.toString()))
+        mockMvc.perform(get("/disponibilidad").param("completo", "true").param("ubicacionId", ubicacionAnteriorId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "La combinación de torre, piso y aula no está disponible.")))
@@ -651,12 +745,12 @@ class RegistroIncidenciaJpaTest {
         ComputadoraEntidad equipoTorreB = computadoras.saveAndFlush(new ComputadoraEntidad(
                 "QR-TORRE-B-001", "SERIE-TORRE-B-001", "Lenovo", "ThinkCentre", aulaTorreB, EstadoComputadora.OPERATIVA));
 
-        mockMvc.perform(get("/disponibilidad").param("ubicacionId", computadora.getUbicacion().getId().toString()))
+        mockMvc.perform(get("/disponibilidad").param("completo", "true").param("ubicacionId", computadora.getUbicacion().getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(computadora.getCodigoQr())))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(equipoTorreB.getCodigoQr()))));
 
-        mockMvc.perform(get("/disponibilidad").param("ubicacionId", aulaTorreB.getId().toString()))
+        mockMvc.perform(get("/disponibilidad").param("completo", "true").param("ubicacionId", aulaTorreB.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(equipoTorreB.getCodigoQr())))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(computadora.getCodigoQr()))));

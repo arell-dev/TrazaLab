@@ -87,7 +87,7 @@
 
 .ubicacion-selector__controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: end;
   gap: 0.75rem;
 }
@@ -520,4 +520,142 @@
     min-width: 2rem;
     padding-inline: 0.35rem;
   }
+}
+
+.disponibilidad-carga {
+  display: none;
+}
+
+.disponibilidad-js [data-disponibilidad][data-carga-inicial="true"][aria-busy="true"] [data-resultados-destino] {
+  display: none;
+}
+
+.disponibilidad-js [data-disponibilidad][data-carga-inicial="true"][aria-busy="true"] .disponibilidad-carga {
+  display: block;
+}
+
+.disponibilidad-carga__estadistica,
+.disponibilidad-carga__fila {
+  background: var(--trazalab-surface);
+  border: 1px solid var(--trazalab-border);
+  border-radius: var(--bs-border-radius-lg);
+}
+
+.disponibilidad-carga__estadistica {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.disponibilidad-carga__fila {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+}
+
+.disponibilidad-carga__linea,
+.disponibilidad-carga__numero,
+.disponibilidad-carga__icono {
+  display: block;
+  background: var(--trazalab-muted-surface);
+  border-radius: var(--bs-border-radius);
+}
+
+.disponibilidad-carga__linea {
+  width: 8rem;
+  max-width: 70%;
+  height: 1rem;
+}
+
+.disponibilidad-carga__numero {
+  width: 3rem;
+  height: 2rem;
+}
+
+.disponibilidad-carga__icono {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 2.75rem;
+}
+
+.filtro-equipos {
+  position: relative;
+}
+
+.filtro-equipos__panel {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(16rem, calc(100vw - 2rem));
+  padding: 1rem;
+  background: var(--trazalab-surface);
+  border: 1px solid var(--trazalab-border);
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: 0 0.5rem 1rem rgb(0 0 0 / 12%);
+}
+
+.filtro-equipos__panel[hidden] {
+  display: none;
+}
+
+.filtro-equipos__panel legend {
+  margin-bottom: 0.75rem;
+  color: var(--trazalab-ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.filtro-equipos__panel label {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  color: var(--trazalab-ink);
+  border-radius: var(--bs-border-radius);
+  cursor: pointer;
+}
+
+.filtro-equipos__panel label:hover {
+  background: var(--trazalab-canvas);
+}
+
+.filtro-equipos__panel input {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
+  margin: 0;
+  accent-color: var(--trazalab-action);
+}
+
+.filtro-equipos__panel input:focus-visible {
+  outline: 2px solid var(--trazalab-action);
+  outline-offset: 2px;
+}
+
+.filtro-equipos__limpiar {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 420px) {
+  .filtro-equipos__panel {
+    right: auto;
+    left: 0;
+  }
+
+  .filtro-equipos .equipment-filter-button {
+    width: 100%;
+  }
+}
+
+.disponibilidad-busqueda {
+  position: relative;
+  z-index: 5;
+  overflow: visible;
 }

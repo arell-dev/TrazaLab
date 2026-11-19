@@ -4,6 +4,7 @@
 <head th:replace="~{fragments/head :: head('Disponibilidad de equipos')}"></head>
 
 <body>
+  <script>document.documentElement.classList.add("disponibilidad-js");</script>
   <div class="app-layout">
     <div th:replace="~{fragments/sidebar :: sidebar('disponibilidad')}"></div>
     <div class="app-main">
@@ -15,6 +16,7 @@
 
         <section class="ubicacion-selector mb-4" aria-labelledby="ubicacion-fisica-label">
           <form method="get" th:action="@{/disponibilidad}" data-ubicacion-selectores>
+            <input type="hidden" name="completo" value="true">
             <h2 class="visually-hidden" id="ubicacion-fisica-label">Filtrar equipos por ubicación</h2>
             <div class="ubicacion-selector__controls">
               <div class="ubicacion-selector__field">
@@ -48,17 +50,15 @@
                           th:value="${aula.id}"
                           th:attr="data-torre=${aula.edificio},data-piso=${aula.piso}"
                           th:selected="${ubicacionSeleccionada != null and aula.id == ubicacionSeleccionada.id}"
-                          th:text="|Aula ${aula.nombre}|">Aula A0301</option>
+                          th:text="${aula.nombre}">A0301</option>
                 </select>
               </div>
-              <div class="ubicacion-selector__field">
-                <button class="btn btn-outline-primary" type="submit">Aplicar ubicación</button>
-              </div>
             </div>
+            <noscript><button class="btn btn-primary mt-3" type="submit">Aplicar ubicación</button></noscript>
           </form>
         </section>
 
-        <div class="alert alert-warning" role="status" th:if="${ubicacionNoDisponible}">
+        <div class="alert alert-warning" data-aviso-ubicacion role="status" th:if="${ubicacionNoDisponible}">
           La combinación de torre, piso y aula no está disponible. Selecciona opciones válidas.
         </div>
         <div class="alert alert-info" role="status" th:if="${equiposConUbicacionPorVerificar > 0}">
@@ -66,7 +66,28 @@
           <span th:if="${equiposConUbicacionPorVerificar != 1}" th:text="|${equiposConUbicacionPorVerificar} equipos conservan ubicaciones anteriores y requieren validar su aula.|">Equipos con ubicaciones previas requieren validar sus aulas.</span>
         </div>
 
-        <div class="row g-3 mb-4">
+        <noscript th:if="${cargaInicial}">
+          <p>Para consultar los equipos, <a th:href="@{/disponibilidad(completo=true, ubicacionId=${ubicacionSeleccionada != null ? ubicacionSeleccionada.id : null}, edificio=${edificioSeleccionado}, piso=${pisoSeleccionado}, buscar=${busqueda}, estado=${param.estado}, pagina=${paginaEquipos.number})}">abre la lista de disponibilidad</a>.</p>
+          <style>[data-disponibilidad] { display: none; }</style>
+        </noscript>
+        <noscript th:unless="${cargaInicial}">
+          <p>Usa «Aplicar ubicación» para cambiar de aula.</p>
+        </noscript>
+        <div data-disponibilidad th:attr="data-url-resultados=@{/disponibilidad/resultados},aria-busy=${cargaInicial},data-carga-inicial=${cargaInicial} ? 'true' : null">
+          <div class="disponibilidad-carga" data-carga aria-hidden="true">
+            <div class="row g-3 mb-4">
+              <div class="col-6 col-xl-3" th:each="numero : ${#numbers.sequence(1, 4)}">
+                <div class="dashboard-stat disponibilidad-carga__estadistica"><span class="disponibilidad-carga__linea"></span><span class="disponibilidad-carga__numero"></span></div>
+              </div>
+            </div>
+            <div class="equipment-row disponibilidad-carga__fila" th:each="numero : ${#numbers.sequence(1, 3)}"><span class="disponibilidad-carga__icono"></span><span class="disponibilidad-carga__linea"></span></div>
+          </div>
+          <div class="alert alert-danger" data-error-carga role="alert" hidden>
+            No se pudieron cargar los equipos. <button type="button" class="btn btn-link p-0" data-reintentar>Reintentar</button>
+          </div>
+          <div data-resultados-destino>
+        <div th:fragment="resultados" data-resultados-contenido>
+        <div class="row g-3 mb-4" data-indicadores>
           <div class="col-6 col-xl-3">
             <div class="dashboard-stat">
               <span class="dashboard-stat__label">Equipos</span>
@@ -100,19 +121,32 @@
           </div>
         </div>
 
-        <section class="card app-card mb-4" aria-label="Buscar y filtrar equipos">
+        <section class="card app-card disponibilidad-busqueda mb-4" aria-label="Buscar y filtrar equipos">
           <div class="card-body equipment-search p-3">
-            <form class="equipment-search__form" method="get" th:action="@{/disponibilidad}">
-              <input type="hidden" name="ubicacionId" th:if="${ubicacionSeleccionada != null}" th:value="${ubicacionSeleccionada.id}">
+            <form data-busqueda-equipos class="equipment-search__form" method="get" th:action="@{/disponibilidad}">
+              <input type="hidden" name="completo" value="true">
+              <input type="hidden" name="ubicacionId" th:value="${ubicacionSeleccionada != null ? ubicacionSeleccionada.id : ''}">
               <div class="input-group equipment-search__field">
                 <span class="input-group-text"><span class="material-symbols-outlined" aria-hidden="true">search</span></span>
-                <input class="form-control" id="buscar-equipo" name="buscar" type="search" th:value="${busqueda}" placeholder="Buscar por código de equipo, serie o modelo..." aria-label="Buscar equipo por código, serie o modelo" th:disabled="${ubicacionSeleccionada == null}">
+                <input class="form-control" id="buscar-equipo" name="buscar" type="search" autocomplete="off" th:value="${busqueda}" placeholder="Buscar por código de equipo, serie o modelo..." aria-label="Buscar equipo por código, serie, marca o modelo">
               </div>
-              <button class="btn btn-light equipment-filter-button" type="submit" th:disabled="${ubicacionSeleccionada == null}">
-                <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-                <span>Filtrar</span>
-                <span class="equipment-filter-button__count" th:text="${busqueda.isBlank()} ? 0 : 1">0</span>
-              </button>
+              <div class="filtro-equipos">
+                <button class="btn btn-light equipment-filter-button" type="button" data-abrir-filtros aria-expanded="false" aria-controls="filtros-estado">
+                  <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+                  <span>Filtrar</span>
+                  <span class="equipment-filter-button__count" data-conteo-filtros>0</span>
+                </button>
+                <div class="filtro-equipos__panel" id="filtros-estado" data-panel-filtros hidden>
+                  <fieldset>
+                    <legend>Estado</legend>
+                    <label><input type="checkbox" name="estado" value="OPERATIVA" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).OPERATIVA)}"> Operativa</label>
+                    <label><input type="checkbox" name="estado" value="EN_MANTENIMIENTO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).EN_MANTENIMIENTO)}"> En mantenimiento</label>
+                    <label><input type="checkbox" name="estado" value="FUERA_DE_SERVICIO" th:checked="${#lists.contains(estadosSeleccionados, T(com.utp.trazalab.domain.enums.EstadoComputadora).FUERA_DE_SERVICIO)}"> Fuera de servicio</label>
+                  </fieldset>
+                  <button type="button" class="btn btn-outline-secondary btn-sm filtro-equipos__limpiar" data-limpiar-filtros>Limpiar filtros</button>
+                </div>
+              </div>
+              <noscript><style>.filtro-equipos__panel[hidden] { display: block; position: static; } .equipment-filter-button, [data-limpiar-filtros] { display: none; }</style><button class="btn btn-primary" type="submit">Buscar</button></noscript>
             </form>
             <a class="btn btn-primary equipment-search__scan" th:href="@{/equipos/escaneo}">
               <span class="material-symbols-outlined align-middle me-1" aria-hidden="true">qr_code_scanner</span>Escanear QR
@@ -120,6 +154,7 @@
           </div>
         </section>
 
+        <div data-listado-equipos>
         <section aria-label="Equipos de la ubicación seleccionada">
           <article class="equipment-row" th:each="computadora : ${paginaEquipos.content}">
             <div class="equipment-row__identity">
@@ -152,9 +187,9 @@
           <div class="equipment-empty-state" th:if="${paginaEquipos.empty}">
             <span class="material-symbols-outlined" aria-hidden="true">desktop_access_disabled</span>
             <p th:if="${ubicacionSeleccionada == null and ubicacionNoDisponible}">Selecciona un aula válida para consultar sus equipos.</p>
-            <p th:if="${ubicacionSeleccionada == null and !ubicacionNoDisponible}">Selecciona un aula para consultar sus equipos.</p>
-            <p th:if="${ubicacionSeleccionada != null and busqueda.isBlank()}">No hay equipos registrados en esta aula.</p>
-            <p th:unless="${busqueda.isBlank()}">No se encontraron equipos con ese criterio.</p>
+            <p th:if="${ubicacionSeleccionada == null and !ubicacionNoDisponible}">No hay aulas disponibles para esta sede.</p>
+            <p th:if="${ubicacionSeleccionada != null and busqueda.isBlank() and #lists.isEmpty(estadosSeleccionados)}">No hay equipos registrados en esta aula.</p>
+            <p th:if="${!busqueda.isBlank() or !#lists.isEmpty(estadosSeleccionados)}">No se encontraron equipos con ese criterio.</p>
           </div>
         </section>
 
@@ -162,10 +197,10 @@
           <p class="lista-equipos-pie__resumen">
             Mostrando <strong th:text="${inicioResultados}">0</strong>–<strong th:text="${finResultados}">0</strong> de <strong th:text="${paginaEquipos.totalElements}">0</strong> equipos en <strong th:text="${ubicacionSeleccionada.nombre}">A0301</strong>
           </p>
-          <nav aria-label="Paginación de equipos" th:if="${paginaEquipos.totalPages > 1}">
+          <nav aria-label="Paginación de equipos">
             <ul class="pagination pagination-sm">
               <li class="page-item" th:classappend="${paginaEquipos.first} ? 'disabled'">
-                <a class="page-link" th:if="${!paginaEquipos.first}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, pagina=${paginaEquipos.number - 1})}" aria-label="Página anterior">
+                <a class="page-link" th:if="${!paginaEquipos.first}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, estado=${param.estado}, pagina=${paginaEquipos.number - 1}, completo=${param.completo != null})}" aria-label="Página anterior">
                   <svg class="equipment-row__arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>Anterior
                 </a>
                 <span class="page-link" th:if="${paginaEquipos.first}" aria-disabled="true">
@@ -174,13 +209,14 @@
               </li>
               <th:block th:each="numeroPagina, iteracion : ${paginasVisibles}">
                 <li class="page-item disabled" th:if="${iteracion.index > 0 and numeroPagina - paginasVisibles[iteracion.index - 1] > 1}"><span class="page-link">…</span></li>
-                <li class="page-item" th:classappend="${numeroPagina == paginaEquipos.number} ? 'active'">
-                  <a class="page-link" th:if="${numeroPagina != paginaEquipos.number}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, pagina=${numeroPagina})}" th:text="${numeroPagina + 1}">1</a>
-                  <span class="page-link" th:if="${numeroPagina == paginaEquipos.number}" aria-current="page" th:text="${numeroPagina + 1}">1</span>
+                <li class="page-item" th:classappend="${numeroPagina >= paginaEquipos.totalPages ? 'disabled' : (numeroPagina == paginaEquipos.number ? 'active' : '')}">
+                  <a class="page-link" th:if="${numeroPagina < paginaEquipos.totalPages and numeroPagina != paginaEquipos.number}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, estado=${param.estado}, pagina=${numeroPagina}, completo=${param.completo != null})}" th:text="${numeroPagina + 1}">1</a>
+                  <span class="page-link" th:if="${numeroPagina < paginaEquipos.totalPages and numeroPagina == paginaEquipos.number}" aria-current="page" tabindex="-1" th:text="${numeroPagina + 1}">1</span>
+                  <span class="page-link" th:if="${numeroPagina >= paginaEquipos.totalPages}" aria-disabled="true" th:text="${numeroPagina + 1}">2</span>
                 </li>
               </th:block>
               <li class="page-item" th:classappend="${paginaEquipos.last} ? 'disabled'">
-                <a class="page-link" th:if="${!paginaEquipos.last}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, pagina=${paginaEquipos.number + 1})}" aria-label="Página siguiente">
+                <a class="page-link" th:if="${!paginaEquipos.last}" th:href="@{/disponibilidad(ubicacionId=${ubicacionSeleccionada.id}, buscar=${busqueda}, estado=${param.estado}, pagina=${paginaEquipos.number + 1}, completo=${param.completo != null})}" aria-label="Página siguiente">
                   Siguiente<svg class="equipment-row__arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="m10 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
                 </a>
                 <span class="page-link" th:if="${paginaEquipos.last}" aria-disabled="true">
@@ -190,10 +226,16 @@
             </ul>
           </nav>
         </div>
+        </div>
+        </div>
+          </div>
+        </div>
+        <p class="visually-hidden" role="status" data-estado-carga></p>
       </main>
     </div>
   </div>
   <th:block th:replace="~{fragments/scripts :: scripts}"></th:block>
+  <script type="module" th:src="@{/js/equipos/disponibilidad.js}"></script>
 </body>
 
 </html>

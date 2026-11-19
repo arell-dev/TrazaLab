@@ -8,7 +8,6 @@ import com.utp.trazalab.persistence.jpa.springdata.UbicacionJpaRepositorio;
 import com.utp.trazalab.service.HistorialTecnicoConsultaServicio;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -32,7 +31,7 @@ import org.springframework.web.util.UriUtils;
 
 @Controller
 public class InterfazBaseWebController {
-    private static final int TAMANO_PAGINA = 5;
+    private static final int TAMANO_PAGINA = 10;
 
     private final ComputadoraJpaRepositorio computadoras;
     private final UbicacionJpaRepositorio ubicaciones;
@@ -47,7 +46,19 @@ public class InterfazBaseWebController {
     }
 
     @GetMapping("/disponibilidad")
-    public String disponibilidad(@RequestParam(required = false) Integer ubicacionId, @RequestParam(required = false) String edificio, @RequestParam(required = false) Integer piso, @RequestParam(required = false) String buscar, @RequestParam(defaultValue = "0") int pagina, Model model) {
+    public String disponibilidad(@RequestParam(required = false) Integer ubicacionId, @RequestParam(required = false) String edificio, @RequestParam(required = false) Integer piso, @RequestParam(required = false) String buscar, @RequestParam(required = false) List<EstadoComputadora> estado, @RequestParam(defaultValue = "0") int pagina, @RequestParam(defaultValue = "false") boolean completo, Model model) {
+        cargarDisponibilidad(ubicacionId, edificio, piso, buscar, estado, pagina, completo, model);
+        model.addAttribute("cargaInicial", !completo);
+        return "equipos/disponibilidad";
+    }
+
+    @GetMapping("/disponibilidad/resultados")
+    public String resultadosDisponibilidad(@RequestParam(required = false) Integer ubicacionId, @RequestParam(required = false) String edificio, @RequestParam(required = false) Integer piso, @RequestParam(required = false) String buscar, @RequestParam(required = false) List<EstadoComputadora> estado, @RequestParam(defaultValue = "0") int pagina, Model model) {
+        cargarDisponibilidad(ubicacionId, edificio, piso, buscar, estado, pagina, true, model);
+        return "equipos/disponibilidad :: resultados";
+    }
+
+    private void cargarDisponibilidad(Integer ubicacionId, String edificio, Integer piso, String buscar, List<EstadoComputadora> estado, int pagina, boolean consultarResultados, Model model) {
         List<UbicacionEntidad> todasLasUbicaciones = ubicaciones.findAllBySede_NombreIgnoreCaseOrderByEdificioAscPisoAscNombreAsc(sedeActiva);
         Set<Integer> idsUbicacionesConEquipos = todasLasUbicaciones.isEmpty()
                 ? Set.of()
@@ -59,6 +70,9 @@ public class InterfazBaseWebController {
         UbicacionEntidad ubicacionSeleccionada = seleccionarUbicacion(ubicacionId, aulasDisponibles);
         Map<String, List<Integer>> pisosPorTorre = obtenerPisosPorTorre(aulasDisponibles);
         String edificioSeleccionado = seleccionarEdificio(edificio, pisosPorTorre);
+        if (edificio == null && ubicacionId == null && !pisosPorTorre.isEmpty()) {
+            edificioSeleccionado = pisosPorTorre.keySet().iterator().next();
+        }
         Integer pisoSeleccionado = seleccionarPiso(piso, edificioSeleccionado, pisosPorTorre);
         boolean ubicacionNoDisponible = (edificio != null && edificioSeleccionado == null)
                 || (piso != null && pisoSeleccionado == null)
@@ -105,24 +119,26 @@ public class InterfazBaseWebController {
         Map<Integer, String> etiquetasEquipos = new HashMap<>();
         List<Integer> idsUbicacion = ubicacionSeleccionada == null ? List.of() : List.of(ubicacionSeleccionada.getId());
         String busqueda = buscar == null || buscar.isBlank() ? null : buscar.strip();
+        List<EstadoComputadora> estadosSeleccionados = estado == null ? List.of() : estado.stream().distinct().toList();
+        List<EstadoComputadora> estadosConsulta = estadosSeleccionados.isEmpty() ? List.of(EstadoComputadora.values()) : estadosSeleccionados;
         Page<ComputadoraEntidad> paginaEquipos = Page.empty();
         long totalEquipos = 0;
         long equiposOperativos = 0;
         long equiposEnMantenimiento = 0;
         long equiposFueraDeServicio = 0;
 
-        if (!idsUbicacion.isEmpty()) {
+        if (consultarResultados && !idsUbicacion.isEmpty()) {
             totalEquipos = computadoras.countByUbicacion_IdIn(idsUbicacion);
             equiposOperativos = computadoras.countByUbicacion_IdInAndEstado(idsUbicacion, EstadoComputadora.OPERATIVA);
             equiposEnMantenimiento = computadoras.countByUbicacion_IdInAndEstado(idsUbicacion, EstadoComputadora.EN_MANTENIMIENTO);
             equiposFueraDeServicio = computadoras.countByUbicacion_IdInAndEstado(idsUbicacion, EstadoComputadora.FUERA_DE_SERVICIO);
 
             Pageable pageable = PageRequest.of(Math.max(0, pagina), TAMANO_PAGINA, ordenPorCodigoQr());
-            paginaEquipos = consultarEquipos(idsUbicacion, busqueda, pageable);
+            paginaEquipos = computadoras.filtrarPorUbicaciones(idsUbicacion, busqueda == null ? "" : busqueda, estadosConsulta, pageable);
 
             if (!paginaEquipos.hasContent() && paginaEquipos.getTotalPages() > 0) {
                 pageable = PageRequest.of(paginaEquipos.getTotalPages() - 1, TAMANO_PAGINA, ordenPorCodigoQr());
-                paginaEquipos = consultarEquipos(idsUbicacion, busqueda, pageable);
+                paginaEquipos = computadoras.filtrarPorUbicaciones(idsUbicacion, busqueda == null ? "" : busqueda, estadosConsulta, pageable);
             }
 
             for (ComputadoraEntidad computadora : paginaEquipos.getContent()) {
@@ -144,6 +160,7 @@ public class InterfazBaseWebController {
         model.addAttribute("etiquetasEquipos", etiquetasEquipos);
         model.addAttribute("paginaEquipos", paginaEquipos);
         model.addAttribute("busqueda", busqueda == null ? "" : busqueda);
+        model.addAttribute("estadosSeleccionados", estadosSeleccionados);
         model.addAttribute("totalEquipos", totalEquipos);
         model.addAttribute("equiposOperativos", equiposOperativos);
         model.addAttribute("equiposEnMantenimiento", equiposEnMantenimiento);
@@ -154,8 +171,6 @@ public class InterfazBaseWebController {
         model.addAttribute("inicioResultados", inicioResultados);
         model.addAttribute("finResultados", finResultados);
         model.addAttribute("paginasVisibles", paginasVisibles(paginaEquipos.getNumber(), paginaEquipos.getTotalPages()));
-
-        return "equipos/disponibilidad";
     }
 
     @GetMapping("/equipos/escaneo")
@@ -231,14 +246,6 @@ public class InterfazBaseWebController {
                 .orElse(null);
     }
 
-    private Page<ComputadoraEntidad> consultarEquipos(Collection<Integer> ubicacionIds, String busqueda, Pageable pageable) {
-        if (busqueda == null) {
-            return computadoras.listarPorUbicaciones(ubicacionIds, pageable);
-        }
-
-        return computadoras.buscarPorUbicaciones(ubicacionIds, busqueda, pageable);
-    }
-
     private String etiquetaUbicacion(UbicacionEntidad ubicacion) {
         if (ubicacion == null) {
             return "Selecciona un aula";
@@ -268,7 +275,7 @@ public class InterfazBaseWebController {
 
     private List<Integer> paginasVisibles(int paginaActual, int totalPaginas) {
         if (totalPaginas <= 5) {
-            return java.util.stream.IntStream.range(0, totalPaginas).boxed().toList();
+            return java.util.stream.IntStream.range(0, Math.max(3, totalPaginas)).boxed().toList();
         }
 
         int primeraPagina = Math.max(0, paginaActual - 1);

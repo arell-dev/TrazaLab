@@ -37,6 +37,21 @@ public interface ComputadoraJpaRepositorio extends JpaRepository<ComputadoraEnti
             """)
     Page<ComputadoraEntidad> listarPorUbicaciones(@Param("ubicacionIds") Collection<Integer> ubicacionIds, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"ubicacion", "ubicacion.sede"})
+    @Query("""
+            SELECT computadora
+            FROM ComputadoraEntidad computadora
+            WHERE computadora.ubicacion.id IN :ubicacionIds
+                AND computadora.estado IN :estados
+                AND (
+                    LOWER(computadora.codigoQr) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+                    OR LOWER(computadora.numeroSerie) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+                    OR LOWER(computadora.marca) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+                    OR LOWER(computadora.modelo) LIKE LOWER(CONCAT('%', :busqueda, '%'))
+                )
+            """)
+    Page<ComputadoraEntidad> filtrarPorUbicaciones(@Param("ubicacionIds") Collection<Integer> ubicacionIds, @Param("busqueda") String busqueda, @Param("estados") Collection<EstadoComputadora> estados, Pageable pageable);
+
     @Query("""
             SELECT DISTINCT computadora.ubicacion.id
             FROM ComputadoraEntidad computadora
