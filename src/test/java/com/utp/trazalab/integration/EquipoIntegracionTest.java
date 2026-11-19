@@ -6,8 +6,6 @@ import com.utp.trazalab.trazabilidad.dto.HistorialComputadoraDto;
 import com.utp.trazalab.trazabilidad.dto.IncidenciaRegistradaDto;
 import com.utp.trazalab.trazabilidad.model.Computadora;
 import com.utp.trazalab.trazabilidad.model.EstadoComputadora;
-import com.utp.trazalab.trazabilidad.model.Incidencia;
-import com.utp.trazalab.trazabilidad.model.Sede;
 import com.utp.trazalab.trazabilidad.model.Ubicacion;
 import java.sql.Connection;
 import java.sql.Statement;
