@@ -1,0 +1,40 @@
+package com.utp.trazalab.trazabilidad.controller.form;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public class IncidenciaForm {
+    @NotBlank(message = "Ingresa el código QR del equipo.")
+    @Size(max = 100, message = "El código QR no puede superar 100 caracteres.")
+    private String codigoQr;
+
+    @NotBlank(message = "La descripción de la falla es obligatoria.")
+    @Size(max = 500, message = "La descripción no puede superar 500 caracteres.")
+    private String descripcion;
+
+    private Integer tipoFallaId;
+
+    public String getCodigoQr() {
+        return codigoQr;
+    }
+
+    public void setCodigoQr(String codigoQr) {
+        this.codigoQr = codigoQr;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
+
+    public Integer getTipoFallaId() {
+        return tipoFallaId;
+    }
+
+    public void setTipoFallaId(Integer tipoFallaId) {
+        this.tipoFallaId = tipoFallaId;
+    }
+}

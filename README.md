@@ -26,33 +26,9 @@ El mantenimiento no cambia el estado operativo de la computadora ni cierra una i
 
 ## Arquitectura
 
-```text
-Navegador
-  → Spring MVC / Thymeleaf / Bootstrap 5.3.8
-  → controller (MVC/API) + DTO de formulario
-  → service (reglas, transacción y eventos)
-  → persistence.jpa.springdata / entity / converter
-  → Hibernate / JPA
-  → PostgreSQL
-```
+El código Java se organiza por capacidades en `usuarios`, `trazabilidad` y `reportes`. Cada módulo reúne sus controladores, servicios, modelos y repositorios en paquetes separados. `app` contiene el arranque y los extremos generales. `exception` centraliza los errores de la API.
 
-Las entidades y repositorios JPA están organizados en `persistence.jpa`, siguiendo la estructura usada por el proyecto ilustrativo Opalina. Los controladores MVC están en `controller` y los REST en `controller/api`; no existe una capa adicional de «Adaptador Web». Los errores REST se centralizan en `exception`, mientras las pantallas MVC conservan sus validaciones de formulario.
-
-| Paquete o recurso | Responsabilidad |
-|---|---|
-| `controller` | Recibe solicitudes MVC, valida formularios y renderiza vistas. |
-| `controller.api` | Agrupa los controladores REST, incluida la comprobación de salud de PostgreSQL. |
-| `service` | Aplica reglas de negocio, transacciones y registro de eventos. |
-| `dto` | Separa datos de formulario, identidad resuelta desde la sesión y datos de respuesta. |
-| `exception` | Distingue recursos inexistentes y conflictos; genera respuestas `ProblemDetail` para la API REST. |
-| `persistence.jpa.entity` | Mapea entidades persistentes al esquema de PostgreSQL. |
-| `persistence.jpa.springdata` | Define las consultas y operaciones JPA. |
-| `persistence.jpa.converter` | Convierte estados entre Java y el esquema SQL. |
-| `templates/fragments` | Comparte encabezado, menú, mensajes y scripts. |
-| `templates/incidencias` | Contiene las vistas de consulta y registro. |
-| `templates/mantenimientos`, `templates/reportes` | Contiene los paneles de registro técnico y consulta de recurrencias. |
-| `static/css`, `static/js` | `colores.css` reúne tokens y variables Bootstrap; `componentes.css` define la interfaz. JavaScript se organiza por componentes y por pantalla en `componentes`, `equipos` e `incidencias`; `app.js` inicia los avisos compartidos. |
-| `export` | Genera la salida Excel del informe de fallas recurrentes. CSV y PDF pertenecen al servicio de reportes. |
+Las vistas Thymeleaf permanecen en `templates` y los recursos de interfaz en `static`. Los exportadores CSV, Excel y PDF pertenecen a `reportes/export`.
 
 La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.
 
@@ -95,13 +71,7 @@ Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). El login
    docker compose --env-file .env up -d
    ```
 
-4. Solo para una base nueva sin cuentas administradoras, crea la primera cuenta desde una consola interactiva:
-
-   ```powershell
-   .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=crear-administrador"
-   ```
-
-   Ejecuta el comando desde una consola PowerShell interactiva; solicita los datos y oculta la contraseña mientras se escribe. La cuenta y su hash BCrypt se guardan en PostgreSQL. Cuando aparezca el mensaje de confirmación, detén la aplicación con `Ctrl+C` antes de arrancarla normalmente. Si ya existe una cuenta administradora con contraseña, el comando se detiene; si quedó una fila administradora sin hash, permite completarla. Las credenciales `SPRING_DATASOURCE_*` de `.env` solo permiten conectar con PostgreSQL; no sirven para iniciar sesión en TrazaLab.
+4. Recupera la base de datos correspondiente y comprueba que contenga las cuentas activas necesarias para acceder. Las credenciales `SPRING_DATASOURCE_*` de `.env` permiten conectar con PostgreSQL.
 
 5. Arranca TrazaLab:
 
@@ -113,7 +83,7 @@ Las dependencias y versiones están declaradas en [`pom.xml`](pom.xml). El login
 
 También se puede iniciar directamente con `.\mvnw.cmd spring-boot:run`. Spring Boot carga las variables desde `.env` y conecta con PostgreSQL.
 
-La carga opcional de datos demo usa los correos predeterminados de `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` en `application.properties` para crear cuentas de muestra. Esos correos solo pertenecen al sembrado; no son credenciales de login ni determinan quién registra incidencias o mantenimientos. Los formularios atribuyen esas acciones a la cuenta activa de la sesión. La carga está desactivada por defecto y solo se activa con `TRAZALAB_SEED_ENABLED=true` en una base preparada para datos demo.
+La carga opcional de datos de ejemplo está desactivada por defecto. Si se activa con `TRAZALAB_SEED_ENABLED=true`, puede registrar `PC-001` en el aula A0301. Las cuentas se consultan en PostgreSQL y las acciones se atribuyen a la sesión autenticada.
 
 Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate utiliza `spring.jpa.hibernate.ddl-auto=validate` y no crea ni actualiza tablas. Para una base que ya tenía datos antes de Flyway, sigue [`database/README.md`](database/README.md#migraciones-y-volumenes-existentes); el procedimiento genera un respaldo antes de registrar la línea base y conserva el volumen.
 
@@ -121,9 +91,28 @@ Flyway aplica las migraciones bajo `src/main/resources/db/migration`. Hibernate 
 
 Las descargas están disponibles únicamente en Reportes y respetan los filtros de periodo, equipo y tipo. Se ofrecen CSV, Excel (XLSX) y PDF para las fallas recurrentes. El listado de incidencias no tiene rutas ni botones de exportación.
 
-## Logging
+Los listados de usuarios y reportes presentan 20 registros por página. Los indicadores y las exportaciones de reportes consideran todos los resultados que cumplen los filtros.
 
-Los eventos funcionales se escriben en `logs/trazalab-app.log`. `APP_EVENT` registra acción, recurso, resultado y, cuando corresponde, referencias o cantidades. No contiene descripciones, nombres, correos ni contraseñas.
+## Verificaciones y logs
+
+Con la aplicación iniciada, ejecuta las comprobaciones desde PowerShell:
+
+```powershell
+curl.exe -i http://localhost:8080/health
+curl.exe -i http://localhost:8080/db-health
+curl.exe -i http://localhost:8080/api/health
+```
+
+`/health` confirma que la aplicación responde con HTTP 200 y `{"status":"UP"}`. `/db-health` consulta PostgreSQL con `SELECT 1`: devuelve HTTP 200 y `{"status":"UP"}` cuando la conexión funciona, o HTTP 503 y `{"status":"DOWN"}` si falla. `/api/health` conserva la comprobación conjunta y devuelve `{"estado":"disponible"}` o HTTP 503 con `{"estado":"no disponible"}`. Ajusta el puerto si cambias `server.port`.
+
+Los registros se guardan en `logs` por defecto. La variable `TRAZALAB_LOG_DIR` permite elegir otra carpeta antes de iniciar la aplicación:
+
+- `logs/arranque/arranque.log` registra el ciclo de arranque y sus fallos.
+- `logs/actividad/actividad.log` contiene eventos funcionales `APP_EVENT`.
+- `logs/errores/errores.log` reúne mensajes de nivel ERROR de la aplicación y el framework.
+- `logs/chequeos/chequeos.log` contiene las comprobaciones de arranque y las solicitudes de salud.
+
+Cada categoría rota por tamaño y fecha, con archivos comprimidos en su subcarpeta `archive`, límite de 10 MB por archivo, historial de 30 días y tope de 500 MB por categoría. Los errores también permanecen en su categoría de origen cuando corresponda. `APP_EVENT` registra acción, recurso, resultado y, cuando corresponde, referencias o cantidades.
 
 ## Pruebas
 
@@ -133,11 +122,11 @@ Ejecuta la suite con Docker disponible:
 .\mvnw.cmd test
 ```
 
-El 07/11/2026, `./mvnw.cmd -q clean test` terminó con 25 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas en PostgreSQL temporal mediante Testcontainers. La suite incluye la validación de QR y la consulta ordenada de las cinco incidencias recientes. La matriz con caso, requisito, ejecución y resultado está en [`docs/testing/README.md`](docs/testing/README.md). Maven deja resultados y logs de prueba en `target/surefire-reports`.
+La ejecución local de `clean verify` del 19/11/2026 terminó con 64 pruebas aprobadas, sin fallos, errores ni omisiones, con PostgreSQL temporal mediante Testcontainers. Las pruebas de integración se organizan por flujo e incluyen la validación de QR y la consulta ordenada de las cinco incidencias recientes. La matriz con caso, requisito, ejecución y resultado está en [`docs/testing/README.md`](docs/testing/README.md). Maven deja los resultados en `target/surefire-reports`.
 
 ## Alcance y documentación
 
-Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en modo demo. El QR se introduce como texto; no hay lector de cámara. El login, la autorización por rol y la atribución de incidencias y mantenimientos usan la cuenta activa almacenada en PostgreSQL y asociada a la sesión. El registro consulta los datos básicos del equipo y sus cinco incidencias más recientes; la consulta técnica integral, incluidas intervenciones y asignaciones de componentes, sigue pendiente.
+Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en código. La pantalla de escaneo permite leer QR con la cámara del navegador o ingresar el código manualmente; la lectura por cámara requiere permisos y un contexto seguro. El login, la autorización por rol y la atribución de incidencias y mantenimientos usan la cuenta activa almacenada en PostgreSQL y asociada a la sesión. La ficha del equipo muestra una cronología paginada de incidencias, fallas, mantenimientos y componentes. La cobertura frente a los requisitos y su validación en piloto permanecen pendientes.
 
 - [Índice de documentación](docs/README.md)
 - [Arquitectura](docs/Arquitectura.md)

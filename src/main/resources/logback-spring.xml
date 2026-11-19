@@ -7,10 +7,23 @@
         </encoder>
     </appender>
 
-    <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/trazalab-app.log</file>
+    <appender name="ARRANQUE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/arranque/arranque.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/trazalab-app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/arranque/archive/arranque.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ACTIVIDAD" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/actividad/actividad.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/actividad/archive/actividad.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>30</maxHistory>
             <totalSizeCap>500MB</totalSizeCap>
@@ -20,12 +33,61 @@
         </encoder>
     </appender>
 
+    <appender name="ERRORES" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/errores/errores.log</file>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/errores/archive/errores.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CHEQUEOS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/chequeos/chequeos.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/chequeos/archive/chequeos.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <logger name="trazalab.app" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE" />
-        <appender-ref ref="APP_FILE" />
+        <appender-ref ref="ACTIVIDAD" />
+        <appender-ref ref="ERRORES" />
+    </logger>
+
+    <logger name="trazalab.arranque" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ARRANQUE" />
+        <appender-ref ref="ERRORES" />
+    </logger>
+
+    <logger name="com.utp.trazalab.TrazalabApplication" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ARRANQUE" />
+        <appender-ref ref="ERRORES" />
+    </logger>
+
+    <logger name="trazalab.chequeos" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="CHEQUEOS" />
+        <appender-ref ref="ERRORES" />
     </logger>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ERRORES" />
     </root>
 </configuration>

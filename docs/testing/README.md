@@ -16,9 +16,15 @@ Desde la raíz de `trazalab`, con Docker Desktop activo:
 .\mvnw.cmd -q test
 ```
 
-`RegistroIncidenciaJpaTest` inicia PostgreSQL 16 desechable con Testcontainers, aplica Flyway, valida el mapeo con Hibernate y ejecuta las pruebas JPA y MockMvc. `GlobalExceptionHandlerTest` comprueba los estados y cuerpos `ProblemDetail` para validación, recursos inexistentes y conflictos. La ejecución histórica del 07/11/2026 terminó con **25 pruebas aprobadas**. El 17/11/2026, `mvn -q test` terminó con **41 pruebas aprobadas**. La suite de la PR #21 terminó con **50 pruebas aprobadas** el 18/11/2026. Después, se restauró V7 al contenido SQL ya aplicado para conservar su checksum; la ejecución posterior terminó con **49 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas** (44 de integración y 5 unitarias). La prueba V5→V7 verifica que `PC-001` ubicado en `LAB-01` pase a `A0301` y que otro equipo en `LAB-01` permanezca allí. En la base local, Flyway validó el esquema en v7 sin ejecutar migraciones y la aplicación arrancó con `/api/health` respondiendo correctamente. Las pruebas usan PostgreSQL temporal y no acreditan un piloto real.
+La suite de integración está organizada por flujo en `EquipoIntegracionTest`, `IncidenciaIntegracionTest`, `MantenimientoIntegracionTest`, `ReporteIntegracionTest`, `UsuarioIntegracionTest` y `SistemaIntegracionTest`. Estas clases comparten `BaseIntegracion`, que configura PostgreSQL 16 desechable con Testcontainers, Flyway, validación del mapeo de Hibernate y MockMvc. Las pruebas de concurrencia tienen clases propias y `ApiExceptionHandlerTest` verifica los estados y cuerpos `ProblemDetail`.
 
-La suite también contiene pruebas para login correcto con una cuenta insertada en PostgreSQL, contraseña incorrecta, cuenta inactiva, redirección de usuarios anónimos y autorización de la gestión de usuarios por rol. La configuración de prueba crea el hash BCrypt en la base temporal; no configura credenciales administrativas mediante propiedades. El alta inicial interactiva bajo el perfil `crear-administrador` todavía requiere una comprobación manual desde una consola con base de datos descartable.
+El 19/11/2026, `./mvnw.cmd clean verify` terminó con **64 pruebas aprobadas, 0 fallos, 0 errores y 0 omitidas**. De ellas, 50 corresponden a las seis clases de integración por flujo; las otras 14 abarcan las pruebas de excepciones, health, disponibilidad y concurrencia. Se cotejaron los 48 casos de integración existentes en el punto de partida con los casos divididos y se conservaron sin duplicados. Los resultados están en `target/surefire-reports` y corresponden al estado local probado.
+
+Antes de dividirse por flujo, la clase `RegistroIncidenciaJpaTest` reunía los casos de integración. En esa estructura, la ejecución histórica del 07/11/2026 terminó con **25 pruebas aprobadas**; la del 17/11/2026, con **41 pruebas aprobadas**; y la suite de la PR #21, con **50 pruebas aprobadas** el 18/11/2026. Después se restauró V7 al SQL ya aplicado para conservar su checksum; la verificación posterior terminó con **49 pruebas aprobadas, 0 fallidas, 0 errores y 0 omitidas**. El 19/11/2026 se registraron **64 pruebas aprobadas** en la estructura anterior a la división. Los resultados históricos corresponden a esas versiones y se conservan como evidencia de sus ejecuciones.
+
+La prueba V5→V7 verifica que `PC-001` ubicado en `LAB-01` pase a `A0301` y que otro equipo en `LAB-01` permanezca allí. En la base local, Flyway validó el esquema en v7 sin ejecutar migraciones y la aplicación arrancó con `/api/health` respondiendo correctamente. Las pruebas usan PostgreSQL temporal y no acreditan un piloto real.
+
+La suite también contiene pruebas para login correcto con una cuenta insertada en PostgreSQL, contraseña incorrecta, cuenta inactiva, redirección de usuarios anónimos y autorización de la gestión de usuarios por rol. La configuración de prueba crea el hash BCrypt en la base temporal; no configura credenciales administrativas mediante propiedades. Las cuentas utilizadas por estas pruebas se insertan en una base temporal específica para cada ejecución.
 
 Los resultados por clase quedan en `target/surefire-reports`. No se informa un porcentaje JaCoCo porque el proyecto aún no configura ese agente o informe.
 
@@ -46,7 +52,7 @@ Los resultados por clase quedan en `target/surefire-reports`. No se informa un p
 | RF-06, exportación | `exportaRecurrenciasFiltradasEnCsvExcelYPdfDesdeLaWeb` | Descarga CSV, XLSX (validado con Apache POI) y PDF con los filtros del reporte. | Ejecutado |
 | EXT-01, alcance de exportación | `renderizaLosPanelesWebActivos` | Comprueba que la lista de incidencias no muestra enlaces ni controles de exportación. | Ejecutado |
 | OBS-01, paginación de historial | `recorrePorPaginasUnHistorialDeCincoMilIncidencias` | Recorre 5 000 incidencias en 50 páginas y valida orden estable sin duplicados. | Ejecutado |
-| API REST, errores | `GlobalExceptionHandlerTest` | Verifica respuestas `ProblemDetail` y estados HTTP 400, 404 y 409 sin filtrar detalles internos de PostgreSQL. | Ejecutado |
+| API REST, errores | `ApiExceptionHandlerTest` | Verifica respuestas `ProblemDetail` y estados HTTP 400, 404 y 409 sin filtrar detalles internos de PostgreSQL. | Ejecutado |
 | RNF-02, autenticación desde PostgreSQL | `loginCorrectoRedirigeAlPanelDeDisponibilidad` y `rechazaContrasenaIncorrectaYCuentaInactiva` | Crea una cuenta activa con hash BCrypt en la base temporal y comprueba login correcto, clave incorrecta y cuenta inactiva. | Ejecutado (17/11/2026) |
 | RNF-02, autorización por rol | `limitaLaAdministracionDeUsuariosAlRolAdministradorYExigeCsrf` | Comprueba que el rol administrador accede a usuarios y que otros roles reciben 403; verifica CSRF en POST. | Ejecutado (17/11/2026) |
 
@@ -54,7 +60,7 @@ La suite también cubre paginación estable, límites de página, historial por 
 
 ## Límites conocidos
 
-- No se prueba la cámara ni el lector físico de QR: el flujo usa texto manual.
+- La pantalla de escaneo incluye cámara y entrada manual; el formulario de incidencia recibe el QR como texto. La lectura con cámara en dispositivos físicos sigue sin verificarse.
 - La sesión identifica la cuenta que registra el evento, pero no verifica quién usa físicamente el equipo; aún no hay validación de piloto.
 - La recurrencia solo incluye incidencias clasificadas, porque la clasificación de nuevas incidencias es opcional.
 - Se usan datos sintéticos en una base temporal; no se declara evidencia de uso piloto.

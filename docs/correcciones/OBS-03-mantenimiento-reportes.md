@@ -16,11 +16,11 @@
 
 ## Seguimiento de autenticación y sembrado · 16/11/2026
 
-La referencia a `TRAZALAB_DEMO_TECH_EMAIL` en el hallazgo anterior describe la configuración de esa fecha. En el estado actual, los correos `trazalab.seed.usuario-correo` y `trazalab.seed.tecnico-correo` son valores fijos de `application.properties` usados únicamente por la carga opcional de cuentas demo, desactivada por defecto. No autentican ni seleccionan al responsable de acciones. El login consulta cuentas activas, hash BCrypt y rol en PostgreSQL; incidencias y mantenimientos toman el usuario de la sesión. Las pruebas no se ejecutaron durante este seguimiento.
+La referencia a `TRAZALAB_DEMO_TECH_EMAIL` en el hallazgo anterior describe la configuración histórica de esa fecha. Actualmente, el login consulta cuentas activas, hash BCrypt y rol en PostgreSQL. Incidencias y mantenimientos toman el usuario de la sesión. Las cuentas de acceso deben existir en la base recuperada. Las pruebas indicadas en esta observación son históricas.
 
 ## Trazabilidad
 
 - Servicio de mantenimiento: [`RegistroMantenimientoServicio`](../../src/main/java/com/utp/trazalab/service/RegistroMantenimientoServicio.java).
 - Servicios web: [`MantenimientoWebController`](../../src/main/java/com/utp/trazalab/controller/MantenimientoWebController.java) y [`ReporteWebController`](../../src/main/java/com/utp/trazalab/controller/ReporteWebController.java).
 - Migración de catálogo: [`V2__catalogo_tipos_falla.sql`](../../src/main/resources/db/migration/V2__catalogo_tipos_falla.sql).
-- Casos y ejecución: [`testing/README.md`](../testing/README.md) y [`RegistroIncidenciaJpaTest`](../../src/test/java/com/utp/trazalab/integration/RegistroIncidenciaJpaTest.java).
+- Casos y ejecución: [`testing/README.md`](../testing/README.md) y las [pruebas de integración](../../src/test/java/com/utp/trazalab/integration/), que sustituyen a la clase histórica `RegistroIncidenciaJpaTest`.

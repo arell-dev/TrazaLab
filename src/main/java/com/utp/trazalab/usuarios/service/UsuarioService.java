@@ -1,0 +1,84 @@
+package com.utp.trazalab.usuarios.service;
+
+import com.utp.trazalab.usuarios.controller.form.UsuarioForm;
+import com.utp.trazalab.usuarios.model.Rol;
+import com.utp.trazalab.usuarios.model.Usuario;
+import com.utp.trazalab.usuarios.repository.RolRepository;
+import com.utp.trazalab.usuarios.repository.UsuarioRepository;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UsuarioService {
+    private final UsuarioRepository usuarios;
+    private final RolRepository roles;
+    private final PasswordEncoder codificador;
+
+    public UsuarioService(UsuarioRepository usuarios, RolRepository roles, PasswordEncoder codificador) {
+        this.usuarios = usuarios;
+        this.roles = roles;
+        this.codificador = codificador;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Usuario> listarUsuarios() {
+        return usuarios.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Usuario> listarUsuarios(Pageable pageable) {
+        return usuarios.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Usuario> buscarPorId(Integer usuarioId) {
+        return usuarios.findById(usuarioId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Usuario> buscarPorCorreo(String correo) {
+        return usuarios.findByCorreoIgnoreCase(correo);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Rol> listarRoles() {
+        return roles.findAll();
+    }
+
+    @Transactional
+    public void crear(UsuarioForm formulario) {
+        String correo = formulario.getCorreo().strip();
+        if (formulario.getContrasena().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("La contraseña no puede superar 72 bytes UTF-8.");
+        }
+        if (usuarios.findByCorreoIgnoreCase(correo).isPresent()) {
+            throw new IllegalArgumentException("Ya existe una cuenta con ese correo.");
+        }
+        Rol rol = roles.findById(formulario.getRolId())
+                .orElseThrow(() -> new IllegalArgumentException("Selecciona un rol válido."));
+        usuarios.save(new Usuario(rol, formulario.getNombres().strip(), formulario.getApellidos().strip(), correo, "activo", codificador.encode(formulario.getContrasena())));
+    }
+
+    @Transactional
+    public void cambiarEstado(Integer usuarioId, String correoAdministrador) {
+        roles.bloquearPorNombre("Administrador")
+                .orElseThrow(() -> new IllegalStateException("No se encontró el rol de administrador."));
+        Usuario usuario = usuarios.findById(usuarioId)
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró la cuenta solicitada."));
+        if (usuario.getCorreo().equalsIgnoreCase(correoAdministrador)) {
+            throw new IllegalArgumentException("No puedes desactivar la cuenta con la que iniciaste sesión.");
+        }
+        if ("activo".equalsIgnoreCase(usuario.getEstado()) && "Administrador".equalsIgnoreCase(usuario.getRol().getNombre())
+                && usuarios.countByEstadoIgnoreCaseAndRol_NombreIgnoreCase("activo", "Administrador") <= 1) {
+            throw new IllegalArgumentException("Debe permanecer al menos un administrador activo.");
+        }
+        usuario.setEstado("activo".equalsIgnoreCase(usuario.getEstado()) ? "inactivo" : "activo");
+        usuarios.save(usuario);
+    }
+}

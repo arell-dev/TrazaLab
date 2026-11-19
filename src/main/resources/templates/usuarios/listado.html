@@ -14,6 +14,7 @@
           <div class="card-body">
             <h2 class="h5 mb-3">Crear cuenta</h2>
             <form method="post" th:action="@{/usuarios}" th:object="${usuarioAlta}" class="row g-3">
+              <input type="hidden" name="pagina" th:value="${paginaUsuarios.number}">
               <div class="col-md-6"><label class="form-label" for="nombres">Nombres</label><input class="form-control" id="nombres" th:field="*{nombres}" required><div class="invalid-feedback d-block" th:errors="*{nombres}"></div></div>
               <div class="col-md-6"><label class="form-label" for="apellidos">Apellidos</label><input class="form-control" id="apellidos" th:field="*{apellidos}" required><div class="invalid-feedback d-block" th:errors="*{apellidos}"></div></div>
               <div class="col-md-6"><label class="form-label" for="correo">Correo</label><input class="form-control" id="correo" type="email" th:field="*{correo}" required><div class="invalid-feedback d-block" th:errors="*{correo}"></div></div>
@@ -27,8 +28,15 @@
           <div class="card-body">
             <h2 class="h5 mb-3">Cuentas registradas</h2>
             <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
-              <tbody><tr th:each="usuario : ${usuarios}"><td th:text="|${usuario.nombres} ${usuario.apellidos}|"></td><td th:text="${usuario.correo}"></td><td th:text="${usuario.rol.nombre}"></td><td th:text="${usuario.estado}"></td><td><form method="post" th:action="@{/usuarios/{id}/estado(id=${usuario.id})}"><button class="btn btn-sm btn-outline-secondary" type="submit" th:text="${usuario.estado == 'activo'} ? 'Desactivar' : 'Activar'"></button></form></td></tr></tbody>
+              <tbody><tr th:each="usuario : ${usuarios}"><td th:text="|${usuario.nombres} ${usuario.apellidos}|"></td><td th:text="${usuario.correo}"></td><td th:text="${usuario.rol.nombre}"></td><td th:text="${usuario.estado}"></td><td><form method="post" th:action="@{/usuarios/{id}/estado(id=${usuario.id})}"><input type="hidden" name="pagina" th:value="${paginaUsuarios.number}"><button class="btn btn-sm btn-outline-secondary" type="submit" th:text="${usuario.estado == 'activo'} ? 'Desactivar' : 'Activar'"></button></form></td></tr></tbody>
             </table></div>
+            <nav class="d-flex flex-wrap align-items-center gap-2" aria-label="Paginación de usuarios" th:if="${paginaUsuarios.totalPages > 1}">
+              <span class="small text-body-secondary" th:text="|Página ${paginaUsuarios.number + 1} de ${paginaUsuarios.totalPages}|">Página</span>
+              <a class="btn btn-outline-secondary btn-sm" th:if="${!paginaUsuarios.first}" th:href="@{/usuarios(pagina=${paginaUsuarios.number - 1})}">Anterior</a>
+              <span class="btn btn-outline-secondary btn-sm disabled" th:if="${paginaUsuarios.first}" aria-disabled="true">Anterior</span>
+              <a class="btn btn-outline-secondary btn-sm" th:if="${!paginaUsuarios.last}" th:href="@{/usuarios(pagina=${paginaUsuarios.number + 1})}">Siguiente</a>
+              <span class="btn btn-outline-secondary btn-sm disabled" th:if="${paginaUsuarios.last}" aria-disabled="true">Siguiente</span>
+            </nav>
           </div>
         </section>
       </main>

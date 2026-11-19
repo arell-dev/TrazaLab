@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "TrazaLab API",
+    "description": "Para consultar el historial, inicia sesión en la aplicación y coloca el valor de JSESSIONID en la variable sesion. La cuenta necesita permiso para consultar equipos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "codigoQr",
+      "value": "PC-001"
+    },
+    {
+      "key": "sesion",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Salud de la aplicación",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Salud de PostgreSQL",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/db-health"
+      }
+    },
+    {
+      "name": "Estado del servicio",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/health"
+      }
+    },
+    {
+      "name": "Historial reciente por QR",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "JSESSIONID={{sesion}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/computadoras/historial?codigoQr={{codigoQr}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "computadoras",
+            "historial"
+          ],
+          "query": [
+            {
+              "key": "codigoQr",
+              "value": "{{codigoQr}}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
