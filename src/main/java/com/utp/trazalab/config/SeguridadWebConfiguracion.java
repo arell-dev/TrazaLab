@@ -19,7 +19,7 @@ public class SeguridadWebConfiguracion {
                         .requestMatchers("/mantenimientos/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio")
                         .requestMatchers("/reportes/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Responsable")
                         .requestMatchers("/api/computadoras/historial").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Responsable")
-                        .requestMatchers("/", "/disponibilidad").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Docente", "ROLE_Responsable")
+                        .requestMatchers("/", "/disponibilidad", "/disponibilidad/resultados").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Docente", "ROLE_Responsable")
                         .requestMatchers("/equipos/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Responsable")
                         .requestMatchers("/incidencias/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Docente", "ROLE_Responsable")
                         .anyRequest().denyAll())
