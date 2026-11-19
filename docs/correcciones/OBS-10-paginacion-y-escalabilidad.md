@@ -12,7 +12,11 @@ Con 100.000 registros, la versión de `d78a4a7` obtuvo p50/p95 de 994,952/1.227,
 
 En disponibilidad, el p50/p95 de `d78a4a7` fue 68,573/87,251 ms y el de la refactorización sin paginar fue 39,815/58,230 ms. Para historial, fue 82,401/94,395 ms frente a 69,893/96,286 ms. Estas mediciones no demuestran una mejora del p95 de historial.
 
-Los resultados dependen del equipo, de la distribución y de la carga sintética. Los tiempos HTTP incluyen la aplicación y la transferencia de la respuesta; no representan una prueba de concurrencia ni un piloto. Los scripts, muestras y planes se conservaron temporalmente en `%TEMP%/trazalab-bench-4jjsetah`. No se midió el pico de memoria por formato de exportación. CSV, Excel y PDF todavía generan la lista completa y el archivo en memoria, por lo que su comportamiento con conjuntos grandes requiere una medición independiente.
+Los resultados dependen del equipo, de la distribución y de la carga sintética. Los tiempos HTTP incluyen la aplicación y la transferencia de la respuesta; no representan una prueba de concurrencia ni un piloto. Los scripts, muestras y planes se conservaron temporalmente en `%TEMP%/trazalab-bench-4jjsetah`.
+
+Se midieron también las descargas sobre la carga de 100.000 fallas, con un calentamiento y tres solicitudes consecutivas por formato. La mediana y el máximo fueron 447,828/613,834 ms para CSV, 989,264/1.018,895 ms para Excel y 1.232,265/1.241,352 ms para PDF. Los archivos ocuparon 3.858.933, 1.557.787 y 1.063.765 bytes, respectivamente. El pico de memoria del proceso durante toda la secuencia fue 737.677.312 bytes; esta cifra incluye el arranque y los tres formatos y no determina el pico de cada descarga. Tres muestras no permiten estimar un p95 fiable.
+
+CSV, Excel y PDF aún generan la lista completa y el archivo en memoria. La prueba anterior demuestra que los tres formatos respondieron para esta carga secuencial; queda pendiente medir descargas simultáneas y memoria por formato antes de decidir si se requiere procesamiento acotado.
 
 ## Verificación funcional
 
