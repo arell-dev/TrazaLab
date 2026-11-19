@@ -16,7 +16,9 @@ Los resultados dependen del equipo, de la distribución y de la carga sintética
 
 Se midieron también las descargas sobre la carga de 100.000 fallas, con un calentamiento y tres solicitudes consecutivas por formato. La mediana y el máximo fueron 447,828/613,834 ms para CSV, 989,264/1.018,895 ms para Excel y 1.232,265/1.241,352 ms para PDF. Los archivos ocuparon 3.858.933, 1.557.787 y 1.063.765 bytes, respectivamente. El pico de memoria del proceso durante toda la secuencia fue 737.677.312 bytes; esta cifra incluye el arranque y los tres formatos y no determina el pico de cada descarga. Tres muestras no permiten estimar un p95 fiable.
 
-CSV, Excel y PDF aún generan la lista completa y el archivo en memoria. La prueba anterior demuestra que los tres formatos respondieron para esta carga secuencial; queda pendiente medir descargas simultáneas y memoria por formato antes de decidir si se requiere procesamiento acotado.
+Se realizaron además cuatro descargas simultáneas de cada formato, con un proceso Java nuevo por formato y el mismo conjunto de datos. Las 12 respuestas fueron HTTP 200. Los tiempos oscilaron entre 1.567,24 y 1.579,88 ms para CSV, entre 2.604,43 y 2.607,08 ms para Excel, y entre 2.506,82 y 2.527,30 ms para PDF. El pico de memoria residente del proceso fue 918.585.344 bytes para CSV, 723.505.152 para Excel y 693.481.472 para PDF. Cada pico incluye el arranque y las cuatro solicitudes; no equivale a memoria por descarga ni a memoria de la base de datos. Esta ejecución no establece un límite de capacidad ni un comportamiento en producción.
+
+CSV, Excel y PDF generan la lista completa y el archivo en memoria. La medición demuestra la respuesta para esta carga y concurrencia en el entorno indicado. El uso de memoria debe reevaluarse con el volumen y los recursos del despliegue académico antes de decidir si requiere procesamiento acotado.
 
 ## Verificación funcional
 
