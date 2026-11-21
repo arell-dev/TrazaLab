@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Encendido | TrazaLab</title>
+</head>
+<body>
+  <main class="panel">
+    <div class="consola">
+      <h1>TrazaLab — Consola de inicio</h1>
+      <p class="instruccion">Inicia sesión para consultar el estado y encender el sistema.</p>
+      <div class="separador" aria-hidden="true">────────────────────────────────────────────────────────</div>
+      <p class="etiqueta">Estado: <span id="indicador">Sin conexión</span></p>
+      <ol id="eventos" class="eventos" aria-label="Mensajes de esta sesión"></ol>
+      <p id="mensaje" class="mensaje" role="status" aria-live="polite">Comprobando configuración…</p>
+      <div class="acciones" aria-label="Acciones del sistema">
+        <button id="ingresar" type="button" hidden>Iniciar sesión</button>
+        <button id="encender" type="button" hidden>Encender TrazaLab</button>
+        <button id="verificar" type="button" hidden>Actualizar estado</button>
+        <a id="abrir" hidden>Abrir TrazaLab</a>
+        <button id="salir" type="button" hidden>Cerrar sesión</button>
+      </div>
+      <p class="nota">Los mensajes corresponden a esta sesión.</p>
+    </div>
+  </main>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>

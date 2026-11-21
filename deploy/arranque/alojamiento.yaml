@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Alojamiento independiente del panel de arranque con S3 privado y CloudFront.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    must:
+      - No alojar credenciales ni tokens en los archivos estáticos.
+      - Activar registros de acceso antes de habilitar la distribución.
+
+Parameters:
+  HabilitarDistribucion:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'false'
+      - 'true'
+    Description: Habilitar solo después de configurar los registros y completar el panel.
+
+Conditions:
+  DistribucionHabilitada: !Equals [!Ref HabilitarDistribucion, 'true']
+
+Resources:
+  Sitio:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Alojar los archivos estáticos sin depender de EC2 ni de un sitio S3 público.
+        must:
+          - Mantener el bloqueo de acceso público y el cifrado.
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  ControlOrigen:
+    Type: AWS::CloudFront::OriginAccessControl
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Firmar las solicitudes al endpoint privado de S3.
+        must:
+          - Mantener el modo de firma always y el origen de tipo s3.
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-panel-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CacheSinAlmacenamiento:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub '${AWS::StackName}-panel-sin-cache'
+        DefaultTTL: 0
+        MaxTTL: 0
+        MinTTL: 0
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingBrotli: false
+          EnableAcceptEncodingGzip: false
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
+  CabecerasSeguridad:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub '${AWS::StackName}-panel-seguridad'
+        SecurityHeadersConfig:
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://cognito-idp.us-east-2.amazonaws.com https://*.auth.us-east-2.amazoncognito.com https://*.execute-api.us-east-2.amazonaws.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https://*.auth.us-east-2.amazoncognito.com"
+            Override: true
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: no-referrer
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: false
+            Override: true
+
+  Distribucion:
+    Type: AWS::CloudFront::Distribution
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Dar al panel una dirección HTTPS estable incluso cuando la instancia esté detenida.
+        must:
+          - Mantener el origen S3 privado y el caché deshabilitado para configuración y callback.
+          - Configurar registros antes de habilitar y comprobar la política CSP con Cognito.
+    Properties:
+      DistributionConfig:
+        Enabled: !If [DistribucionHabilitada, true, false]
+        Comment: Panel de arranque TrazaLab
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - Id: panel-s3
+            DomainName: !GetAtt Sitio.RegionalDomainName
+            OriginAccessControlId: !GetAtt ControlOrigen.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: panel-s3
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: !Ref CacheSinAlmacenamiento
+          ResponseHeadersPolicyId: !Ref CabecerasSeguridad
+          Compress: true
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+  PoliticaSitio:
+    Type: AWS::S3::BucketPolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Permitir lectura a esta distribución específica y rechazar transporte sin TLS.
+        must:
+          - No permitir acceso público directo al bucket.
+    Properties:
+      Bucket: !Ref Sitio
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: SoloCloudFrontAutorizado
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${Sitio.Arn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+                AWS:SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribucion}'
+          - Sid: RechazarSinTLS
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt Sitio.Arn
+              - !Sub '${Sitio.Arn}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+Outputs:
+  BucketPanel:
+    Description: Bucket privado donde se publican los archivos compilados.
+    Value: !Ref Sitio
+  DistribucionId:
+    Description: Distribución del panel para habilitación y registros.
+    Value: !Ref Distribucion
+  OrigenPanel:
+    Description: Origen HTTPS para configurar Cognito y CORS.
+    Value: !Sub 'https://${Distribucion.DomainName}'

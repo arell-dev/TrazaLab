@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: trazalab-postgres
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  volumeMode: Filesystem
+  hostPath:
+    path: /var/lib/trazalab-data/postgres
+    type: Directory
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: trazalab.utp.edu.pe/almacen-postgres
+              operator: In
+              values:
+                - verificado
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trazalab-postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  volumeMode: Filesystem
+  volumeName: trazalab-postgres
+  resources:
+    requests:
+      storage: 10Gi

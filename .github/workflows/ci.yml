@@ -1,0 +1,155 @@
+name: Integración continua
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_call:
+    inputs:
+      guardar_imagen:
+        description: Guardar la imagen comprobada como artefacto de la ejecución
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v6
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Comprobar Docker
+        run: docker info
+
+      - name: Compilar y ejecutar pruebas
+        run: ./mvnw --batch-mode clean verify
+
+      - name: Verificar ejecución de pruebas de integración
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+          import xml.etree.ElementTree as ET
+
+          sources = Path('src/test/java')
+          reports = Path('target/surefire-reports')
+          integration_tests = list(sources.rglob('*IntegracionTest.java'))
+          integration_tests += list(sources.rglob('RetiroComponenteConcurrenciaTest.java'))
+          integration_tests += list(sources.rglob('UsuarioConcurrenciaTest.java'))
+          if not integration_tests:
+              sys.exit('No se encontraron pruebas de integración.')
+
+          failures = []
+          for source in sorted(integration_tests):
+              matches = list(reports.glob(f'TEST-*.{source.stem}.xml'))
+              if len(matches) != 1:
+                  failures.append(f'{source.stem}: informe ausente o duplicado')
+                  continue
+              report = ET.parse(matches[0]).getroot()
+              tests = int(report.get('tests', '0'))
+              skipped = int(report.get('skipped', '0'))
+              errors = int(report.get('errors', '0'))
+              failed = int(report.get('failures', '0'))
+              print(f'{source.stem}: {tests} pruebas, {skipped} omitidas, {errors} errores, {failed} fallos')
+              if tests == 0 or skipped or errors or failed:
+                  failures.append(f'{source.stem}: ejecución incompleta o fallida')
+          if failures:
+              sys.exit('\n'.join(failures))
+          PY
+
+      - name: Construir imagen con el JAR verificado
+        run: docker build --tag trazalab:ci .
+
+      - name: Comprobar imagen y conexión a PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          red="trazalab-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          base="${red}-db"
+          aplicacion="${red}-app"
+          limpiar() {
+            docker logs "$aplicacion" 2>/dev/null || true
+            docker rm -f "$aplicacion" "$base" >/dev/null 2>&1 || true
+            docker network rm "$red" >/dev/null 2>&1 || true
+          }
+          trap limpiar EXIT
+          docker network create "$red" >/dev/null
+          docker run -d --name "$base" --network "$red" \
+            -e POSTGRES_DB=trazalab -e POSTGRES_USER=trazalab \
+            -e POSTGRES_PASSWORD=prueba-ci postgres:16 >/dev/null
+          for intento in {1..60}; do
+            if docker exec "$base" pg_isready -U trazalab -d trazalab; then
+              break
+            fi
+            if [ "$intento" -eq 60 ]; then
+              exit 1
+            fi
+            sleep 2
+          done
+          docker run -d --name "$aplicacion" --network "$red" \
+            -p 127.0.0.1:18080:8080 \
+            -e "SPRING_DATASOURCE_URL=jdbc:postgresql://${base}:5432/trazalab" \
+            -e SPRING_DATASOURCE_USERNAME=trazalab \
+            -e SPRING_DATASOURCE_PASSWORD=prueba-ci trazalab:ci >/dev/null
+          for intento in {1..90}; do
+            if curl --fail --silent http://127.0.0.1:18080/db-health >/dev/null; then
+              break
+            fi
+            if [ "$(docker inspect --format '{{.State.Running}}' "$aplicacion")" != true ]; then
+              exit 1
+            fi
+            if [ "$intento" -eq 90 ]; then
+              exit 1
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1:18080/health
+          curl --fail --silent http://127.0.0.1:18080/db-health
+          curl --fail --silent http://127.0.0.1:18080/api/health
+
+      - name: Preparar imagen comprobada para publicación
+        if: inputs.guardar_imagen
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artefacto-imagen
+          docker image inspect --format '{{.Id}}' trazalab:ci > artefacto-imagen/imagen.id
+          docker image save --output artefacto-imagen/trazalab.tar trazalab:ci
+          cd artefacto-imagen
+          sha256sum trazalab.tar > trazalab.tar.sha256
+
+      - name: Guardar imagen comprobada
+        if: inputs.guardar_imagen
+        uses: actions/upload-artifact@v4
+        with:
+          name: trazalab-imagen-comprobada
+          path: |
+            artefacto-imagen/trazalab.tar
+            artefacto-imagen/trazalab.tar.sha256
+            artefacto-imagen/imagen.id
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Publicar informes de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-surefire
+          path: target/surefire-reports/
+          if-no-files-found: warn

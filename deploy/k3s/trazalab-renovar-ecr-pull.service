@@ -1,0 +1,15 @@
+[Unit]
+Description=Renovación de credencial ECR para TrazaLab
+Wants=network-online.target
+After=network-online.target k3s.service
+Requires=k3s.service
+StartLimitIntervalSec=600
+StartLimitBurst=10
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/local/sbin/trazalab-renovar-ecr-pull
+Restart=on-failure
+RestartSec=30s

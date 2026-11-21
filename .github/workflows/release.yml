@@ -1,0 +1,232 @@
+name: Publicación y despliegue
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trazalab-publicacion
+  queue: max
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obtener historial y etiqueta
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validar etiqueta y commit
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo 'La etiqueta debe tener formato vX.Y.Z sin ceros iniciales.' >&2
+            exit 1
+          fi
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          etiquetado=$(git rev-parse "refs/tags/${VERSION}^{commit}")
+          actual=$(git rev-parse HEAD)
+          test "$etiquetado" = "$actual"
+          git merge-base --is-ancestor "$actual" refs/remotes/origin/main
+
+  verificar:
+    needs: validar
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+    with:
+      guardar_imagen: true
+
+  publicar_y_desplegar:
+    needs:
+      - validar
+      - verificar
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: produccion
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-2
+      AWS_DEFAULT_REGION: us-east-2
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      AWS_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+      INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+      DOCUMENT_NAME: ${{ vars.AWS_DEPLOY_DOCUMENT }}
+      DOCUMENT_VERSION: ${{ vars.AWS_DEPLOY_DOCUMENT_VERSION }}
+      VERSION: ${{ github.ref_name }}
+      REPOSITORY: trazalab
+
+    steps:
+      - name: Obtener manifiestos de la versión
+        uses: actions/checkout@v6
+
+      - name: Descargar imagen comprobada
+        uses: actions/download-artifact@v4
+        with:
+          name: trazalab-imagen-comprobada
+          path: artefacto-imagen
+
+      - name: Verificar y cargar la imagen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artefacto-imagen
+          sha256sum --check trazalab.tar.sha256
+          docker image load --input trazalab.tar
+          esperado=$(tr -d '\r\n' < imagen.id)
+          actual=$(docker image inspect --format '{{.Id}}' trazalab:ci)
+          [[ "$esperado" =~ ^sha256:[a-f0-9]{64}$ ]]
+          test "$actual" = "$esperado"
+
+      - name: Validar configuración del entorno
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$AWS_ACCOUNT_ID" =~ ^[0-9]{12}$ ]]
+          [[ "$INSTANCE_ID" =~ ^i-[a-f0-9]{8,17}$ ]]
+          [[ "$DOCUMENT_NAME" =~ ^[A-Za-z0-9_.-]{3,128}$ ]]
+          test "$DOCUMENT_NAME" = 'TrazaLabDeploy'
+          [[ "$DOCUMENT_VERSION" =~ ^[1-9][0-9]*$ ]]
+          test "$AWS_ROLE_ARN" = "arn:aws:iam::${AWS_ACCOUNT_ID}:role/trazalab-github-deploy"
+
+      - name: Obtener credenciales temporales mediante OIDC
+        id: credenciales
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+          role-session-name: trazalab-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Publicar exactamente la imagen comprobada
+        id: imagen
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(aws sts get-caller-identity --query Account --output text)" = "$AWS_ACCOUNT_ID"
+          registro="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          temporal="build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker_config=$(mktemp -d)
+          export DOCKER_CONFIG="$docker_config"
+          trap 'rm -rf -- "$docker_config"' EXIT
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$registro" >/dev/null
+          docker tag trazalab:ci "${registro}/${REPOSITORY}:${temporal}"
+          docker push "${registro}/${REPOSITORY}:${temporal}"
+          digest=''
+          for intento in {1..12}; do
+            digest=$(aws ecr describe-images --repository-name "$REPOSITORY" --image-ids "imageTag=$temporal" --query 'imageDetails[0].imageDigest' --output text 2>/dev/null || true)
+            if [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then break; fi
+            sleep 5
+          done
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          aws ecr batch-get-image --repository-name "$REPOSITORY" --image-ids "imageDigest=$digest" --output json > respuesta-ecr.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          respuesta = json.loads(Path('respuesta-ecr.json').read_text())
+          if respuesta.get('failures') or len(respuesta.get('images', [])) != 1:
+              raise SystemExit('No se pudo recuperar el manifiesto exacto de ECR.')
+          imagen = respuesta['images'][0]
+          Path('manifiesto-ecr.json').write_text(imagen['imageManifest'], encoding='utf-8')
+          Path('tipo-ecr.txt').write_text(imagen['imageManifestMediaType'], encoding='utf-8')
+          PY
+          tipo=$(cat tipo-ecr.txt)
+          if ! aws ecr put-image --repository-name "$REPOSITORY" --image-tag "$VERSION" --image-digest "$digest" --image-manifest file://manifiesto-ecr.json --image-manifest-media-type "$tipo" >/dev/null; then
+            existente=$(aws ecr describe-images --repository-name "$REPOSITORY" --image-ids "imageTag=$VERSION" --query 'imageDetails[0].imageDigest' --output text)
+            test "$existente" = "$digest"
+          fi
+          publicado=$(aws ecr describe-images --repository-name "$REPOSITORY" --image-ids "imageTag=$VERSION" --query 'imageDetails[0].imageDigest' --output text)
+          test "$publicado" = "$digest"
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Iniciar instancia y esperar Systems Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+          estado=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query 'Reservations[0].Instances[0].State.Name' --output text)
+          case "$estado" in
+            stopped)
+              echo 'EC2_ARRANQUE_SOLICITADO=true' >> "$GITHUB_ENV"
+              aws ec2 start-instances --instance-ids "$INSTANCE_ID" >/dev/null
+              ;;
+            running|pending) ;;
+            *) echo "Estado EC2 incompatible: $estado" >&2; exit 1 ;;
+          esac
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+          for intento in {1..60}; do
+            estado=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" --query 'InstanceInformationList[0].PingStatus' --output text)
+            if [ "$estado" = Online ]; then exit 0; fi
+            sleep 10
+          done
+          echo 'Systems Manager no estuvo disponible dentro del tiempo esperado.' >&2
+          exit 1
+
+      - name: Desplegar por digest mediante documento restringido
+        shell: bash
+        env:
+          DIGEST: ${{ steps.imagen.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          test -n "$(git ls-files deploy/k3s)"
+          manifiestos=$(git ls-files -z deploy/k3s | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f 1)
+          [[ "$manifiestos" =~ ^[a-f0-9]{64}$ ]]
+          echo 'DESPLIEGUE_SSM_INTENTADO=true' >> "$GITHUB_ENV"
+          comando=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name "$DOCUMENT_NAME" --document-version "$DOCUMENT_VERSION" --parameters "Digest=$DIGEST,Version=$VERSION,ManifestHash=$manifiestos" --timeout-seconds 1800 --query 'Command.CommandId' --output text)
+          [[ "$comando" =~ ^[a-f0-9-]{36}$ ]]
+          printf 'DESPLIEGUE_SSM_ID=%s\n' "$comando" >> "$GITHUB_ENV"
+          echo "Comando de despliegue: $comando"
+          for intento in {1..420}; do
+            estado=$(aws ssm get-command-invocation --command-id "$comando" --instance-id "$INSTANCE_ID" --query Status --output text 2>/dev/null || true)
+            case "$estado" in
+              Success)
+                printf 'Versión: %s\nDigest: %s\nComando SSM: %s\n' "$VERSION" "$DIGEST" "$comando" >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+                ;;
+              Cancelled|TimedOut|Failed|Cancelling)
+                echo "El despliegue terminó con estado $estado; consultar SSM $comando." >&2
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+          echo "El despliegue excedió el tiempo de espera; consultar SSM $comando." >&2
+          exit 1
+
+      - name: Informar estado tras un fallo o cancelación
+        if: ${{ (failure() || cancelled()) && steps.credenciales.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          {
+            echo '### Estado tras la interrupción'
+            echo
+            echo "Versión solicitada: $VERSION"
+            if [[ "$INSTANCE_ID" =~ ^i-[a-f0-9]{8,17}$ ]]; then
+              estado=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null) || estado='no disponible'
+              printf 'Instancia %s: %s\n' "$INSTANCE_ID" "$estado"
+            fi
+            if [[ -n "${DESPLIEGUE_SSM_ID:-}" ]]; then
+              estado_ssm=$(aws ssm get-command-invocation --command-id "$DESPLIEGUE_SSM_ID" --instance-id "$INSTANCE_ID" --query Status --output text 2>/dev/null) || estado_ssm='no disponible'
+              printf 'Comando SSM %s: %s\n' "$DESPLIEGUE_SSM_ID" "$estado_ssm"
+            elif [[ "${DESPLIEGUE_SSM_INTENTADO:-false}" == true ]]; then
+              echo 'Se intentó enviar un comando SSM, pero no se confirmó su identificador; revisa Systems Manager antes de actuar.'
+            fi
+            if [[ "${EC2_ARRANQUE_SOLICITADO:-false}" == true ]]; then
+              echo 'El flujo solicitó encender EC2. Verifica si hay usuarios u operaciones activas antes de detenerla.'
+            fi
+            echo 'No se confirmó el despliegue. Revisa los registros y la marca pendiente antes de reintentar.'
+          } >> "$GITHUB_STEP_SUMMARY"

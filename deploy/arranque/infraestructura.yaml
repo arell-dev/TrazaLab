@@ -1,0 +1,266 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Panel de encendido con autenticación separada para operar una única instancia.
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    must:
+      - No habilitar el autorregistro ni permitir seleccionar la instancia desde la solicitud.
+      - La URL del panel debe permanecer accesible con EC2 detenida.
+Parameters:
+  InstanciaId:
+    Type: String
+    AllowedPattern: '^i-[a-f0-9]{8,17}$'
+  OrigenPanel:
+    Type: String
+    AllowedPattern: '^https://[a-z0-9-]+\.cloudfront\.net$'
+  UrlSalud:
+    Type: String
+    AllowedPattern: '^https://[a-z0-9-]+\.cloudfront\.net/api/health$'
+  DominioCognito:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+  CodigoBucket:
+    Type: String
+    MinLength: 3
+    MaxLength: 63
+  CodigoKey:
+    Type: String
+    MinLength: 1
+Resources:
+  Usuarios:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Autenticación independiente del servidor detenido.
+        must:
+          - Las cuentas solo pueden ser creadas por administración.
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      MfaConfiguration: OPTIONAL
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      UserPoolTier: LITE
+  Operadores:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: operadores
+      UserPoolId: !Ref Usuarios
+  Dominio:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref DominioCognito
+      UserPoolId: !Ref Usuarios
+      ManagedLoginVersion: 1
+  Scopes:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      Identifier: trazalab
+      Name: Control de arranque
+      UserPoolId: !Ref Usuarios
+      Scopes:
+        - ScopeName: iniciar
+          ScopeDescription: Consultar y solicitar encendido
+  Cliente:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: Scopes
+    Properties:
+      UserPoolId: !Ref Usuarios
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - trazalab/iniciar
+      CallbackURLs:
+        - !Sub '${OrigenPanel}/'
+      LogoutURLs:
+        - !Sub '${OrigenPanel}/'
+      SupportedIdentityProviders:
+        - COGNITO
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      AccessTokenValidity: 5
+      IdTokenValidity: 5
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+  FuncionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-control'
+      RetentionInDays: 7
+  ApiLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+  RolFuncion:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Limitar el control de EC2 y comprobar autorización vigente.
+        must:
+          - No conceder StopInstances ni seleccionar otra instancia.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: control-minimo
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: ec2:StartInstances
+                Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanciaId}'
+              - Effect: Allow
+                Action: ec2:DescribeInstances
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:AdminListGroupsForUser
+                Resource: !GetAtt Usuarios.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-control:*'
+  Funcion:
+    Type: AWS::Lambda::Function
+    DependsOn: FuncionLogs
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Autoriza y controla una sola instancia sin exponer el SDK al navegador.
+        must:
+          - No imprimir tokens ni información de usuario.
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-control'
+      Runtime: nodejs22.x
+      Handler: lambda/index.handler
+      Role: !GetAtt RolFuncion.Arn
+      Timeout: 10
+      MemorySize: 256
+      Code:
+        S3Bucket: !Ref CodigoBucket
+        S3Key: !Ref CodigoKey
+      Environment:
+        Variables:
+          INSTANCIA_ID: !Ref InstanciaId
+          GRUPO_OPERADORES: operadores
+          USER_POOL_ID: !Ref Usuarios
+          CLIENTE_ID: !Ref Cliente
+          SALUD_URL: !Ref UrlSalud
+  Api:
+    Type: AWS::ApiGatewayV2::Api
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Expone dos rutas protegidas para el panel web.
+        must:
+          - Cada ruta debe usar el autorizador JWT y scope configurados.
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref OrigenPanel
+        AllowHeaders:
+          - authorization
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        MaxAge: 300
+  Autorizador:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref Api
+      AuthorizerType: JWT
+      Name: usuarios-cognito
+      IdentitySource:
+        - '$request.header.Authorization'
+      JwtConfiguration:
+        Audience:
+          - !Ref Cliente
+        Issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${Usuarios}'
+  Integracion:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref Api
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Funcion.Arn
+      PayloadFormatVersion: '2.0'
+  Estado:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref Api
+      RouteKey: 'GET /estado'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref Autorizador
+      AuthorizationScopes:
+        - trazalab/iniciar
+      Target: !Sub 'integrations/${Integracion}'
+  Encendido:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref Api
+      RouteKey: 'POST /iniciar'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref Autorizador
+      AuthorizationScopes:
+        - trazalab/iniciar
+      Target: !Sub 'integrations/${Integracion}'
+  PermisoApiEstado:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Funcion
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/$default/GET/estado'
+  PermisoApiEncendido:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Funcion
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/$default/POST/iniciar'
+  Etapa:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref Api
+      StageName: '$default'
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 5
+        ThrottlingRateLimit: 1
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiLogs.Arn
+        Format: '{"requestId":"$context.requestId","route":"$context.routeKey","status":"$context.status"}'
+Outputs:
+  UserPoolId:
+    Description: Directorio de usuarios del panel.
+    Value: !Ref Usuarios
+  ClientId:
+    Description: Cliente público de autenticación.
+    Value: !Ref Cliente
+  ApiUrl:
+    Description: URL de la API del panel.
+    Value: !GetAtt Api.ApiEndpoint
+  CognitoUrl:
+    Description: Dominio alojado del inicio de sesión.
+    Value: !Sub 'https://${DominioCognito}.auth.${AWS::Region}.amazoncognito.com/'

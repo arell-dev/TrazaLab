@@ -1,0 +1,7 @@
+{
+  "userPoolId": "us-east-2_REEMPLAZAR",
+  "clientId": "REEMPLAZAR",
+  "cognitoUrl": "https://REEMPLAZAR.auth.us-east-2.amazoncognito.com/",
+  "apiUrl": "https://REEMPLAZAR.execute-api.us-east-2.amazonaws.com/",
+  "aplicacionUrl": "https://REEMPLAZAR.cloudfront.net/usuarios/login"
+}
