@@ -182,6 +182,20 @@ jobs:
           test "$(aws sts get-caller-identity --query Account --output text)" = "$AWS_ACCOUNT_ID"
           registro="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           temporal="build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          error_ecr=$(mktemp)
+          trap 'rm -f -- "$error_ecr"' EXIT
+          if digest=$(aws ecr describe-images --repository-name "$REPOSITORY" --image-ids "imageTag=$VERSION" --query 'imageDetails[0].imageDigest' --output text 2>"$error_ecr"); then
+            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+            printf 'Se reutiliza la imagen inmutable de %s: %s\n' "$VERSION" "$digest"
+            printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+            printf 'Imagen ECR reutilizada: %s (%s)\n' "$VERSION" "$digest" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! grep -q 'ImageNotFoundException' "$error_ecr"; then
+            cat "$error_ecr" >&2
+            exit 1
+          fi
+          rm -f -- "$error_ecr"
           docker_config=$(mktemp -d)
           export DOCKER_CONFIG="$docker_config"
           trap 'rm -rf -- "$docker_config"' EXIT
@@ -195,15 +209,19 @@ jobs:
             sleep 5
           done
           [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
-          aws ecr batch-get-image --repository-name "$REPOSITORY" --image-ids "imageDigest=$digest" --output json > respuesta-ecr.json
-          python3 - <<'PY'
+          aws ecr batch-get-image --repository-name "$REPOSITORY" --image-ids "imageTag=$temporal" --output json > respuesta-ecr.json
+          python3 - "$digest" <<'PY'
           import json
           from pathlib import Path
+          import sys
 
+          esperado = sys.argv[1]
           respuesta = json.loads(Path('respuesta-ecr.json').read_text())
           if respuesta.get('failures') or len(respuesta.get('images', [])) != 1:
               raise SystemExit('No se pudo recuperar el manifiesto exacto de ECR.')
           imagen = respuesta['images'][0]
+          if imagen.get('imageId', {}).get('imageDigest') != esperado:
+              raise SystemExit('El manifiesto recuperado no corresponde al digest publicado.')
           Path('manifiesto-ecr.json').write_text(imagen['imageManifest'], encoding='utf-8')
           Path('tipo-ecr.txt').write_text(imagen['imageManifestMediaType'], encoding='utf-8')
           PY
