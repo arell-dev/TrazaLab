@@ -1,0 +1,29 @@
+schemaVersion: '2.2'
+description: Despliega una imagen verificada de TrazaLab sin aceptar comandos arbitrarios.
+parameters:
+  Digest:
+    type: String
+    description: Digest SHA-256 de la imagen del repositorio de TrazaLab.
+    interpolationType: ENV_VAR
+    allowedPattern: '^sha256:[a-f0-9]{64}$'
+  Version:
+    type: String
+    description: Etiqueta de versión validada en GitHub.
+    interpolationType: ENV_VAR
+    allowedPattern: '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+  ManifestHash:
+    type: String
+    description: SHA-256 de la lista de manifiestos revisados.
+    interpolationType: ENV_VAR
+    allowedPattern: '^[a-f0-9]{64}$'
+mainSteps:
+  - action: aws:runShellScript
+    name: desplegar
+    precondition:
+      StringEquals:
+        - platformType
+        - Linux
+    inputs:
+      timeoutSeconds: '900'
+      runCommand:
+        - 'exec /usr/local/sbin/trazalab-desplegar "$SSM_Digest" "$SSM_Version" "$SSM_ManifestHash"'

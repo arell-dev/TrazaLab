@@ -1,0 +1,135 @@
+:root {
+  color-scheme: dark;
+  font-family: Consolas, "Cascadia Mono", "Courier New", monospace;
+  color: #d2d2d2;
+  background: #090909;
+  line-height: 1.55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+.panel {
+  padding: clamp(1rem, 2vw, 2rem);
+}
+
+.consola {
+  max-width: 70rem;
+}
+
+h1 {
+  margin: 0 0 0.35rem;
+  color: #f2f2f2;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.instruccion,
+.etiqueta,
+.mensaje,
+.nota {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.instruccion,
+.nota {
+  color: #a8a8a8;
+}
+
+.separador {
+  overflow: hidden;
+  max-width: 100%;
+  margin: 1rem 0;
+  color: #626262;
+  white-space: nowrap;
+}
+
+.indicador,
+#indicador {
+  color: #d2d2d2;
+}
+
+#indicador[data-estado="disponible"] {
+  color: #99d8a9;
+}
+
+#indicador[data-estado="error"] {
+  color: #edc291;
+}
+
+.eventos {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventos li,
+.mensaje {
+  overflow-wrap: anywhere;
+}
+
+.eventos li {
+  margin-bottom: 0.35rem;
+  color: #bdbdbd;
+}
+
+.evento-hora {
+  margin-right: 0.8rem;
+  color: #919191;
+}
+
+.mensaje {
+  color: #f0f0f0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+button,
+.acciones a {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #777;
+  border-radius: 0;
+  color: #ededed;
+  background: #151515;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.acciones a:hover {
+  border-color: #ddd;
+  background: #292929;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+:where(button, a):focus-visible {
+  outline: 2px solid #c9a9e4;
+  outline-offset: 3px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.nota {
+  margin-top: 2rem;
+  font-size: 0.8rem;
+}

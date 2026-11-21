@@ -1,16 +1,22 @@
 package com.utp.trazalab.usuarios.security;
 
+import com.utp.trazalab.operacion.ControlActividad;
+import com.utp.trazalab.operacion.FiltroActividad;
+import com.utp.trazalab.operacion.FiltroInicioSesion;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 @Configuration
 public class SecurityConfig {
     @Bean
-    public SecurityFilterChain seguridadWeb(HttpSecurity http) throws Exception {
+    public SecurityFilterChain seguridadWeb(HttpSecurity http, ObjectProvider<ControlActividad> controlActividad) throws Exception {
         http.authorizeHttpRequests(autorizacion -> autorizacion
                         .requestMatchers("/usuarios/login", "/login", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                         .requestMatchers("/error").permitAll()
@@ -29,6 +35,13 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/disponibilidad", true)
                         .permitAll())
                 .logout(cierre -> cierre.logoutSuccessUrl("/usuarios/login?salio"));
+        ControlActividad actividad = controlActividad.getIfAvailable();
+
+        if (actividad != null) {
+            http.addFilterBefore(new FiltroInicioSesion(actividad), UsernamePasswordAuthenticationFilter.class);
+            http.addFilterAfter(new FiltroActividad(actividad), AuthorizationFilter.class);
+        }
+
         return http.build();
     }
 

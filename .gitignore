@@ -37,3 +37,5 @@ build/
 .env
 logs/
 evidencias/
+__pycache__/
+*.py[cod]

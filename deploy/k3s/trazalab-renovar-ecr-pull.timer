@@ -1,0 +1,10 @@
+[Unit]
+Description=Programación de renovación ECR para TrazaLab
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=6h
+Unit=trazalab-renovar-ecr-pull.service
+
+[Install]
+WantedBy=timers.target

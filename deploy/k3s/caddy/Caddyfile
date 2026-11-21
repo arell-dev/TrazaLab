@@ -1,0 +1,19 @@
+{$TRAZALAB_ORIGEN} {
+  tls {
+    issuer acme {
+      disable_tlsalpn_challenge
+    }
+  }
+
+  @cloudfront header X-TrazaLab-Origin {$TRAZALAB_ORIGEN_TOKEN}
+
+  handle @cloudfront {
+    reverse_proxy trazalab.default.svc.cluster.local:8080 {
+      header_up -X-TrazaLab-Origin
+    }
+  }
+
+  handle {
+    respond "Acceso denegado" 403
+  }
+}
