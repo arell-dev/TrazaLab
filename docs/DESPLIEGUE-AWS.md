@@ -21,6 +21,10 @@ El despliegue anterior en Fresh Canvas se retiró después de verificar la recup
 
 El apagado automático todavía no está implementado. Al terminar las pruebas, detén la instancia manualmente cuando no haya operaciones activas. La instancia detenida no elimina los cargos posibles por almacenamiento, dirección IPv4 y otros recursos; revisa consumo y créditos en AWS Settings. Los prototipos de apagado y la automatización de publicación tienen comprobaciones pendientes y no deben considerarse operativos.
 
+El CI con Java 21, Docker y PostgreSQL 16 pasó en el PR #24 y el cambio se integró en `main` mediante squash (`959d42d`). El rol OIDC está limitado a la publicación de TrazaLab en ECR, inicio de la EC2 prevista y ejecución del documento SSM autorizado. Las etiquetas `v*` tienen reglas de creación, actualización y eliminación restringidas a administradores. Aún no se ejecutó el workflow de publicación ni existe una versión `v0.0.1`.
+
 La copia externa de migración es anterior a la incidencia registrada en la prueba. Después se creó y restauró una copia puntual con dos incidencias; sus datos y límites figuran en [guía de recuperación](./RECUPERACION-COPIA-FASE1.md). Antes de reemplazar la base o terminar la instancia, comprueba que exista una copia verificada que incluya los cambios posteriores. El respaldo automático verificado sigue pendiente.
+
+AWS Organizations denegó al rol de la instancia el acceso S3 requerido para guardar y restaurar el respaldo automatizado. La publicación seguirá detenida hasta revisar la política organizativa y completar la restauración integral del respaldo.
 
 Las pruebas de capacidad representativa, renovación real de acceso a ECR y validación de los flujos desde la universidad siguen pendientes. Se comprobó que el origen rechaza una distribución sin el encabezado compartido y admite la distribución autorizada.
