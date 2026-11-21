@@ -79,10 +79,16 @@ jobs:
               if not version_anterior:
                   raise SystemExit('La última release publicada tiene un formato inválido.')
               valores_anteriores = tuple(map(int, version_anterior.groups()))
-              cambios = [indice for indice, valores in enumerate(zip(valores_anteriores, valores_nuevos)) if valores[0] != valores[1]]
-              if len(cambios) != 1:
+              indice = next(
+                  (
+                      posicion
+                      for posicion, valores in enumerate(zip(valores_anteriores, valores_nuevos))
+                      if valores[0] != valores[1]
+                  ),
+                  None,
+              )
+              if indice is None:
                   raise SystemExit('La versión debe incrementar un solo componente.')
-              indice = cambios[0]
               if valores_nuevos[indice] != valores_anteriores[indice] + 1:
                   raise SystemExit('El componente incrementado debe avanzar exactamente en uno.')
               if any(valor != 0 for valor in valores_nuevos[indice + 1:]):
