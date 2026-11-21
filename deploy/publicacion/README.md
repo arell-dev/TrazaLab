@@ -4,10 +4,10 @@ Los workflows viven en `.github/workflows/ci.yml` y `release.yml`. La CI constru
 
 ## Requisitos de GitHub
 
-- El entorno `produccion` debe permitir la rama `main` y las etiquetas `v*`: `main` sirve para reintentar una etiqueta existente con `workflow_dispatch`; los despliegues automáticos solo se disparan al publicar una etiqueta. Configura reglas de etiqueta para impedir creación, actualización y eliminación por actores no autorizados.
+- El entorno `produccion` permite la rama `main` y las etiquetas `v*`: `main` sirve para reintentar una etiqueta existente con `workflow_dispatch`; los despliegues automáticos solo se disparan al publicar una etiqueta. Las reglas del entorno y el ruleset de etiquetas `v*` están configurados; el rol administrador puede omitir el ruleset.
 - Variables requeridas: `AWS_ACCOUNT_ID`, `AWS_DEPLOY_ROLE_ARN`, `AWS_INSTANCE_ID`, `AWS_DEPLOY_DOCUMENT` y `AWS_DEPLOY_DOCUMENT_VERSION`.
 - Valores de destino verificados: cuenta `970909363773`, región `us-east-2`, instancia `i-08eb755e51c5be97b`, rol `trazalab-github-deploy`, documento `TrazaLabDeploy` y repositorio ECR `trazalab`.
-- OIDC limita la confianza al repositorio y al entorno `produccion`. El rol publica imágenes, inicia la instancia y ejecuta únicamente el documento SSM autorizado. No utiliza claves permanentes.
+- OIDC limita la confianza a `aud=sts.amazonaws.com` y al sujeto inmutable `repo:arell-dev@270571076/TrazaLab@1427248599:environment:produccion`. El rol publica imágenes solo en ECR `trazalab`, inicia la instancia prevista y ejecuta únicamente el documento SSM autorizado. No utiliza claves permanentes. La obtención real de credenciales OIDC todavía no se ha ejercitado en una publicación.
 
 El workflow acepta `vX.Y.Z`, exige que el commit esté integrado en `main` y compara con la última GitHub Release publicada. La primera publicación es `v0.0.1`. En las siguientes versiones se incrementa un solo componente en uno y se reinician a cero los componentes inferiores. `workflow_dispatch` permite reintentar una etiqueta existente desde `main` sin moverla.
 
@@ -27,9 +27,9 @@ El helper de despliegue conserva un bloqueo compartido, registra un despliegue p
 
 ## Estado verificado
 
-La CI anterior pasó en PR #24. El 21 de noviembre de 2026 se organizó localmente en jobs de Maven, imagen Docker, smoke test PostgreSQL y artefacto publicable. GitHub todavía no ha ejecutado estos cambios y no hay una versión `v0.0.1` registrada.
+PR #25 integró `ci.yml` y `release.yml` en `main` mediante squash commit `216565e21e87a59a002368bab97457089c6d5b85` el 21 de noviembre de 2026. Las ejecuciones [44947404777](https://github.com/arell-dev/TrazaLab/actions/runs/44947404777) (PR) y [44946955832](https://github.com/arell-dev/TrazaLab/actions/runs/44946955832) (push) pasaron Maven/Testcontainers, construcción Docker y smoke test con PostgreSQL 16; el artefacto publicable se omitió en PR como estaba previsto. GitHub reconoce activos ambos workflows.
 
-En EC2 se verificaron K3s, los despliegues de TrazaLab, PostgreSQL y Caddy, el PVC de PostgreSQL y el estado de salud por HTTPS. Después se instaló el helper de despliegue desde una revisión fijada, y se registró la huella de los manifiestos. Antes de publicar falta comprobar las variables del entorno GitHub y ejecutar CI con estos cambios. No hay todavía una publicación real de esta rama.
+En EC2 se verificaron K3s, los despliegues de TrazaLab, PostgreSQL y Caddy, el PVC de PostgreSQL y el estado de salud por HTTPS. Después se instaló el helper de despliegue desde una revisión fijada, y se registró la huella de los manifiestos. Las variables del entorno `produccion`, sus reglas para `main` y `v*`, la confianza OIDC y el alcance del rol IAM están revisados. La publicación real por ECR/SSM no se ha ejecutado y no existe la release `v0.0.1`. Espera a completar la validación desde la red universitaria antes de iniciar la primera publicación.
 
 ## Comprobaciones locales
 
