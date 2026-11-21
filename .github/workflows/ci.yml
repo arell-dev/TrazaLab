@@ -36,7 +36,7 @@ jobs:
         run: python3 deploy/publicacion/pruebas/prueba_temporal_version.py
 
       - name: Configurar Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -86,7 +86,7 @@ jobs:
 
       - name: Publicar informes de pruebas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: informes-surefire-${{ github.run_id }}-${{ github.run_attempt }}
           path: target/surefire-reports/
@@ -95,7 +95,7 @@ jobs:
 
       - name: Transferir el JAR verificado
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trazalab-jar-${{ github.run_id }}-${{ github.run_attempt }}
           path: target/trazalab-*.jar
@@ -115,7 +115,7 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
 
       - name: Descargar el JAR verificado
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: trazalab-jar-${{ github.run_id }}-${{ github.run_attempt }}
           path: target
@@ -132,7 +132,7 @@ jobs:
           sha256sum trazalab.tar > trazalab.tar.sha256
 
       - name: Guardar imagen para smoke test
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -150,7 +150,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Descargar imagen construida
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
           path: artefacto-imagen
@@ -225,7 +225,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Descargar imagen construida
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
           path: artefacto-imagen
@@ -243,7 +243,7 @@ jobs:
           test "$actual" = "$esperado"
 
       - name: Publicar artefacto verificado para release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: trazalab-imagen-comprobada
           path: |
