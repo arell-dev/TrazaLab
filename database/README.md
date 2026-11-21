@@ -76,7 +76,7 @@ docker exec trazalab-postgres psql -U trazalab_app -d trazalab -c "SELECT incide
 - No elimines el volumen si necesitas conservar los registros existentes.
 - Las migraciones Flyway de `src/main/resources/db/migration` son la fuente ejecutable del esquema. El archivo `01_trazalab_schema.sql` conserva el esquema inicial como referencia; Docker ya no lo ejecuta al crear el volumen.
 
-El flujo completo de la aplicación, las capas JPA y la trazabilidad de RF-05 están documentados en el [README principal](../README.md) y en [Arquitectura](../docs/Arquitectura.md).
+El flujo completo de la aplicación, las capas JPA y la trazabilidad de RF-05 están documentados en el [README principal](../README.md) y en [Arquitectura](../docs/arquitectura/Arquitectura.md).
 
 ## Migraciones y volúmenes existentes
 

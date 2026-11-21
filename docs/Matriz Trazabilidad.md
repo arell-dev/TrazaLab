@@ -26,6 +26,6 @@ La suite de la PR #21 terminó con **50 pruebas aprobadas** el 18/11/2026. Despu
 
 Las pruebas corren en una base descartable de Testcontainers; no modifican ni acreditan un piloto con datos reales. Los archivos del docente se consultaron como referencia y no se modificaron.
 
-La guía de mantenimiento del esquema y la línea base local están en [`../database/README.md`](../database/README.md). Los hallazgos y correcciones están en [`correcciones/`](correcciones/) y el plan de pruebas en [`testing/`](testing/).
+La guía de mantenimiento del esquema y la línea base local están en [`../database/README.md`](../database/README.md). El historial de arquitectura, flujos y correcciones está consolidado en [`Historial Arquitectura y Herramientas.md`](Historial%20Arquitectura%20y%20Herramientas.md) y [`Historial Flujos y Rendimiento.md`](Historial%20Flujos%20y%20Rendimiento.md). El plan de pruebas está en [`testing/`](testing/).
 
-El [diagrama unificado](TrazaLab_Arquitectura_Trazabilidad.drawio) refleja los módulos y las comprobaciones de salud actuales, y muestra el agente como propuesta. Se verificaron la estructura XML, las referencias internas y la presentación de sus tres páginas en draw.io.
+El [diagrama unificado](arquitectura/Diagrama%20Arquitectura%20y%20Trazabilidad.drawio) refleja los módulos y las comprobaciones de salud actuales, y muestra el agente como propuesta. Se verificaron la estructura XML, las referencias internas y la presentación de sus tres páginas en draw.io.

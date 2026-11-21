@@ -1,6 +1,6 @@
 # Arquitectura de TrazaLab
 
-El [diagrama editable de arquitectura](TrazaLab_Arquitectura_Trazabilidad.drawio) refleja los módulos web, servicios, persistencia y comprobaciones de salud de la estructura actual. La integración con el agente de monitoreo figura como propuesta pendiente. Se verificaron su estructura XML, referencias internas y presentación de sus tres páginas en draw.io.
+El [diagrama editable de arquitectura](Diagrama%20Arquitectura%20y%20Trazabilidad.drawio) refleja los módulos web, servicios, persistencia y comprobaciones de salud de la estructura actual. La integración con el agente de monitoreo figura como propuesta pendiente. Se verificaron su estructura XML, referencias internas y presentación de sus tres páginas en draw.io.
 
 ## Criterio de diseño
 
@@ -10,7 +10,7 @@ Los formularios y DTO se ubican junto a su módulo. `ApiExceptionHandler` limita
 
 La interfaz actual está construida con Spring MVC, Thymeleaf y Bootstrap 5.3.8. Los fragmentos compartidos están en `templates/fragments`, las pantallas en carpetas por módulo y los recursos del cliente en `static/css` y `static/js`.
 
-El esquema PostgreSQL se versiona con migraciones Flyway en `src/main/resources/db/migration`, mientras Hibernate valida el mapeo. El [`compose.yaml`](../compose.yaml) está en la raíz para levantar la base desde el proyecto; `database/` conserva la guía operativa y el procedimiento de adopción para volúmenes existentes.
+El esquema PostgreSQL se versiona con migraciones Flyway en `src/main/resources/db/migration`, mientras Hibernate valida el mapeo. El [`compose.yaml`](../../compose.yaml) está en la raíz para levantar la base desde el proyecto; `database/` conserva la guía operativa y el procedimiento de adopción para volúmenes existentes.
 
 ## Flujo web implementado
 
@@ -32,7 +32,7 @@ Antes de avanzar desde el primer paso, la interfaz consulta `GET /api/computador
 
 La consulta web muestra incidencias por páginas de hasta 25 registros; el servicio mantiene su límite máximo de 100. La pantalla de incidencias no ofrece exportaciones. Los archivos CSV, XLSX y PDF se generan únicamente desde Reportes y respetan los filtros activos.
 
-Las cuentas y las recurrencias se presentan en páginas de 20 registros. Los indicadores y la distribución de Reportes se calculan sobre todas las recurrencias que cumplen los filtros; las descargas incluyen el conjunto completo. Las mediciones locales y sus límites se describen en [OBS-10](correcciones/OBS-10-paginacion-y-escalabilidad.md).
+Las cuentas y las recurrencias se presentan en páginas de 20 registros. Los indicadores y la distribución de Reportes se calculan sobre todas las recurrencias que cumplen los filtros; las descargas incluyen el conjunto completo. Las mediciones locales y sus límites se describen en el [historial de flujos y rendimiento](../Historial%20Flujos%20y%20Rendimiento.md).
 
 `IncidenciaService` registra los eventos mediante `LoggingAplicacion`. `Slf4jLoggingAplicacion` escribe `APP_EVENT` con SLF4J y Logback; no registra descripciones, nombres ni correos.
 
@@ -97,9 +97,9 @@ Spring Security autentica el login mediante `UsuarioDetailsService`, que consult
 
 Las entidades principales se guardan con Spring Data JPA. `MantenimientoService` coordina la transacción y `AsignacionComponenteRepository` usa `JdbcTemplate` para el historial temporal de asignaciones y la relación de acciones de componentes. `ReporteRepository` usa una consulta SQL agrupada y parametrizada para contar fallas y filtrar periodo, equipo y tipo.
 
-`HealthController` expone `/health` para comprobar la respuesta de la aplicación, `/db-health` para consultar PostgreSQL y `/api/health` como comprobación conjunta. Los registros de arranque, actividad, errores y chequeos se distribuyen según `logback-spring.xml`; los comandos y rutas se describen en el [README](../README.md#verificaciones-y-logs).
+`HealthController` expone `/health` para comprobar la respuesta de la aplicación, `/db-health` para consultar PostgreSQL y `/api/health` como comprobación conjunta. Los registros de arranque, actividad, errores y chequeos se distribuyen según `logback-spring.xml`; los comandos y rutas se describen en el [README](../../README.md#verificaciones-y-logs).
 
-Para el arranque local y la guía de base de datos, consulta [`README.md`](../README.md) y [`database/README.md`](../database/README.md).
+Para el arranque local y la guía de base de datos, consulta [`README.md`](../../README.md) y [`database/README.md`](../../database/README.md).
 
 ## Trazabilidad y pruebas
 
@@ -115,4 +115,4 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../RE
 
 La refactorización de paquetes está en curso. La cifra de pruebas refleja los informes locales disponibles en `target/surefire-reports`; los cambios realizados después de esa ejecución requieren una nueva verificación. Las pruebas históricas corresponden a la versión ejecutada en su fecha.
 
-La matriz detallada está en [`Matriz Trazabilidad.md`](Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](testing/README.md).
+La matriz detallada está en [`Matriz Trazabilidad.md`](../Matriz%20Trazabilidad.md). El método, los casos y la evidencia de ejecución están en [`testing/README.md`](../testing/README.md).

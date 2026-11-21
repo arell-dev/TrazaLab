@@ -11,7 +11,7 @@ import time
 import uuid
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parents[2]
+RAIZ = Path(__file__).resolve().parents[3]
 PRUEBAS = Path(__file__).resolve().parent
 NOMBRE = "trazalab-ensayo-" + uuid.uuid4().hex[:12]
 RED, BASE, APP, CLIENTE = (NOMBRE + sufijo for sufijo in ("-red", "-db", "-app", "-cliente"))
