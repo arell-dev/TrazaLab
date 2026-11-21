@@ -7,8 +7,8 @@ La prueba debe crear su propia aplicación y PostgreSQL con datos y cuentas sint
 Desde la raíz de `Proyecto/trazalab`, con Docker local, Python y el JAR generado por Maven:
 
 ```powershell
-python deploy/pruebas-carga/test_seguridad.py
-python deploy/pruebas-carga/ejecutar.py
+python deploy/laboratorio/pruebas-carga/test_seguridad.py
+python deploy/laboratorio/pruebas-carga/ejecutar.py
 ```
 
 El script construye una imagen local desde el JAR actual y crea tres contenedores: PostgreSQL, aplicación y generador. Utiliza una red Docker interna, no publica puertos, solo admite daemon local y no acepta ninguna URL de destino. La base usa `tmpfs`; las cuentas, contraseñas y 20 computadoras son sintéticas. La aplicación y la base reciben credenciales aleatorias temporales; no se utiliza ninguna cuenta real. Un fallo o interrupción abrupta puede dejar recursos temporales: revisa los nombres `trazalab-ensayo-*` antes de eliminarlos; no borres recursos ajenos. Si la limpieza falla, el script informa los nombres y termina con error.
@@ -19,4 +19,4 @@ Se registran el SHA-256 del JAR, los identificadores de las tres imágenes, el c
 
 Una medición local aislada no reproduce CloudFront, la red universitaria, el tamaño de instancia, los créditos de CPU ni la carga real del entorno académico. En el ensayo con historial sintético, 20 sesiones y 100 lecturas terminaron sin errores en 2,50 segundos. Las muestras de CPU y memoria son puntuales, no picos garantizados: la aplicación marcó 693 % de CPU en el equipo local, sin limitar los núcleos a los de EC2. La prueba no incluye escrituras durante la carga, no determina la suficiencia de `t3.small` y no valida el piloto.
 
-El protocolo y la medición temporal ejecutada en AWS, junto con sus resultados y límites, se documentan en [ENSAYO-EC2.md](./ENSAYO-EC2.md). La medición no determina la suficiencia de `t3.small` para el piloto.
+El protocolo y la medición temporal ejecutada en AWS, junto con sus resultados y límites, se documentan en [Ensayo EC2](./Ensayo%20EC2.md). La medición no determina la suficiencia de `t3.small` para el piloto.

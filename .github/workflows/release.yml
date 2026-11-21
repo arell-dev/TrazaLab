@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Etiqueta existente para reintentar desde main
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,6 +22,9 @@ jobs:
   validar:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
     steps:
       - name: Obtener historial y etiqueta
         uses: actions/checkout@v6
@@ -23,20 +32,66 @@ jobs:
           fetch-depth: 0
 
       - name: Validar etiqueta y commit
+        id: version
         shell: bash
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [[ ! "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo 'La etiqueta debe tener formato vX.Y.Z sin ceros iniciales.' >&2
             exit 1
           fi
+          if [[ "$EVENT_NAME" == workflow_dispatch && "$REF" != refs/heads/main ]]; then
+            echo 'Los reintentos manuales deben ejecutarse desde main.' >&2
+            exit 1
+          fi
           git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ! git show-ref --verify --quiet "refs/tags/${VERSION}"; then
+            git fetch --no-tags origin "refs/tags/${VERSION}:refs/tags/${VERSION}"
+          fi
           etiquetado=$(git rev-parse "refs/tags/${VERSION}^{commit}")
+          git merge-base --is-ancestor "$etiquetado" refs/remotes/origin/main
           actual=$(git rev-parse HEAD)
-          test "$etiquetado" = "$actual"
-          git merge-base --is-ancestor "$actual" refs/remotes/origin/main
+          if [[ "$EVENT_NAME" == push && "$etiquetado" != "$actual" ]]; then
+            echo 'La etiqueta debe apuntar al commit que inició el workflow.' >&2
+            exit 1
+          fi
+          ultima=$(gh release list --limit 100 --exclude-drafts --exclude-pre-releases --json tagName,createdAt --jq 'sort_by(.createdAt) | last | .tagName // ""')
+          python3 - "$VERSION" "$ultima" <<'PY'
+          import re
+          import sys
+
+          nueva, anterior = sys.argv[1:]
+          patron = r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+          version_nueva = re.fullmatch(patron, nueva)
+          if not version_nueva:
+              raise SystemExit('La etiqueta tiene un formato de versión inválido.')
+          valores_nuevos = tuple(map(int, version_nueva.groups()))
+          if not anterior:
+              if nueva != 'v0.0.1':
+                  raise SystemExit('La primera publicación debe usar v0.0.1.')
+          else:
+              version_anterior = re.fullmatch(patron, anterior)
+              if not version_anterior:
+                  raise SystemExit('La última release publicada tiene un formato inválido.')
+              valores_anteriores = tuple(map(int, version_anterior.groups()))
+              cambios = [indice for indice, valores in enumerate(zip(valores_anteriores, valores_nuevos)) if valores[0] != valores[1]]
+              if len(cambios) != 1:
+                  raise SystemExit('La versión debe incrementar un solo componente.')
+              indice = cambios[0]
+              if valores_nuevos[indice] != valores_anteriores[indice] + 1:
+                  raise SystemExit('El componente incrementado debe avanzar exactamente en uno.')
+              if any(valor != 0 for valor in valores_nuevos[indice + 1:]):
+                  raise SystemExit('Los componentes inferiores al incremento deben reiniciarse a cero.')
+              if any(valores_nuevos[posicion] != valores_anteriores[posicion] for posicion in range(indice)):
+                  raise SystemExit('Los componentes superiores deben conservarse.')
+          PY
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+          printf 'commit=%s\n' "$etiquetado" >> "$GITHUB_OUTPUT"
 
   verificar:
     needs: validar
@@ -45,6 +100,7 @@ jobs:
       contents: read
     with:
       guardar_imagen: true
+      ref: ${{ needs.validar.outputs.commit }}
 
   publicar_y_desplegar:
     needs:
@@ -54,7 +110,7 @@ jobs:
     timeout-minutes: 60
     environment: produccion
     permissions:
-      contents: read
+      contents: write
       id-token: write
     env:
       AWS_REGION: us-east-2
@@ -64,12 +120,14 @@ jobs:
       INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
       DOCUMENT_NAME: ${{ vars.AWS_DEPLOY_DOCUMENT }}
       DOCUMENT_VERSION: ${{ vars.AWS_DEPLOY_DOCUMENT_VERSION }}
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ needs.validar.outputs.version }}
       REPOSITORY: trazalab
 
     steps:
       - name: Obtener manifiestos de la versión
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validar.outputs.commit }}
 
       - name: Descargar imagen comprobada
         uses: actions/download-artifact@v4
@@ -230,3 +288,24 @@ jobs:
             fi
             echo 'No se confirmó el despliegue. Revisa los registros y la marca pendiente antes de reintentar.'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Registrar release publicada después de verificar AWS
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if existente=$(gh release view "$VERSION" --json tagName,isDraft,isPrerelease 2>/dev/null); then
+            python3 - "$VERSION" "$existente" <<'PY'
+          import json
+          import sys
+
+          version, contenido = sys.argv[1:]
+          release = json.loads(contenido)
+          if release.get('tagName') != version or release.get('isDraft') or release.get('isPrerelease'):
+              raise SystemExit('La release existente no es una publicación estable verificada para esta etiqueta.')
+          PY
+          else
+            gh release create "$VERSION" --verify-tag --title "$VERSION" --notes "Despliegue verificado en AWS para ${VERSION}. Revisa los detalles de la ejecución de GitHub Actions asociada."
+          fi

@@ -1,33 +1,27 @@
 # Documentación de TrazaLab
 
-Esta carpeta separa la arquitectura, la trazabilidad de requisitos, la evidencia de pruebas y el historial de correcciones.
+La documentación de esta carpeta describe la aplicación, su arquitectura, pruebas y trazabilidad. La infraestructura de AWS y sus procedimientos operativos están en [`../deploy/README.md`](../deploy/README.md).
 
 ## Guías vigentes
 
-- [Arquitectura](Arquitectura.md): estructura de paquetes, flujo MVC/JPA y límites actuales.
-- [Matriz de trazabilidad](Matriz%20Trazabilidad.md): correspondencia entre requisitos, código, persistencia y pruebas.
-- [Pruebas de aplicación](testing/README.md): estrategia tomada del laboratorio del docente y resultados de TrazaLab.
-- [Seguridad y límites](Seguridad%20y%20Limites.md): login desde PostgreSQL, roles, protección CSRF y límites del modo demo.
-- [Versiones y fuentes](Versiones%20y%20Fuente.md): dependencias, referencias y herramientas.
-- [Guía PostgreSQL](../database/README.md): ejecución con el Compose de la raíz, migraciones y volúmenes existentes.
-- [Diagrama](TrazaLab_Arquitectura_Trazabilidad.drawio): flujo editable de la arquitectura.
+- [Arquitectura](arquitectura/Arquitectura.md): módulos, capas, persistencia y flujos implementados.
+- [Matriz de trazabilidad](Matriz%20Trazabilidad.md): relación entre requisitos, código, datos y pruebas.
+- [Pruebas](testing/README.md): estrategia, casos ejecutados y pendientes.
+- [Seguridad y límites](Seguridad%20y%20Limites.md): autenticación, roles, CSRF y límites del modo demo.
+- [Versiones y fuentes](Versiones%20y%20Fuente.md): dependencias, herramientas y referencias.
+- [Base de datos](../database/README.md): Compose local, migraciones y volúmenes existentes.
+- [Diagrama de arquitectura](arquitectura/Diagrama%20Arquitectura%20y%20Trazabilidad.drawio): flujo editable y límites del agente propuesto.
 
-## Correcciones
+## Historial de cambios y correcciones
 
-- [`correcciones/OBS-01-consultas-paginadas.md`](correcciones/OBS-01-consultas-paginadas.md): paginación de incidencias e historial; contexto histórico de exportaciones.
-- [`correcciones/OBS-02-arquitectura-web.md`](correcciones/OBS-02-arquitectura-web.md): migración a Spring MVC y estructura JPA.
-- [`correcciones/OBS-03-mantenimiento-reportes.md`](correcciones/OBS-03-mantenimiento-reportes.md): validaciones de rol técnico, asociación de fallas y fechas de recurrencia.
-- [`correcciones/OBS-04-retiro-exportacion-xlsx.md`](correcciones/OBS-04-retiro-exportacion-xlsx.md): Excel habilitado en Reportes y exportaciones retiradas de Incidencias.
-- [`correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md`](correcciones/OBS-05-diagnostico-arranque-spring-boot-4.md): ajuste del diagnóstico al paquete disponible en Spring Boot 4.
-- [`correcciones/OBS-06-diagnosticos-editor-java.md`](correcciones/OBS-06-diagnosticos-editor-java.md): iterador del benchmark, ordenamiento tipado y recarga Maven del editor.
-- [`correcciones/OBS-07-estructura-controller-api-excepciones.md`](correcciones/OBS-07-estructura-controller-api-excepciones.md): separación de controladores REST, excepciones tipadas y manejo de errores.
-- [`correcciones/OBS-08-avisos-en-pruebas-java.md`](correcciones/OBS-08-avisos-en-pruebas-java.md): método de prueba usado por reflexión y eliminación de un import estático sin uso.
+- [Historial de arquitectura y herramientas](Historial%20Arquitectura%20y%20Herramientas.md): migración a Spring MVC, estructura REST, diagnóstico de arranque y herramientas.
+- [Historial de flujos y rendimiento](Historial%20Flujos%20y%20Rendimiento.md): historial paginado, mantenimientos, reportes, diseño adaptable y mediciones locales.
 
-## Criterios de estado
+## Estados de evidencia
 
 - **Implementado:** existe código integrado en la rama publicada.
 - **Probado:** hay un caso ejecutado y un resultado guardado en el informe de pruebas.
 - **Diseñado:** el requisito tiene propuesta, pero todavía no código ejecutable.
 - **Pendiente:** falta trabajo para cerrar el requisito.
 
-El estado probado no acredita uso piloto ni información real: las pruebas de integración usan una base temporal de Testcontainers.
+Las pruebas de integración usan Testcontainers. Sus resultados no acreditan el uso piloto ni la validez de datos de un laboratorio real.

@@ -16,7 +16,7 @@ Mientras la aplicación arranca o no se conoce con certeza el estado de activida
 
 El bloqueo local `/run/trazalab/operacion.lock` protege el despliegue y el respaldo cuando ya se ejecutan en el nodo. No protege el intervalo entre encender EC2 y comenzar el comando SSM, ni coordina con el panel de encendido o una solicitud de despliegue desde GitHub. Por sí solo, no permite garantizar que una parada no interrumpa un inicio o despliegue.
 
-Hay un prototipo local del coordinador y de sus contratos en `COORDINADOR.md`. Sus pruebas usan sustitutos en memoria; no está integrado ni validado en AWS y no resuelve aún la custodia al apagarse el nodo.
+Hay un prototipo local del coordinador y de sus contratos en [Coordinador](./Coordinador.md). Sus pruebas usan sustitutos en memoria; no está integrado ni validado en AWS y no resuelve aún la custodia al apagarse el nodo.
 
 Hace falta un coordinador externo disponible con EC2 detenida, compartido por todos los mecanismos autorizados de encendido, despliegue y parada. Debe admitir adquisición condicional exclusiva y proteger los cambios de estado frente a procesos concurrentes. Un bloqueo sin caducidad automática evita que la expiración permita a otro actor iniciar mientras una parada tardía aún puede completarse; si el dueño falla, se requiere recuperación administrativa verificada, con costo de disponibilidad. Un lease con caducidad necesita además fencing efectivo en todas las operaciones, incluida la llamada a EC2; no se debe asumir que un simple token de fencing impide una llamada tardía a `StopInstances`.
 

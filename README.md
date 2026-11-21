@@ -30,7 +30,7 @@ El código Java se organiza por capacidades en `usuarios`, `trazabilidad` y `rep
 
 Las vistas Thymeleaf permanecen en `templates` y los recursos de interfaz en `static`. Los exportadores CSV, Excel y PDF pertenecen a `reportes/export`.
 
-La [arquitectura detallada](docs/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.
+La [arquitectura detallada](docs/arquitectura/Arquitectura.md) distingue los flujos implementados y el trabajo pendiente.
 
 ## Tecnologías
 
@@ -129,11 +129,12 @@ La ejecución local de `clean verify` del 19/11/2026 terminó con 64 pruebas apr
 Los flujos de incidencias clasificadas, mantenimientos y recurrencias están implementados en código. La pantalla de escaneo permite leer QR con la cámara del navegador o ingresar el código manualmente; la lectura por cámara requiere permisos y un contexto seguro. El login, la autorización por rol y la atribución de incidencias y mantenimientos usan la cuenta activa almacenada en PostgreSQL y asociada a la sesión. La ficha del equipo muestra una cronología paginada de incidencias, fallas, mantenimientos y componentes. La cobertura frente a los requisitos y su validación en piloto permanecen pendientes.
 
 - [Índice de documentación](docs/README.md)
-- [Arquitectura](docs/Arquitectura.md)
+- [Arquitectura](docs/arquitectura/Arquitectura.md)
 - [Matriz de trazabilidad](docs/Matriz%20Trazabilidad.md)
 - [Seguridad y límites](docs/Seguridad%20y%20Limites.md)
 - [Versiones y fuentes](docs/Versiones%20y%20Fuente.md)
-- [Diagrama de arquitectura y trazabilidad](docs/TrazaLab_Arquitectura_Trazabilidad.drawio)
+- [Diagrama de arquitectura y trazabilidad](docs/arquitectura/Diagrama%20Arquitectura%20y%20Trazabilidad.drawio)
 - [Uso y migración de PostgreSQL](database/README.md)
+- [Despliegue y operación de AWS](deploy/README.md)
 
 Los archivos del docente de `TestLab_Semana13_COMPLETO` son referencias de testing. Se documenta la transferencia y ejecución del proyecto en `docs/`; esos materiales no se editan.

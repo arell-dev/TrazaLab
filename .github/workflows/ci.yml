@@ -8,22 +8,29 @@ on:
   workflow_call:
     inputs:
       guardar_imagen:
-        description: Guardar la imagen comprobada como artefacto de la ejecución
+        description: Guardar el artefacto verificado para publicar una versión
         required: false
         default: false
         type: boolean
+      ref:
+        description: Commit exacto que debe verificar el workflow reutilizable
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  verificar:
+  maven-verify:
+    name: Maven y pruebas de integración
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Obtener código
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Configurar Java 21
         uses: actions/setup-java@v4
@@ -32,15 +39,17 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Comprobar Docker
+      - name: Comprobar Docker para Testcontainers
         run: docker info
 
       - name: Compilar y ejecutar pruebas
         run: ./mvnw --batch-mode clean verify
 
       - name: Verificar ejecución de pruebas de integración
+        if: always()
         shell: bash
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           import sys
@@ -72,10 +81,90 @@ jobs:
               sys.exit('\n'.join(failures))
           PY
 
-      - name: Construir imagen con el JAR verificado
-        run: docker build --tag trazalab:ci .
+      - name: Publicar informes de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-surefire-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 1
 
-      - name: Comprobar imagen y conexión a PostgreSQL
+      - name: Transferir el JAR verificado
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trazalab-jar-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/trazalab-*.jar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  imagen-docker:
+    name: Construir imagen Docker
+    needs: maven-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Descargar el JAR verificado
+        uses: actions/download-artifact@v4
+        with:
+          name: trazalab-jar-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target
+
+      - name: Construir y guardar imagen Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --tag trazalab:ci .
+          mkdir -p artefacto-imagen
+          docker image inspect --format '{{.Id}}' trazalab:ci > artefacto-imagen/imagen.id
+          docker image save --output artefacto-imagen/trazalab.tar trazalab:ci
+          cd artefacto-imagen
+          sha256sum trazalab.tar > trazalab.tar.sha256
+
+      - name: Guardar imagen para smoke test
+        uses: actions/upload-artifact@v4
+        with:
+          name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artefacto-imagen/trazalab.tar
+            artefacto-imagen/trazalab.tar.sha256
+            artefacto-imagen/imagen.id
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  smoke-postgres:
+    name: Smoke test con PostgreSQL 16
+    needs: imagen-docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Descargar imagen construida
+        uses: actions/download-artifact@v4
+        with:
+          name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artefacto-imagen
+
+      - name: Verificar identidad y checksum de la imagen
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artefacto-imagen
+          sha256sum --check trazalab.tar.sha256
+          docker image load --input trazalab.tar
+          esperado=$(tr -d '\r\n' < imagen.id)
+          actual=$(docker image inspect --format '{{.Id}}' trazalab:ci)
+          [[ "$esperado" =~ ^sha256:[a-f0-9]{64}$ ]]
+          test "$actual" = "$esperado"
+
+      - name: Ejecutar PostgreSQL y comprobar salud de la aplicación
         shell: bash
         run: |
           set -euo pipefail
@@ -122,19 +211,35 @@ jobs:
           curl --fail --silent http://127.0.0.1:18080/db-health
           curl --fail --silent http://127.0.0.1:18080/api/health
 
-      - name: Preparar imagen comprobada para publicación
-        if: inputs.guardar_imagen
+  artefacto-publicable:
+    name: Habilitar imagen verificada para publicación
+    if: ${{ inputs.guardar_imagen }}
+    needs:
+      - maven-verify
+      - imagen-docker
+      - smoke-postgres
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar imagen construida
+        uses: actions/download-artifact@v4
+        with:
+          name: trazalab-imagen-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artefacto-imagen
+
+      - name: Volver a comprobar la imagen publicable
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artefacto-imagen
-          docker image inspect --format '{{.Id}}' trazalab:ci > artefacto-imagen/imagen.id
-          docker image save --output artefacto-imagen/trazalab.tar trazalab:ci
           cd artefacto-imagen
-          sha256sum trazalab.tar > trazalab.tar.sha256
+          sha256sum --check trazalab.tar.sha256
+          docker image load --input trazalab.tar
+          esperado=$(tr -d '\r\n' < imagen.id)
+          actual=$(docker image inspect --format '{{.Id}}' trazalab:ci)
+          [[ "$esperado" =~ ^sha256:[a-f0-9]{64}$ ]]
+          test "$actual" = "$esperado"
 
-      - name: Guardar imagen comprobada
-        if: inputs.guardar_imagen
+      - name: Publicar artefacto verificado para release
         uses: actions/upload-artifact@v4
         with:
           name: trazalab-imagen-comprobada
@@ -145,11 +250,3 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
-
-      - name: Publicar informes de pruebas
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: informes-surefire
-          path: target/surefire-reports/
-          if-no-files-found: warn
