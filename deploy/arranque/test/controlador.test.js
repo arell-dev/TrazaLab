@@ -91,21 +91,27 @@ test('enciende solo la instancia configurada y no acepta una elegida por el clie
   assert.equal((await controlador(evento)).statusCode, 202);
   assert.deepEqual(llamadas, [
     ['consultar', configuracion.instancia],
-    ['iniciar', configuracion.instancia],
-    ['consultar', configuracion.instancia]
+    ['iniciar', configuracion.instancia]
   ]);
   assert.deepEqual(operaciones, [
     ['adquirir', 'arranque', configuracion.instancia]
   ]);
 });
 
-test('conserva el bloqueo de arranque hasta confirmar running', async () => {
+test('acepta el encendido mientras AWS termina de reflejar el estado y conserva el bloqueo', async () => {
   let consultas = 0;
-  const { controlador, evento, operaciones } = preparar({
-    consultarInstancia: async () => ++consultas === 1 ? 'stopped' : 'pending'
+  const { controlador, evento, llamadas, operaciones } = preparar({
+    consultarInstancia: async () => {
+      consultas += 1;
+      return 'stopped';
+    }
   });
 
-  assert.equal((await controlador(evento)).statusCode, 202);
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 202);
+  assert.equal(JSON.parse(respuesta.body).estado, 'iniciando');
+  assert.equal(consultas, 1);
+  assert.deepEqual(llamadas, [['iniciar', configuracion.instancia]]);
   assert.deepEqual(operaciones, [['adquirir', 'arranque', configuracion.instancia]]);
 });
 
@@ -122,16 +128,6 @@ test('no inicia EC2 cuando otro actor mantiene el coordinador', async () => {
   assert.equal(respuesta.statusCode, 409);
   assert.equal(JSON.parse(respuesta.body).estado, 'operación en curso');
   assert.deepEqual(llamadas, []);
-});
-
-test('conserva el bloqueo si no puede confirmar el estado después de iniciar', async () => {
-  let consultas = 0;
-  const { controlador, evento, operaciones } = preparar({
-    consultarInstancia: async () => ++consultas === 1 ? 'stopped' : 'unknown'
-  });
-
-  assert.equal((await controlador(evento)).statusCode, 503);
-  assert.deepEqual(operaciones, [['adquirir', 'arranque', configuracion.instancia]]);
 });
 
 test('evento detenido libera solo el permiso de apagado tras verificar EC2', async () => {

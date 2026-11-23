@@ -127,12 +127,6 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
           throw error;
         }
 
-        const actual = await consultarInstancia(configuracion.instancia);
-        if (actual !== 'pending' && actual !== 'running') {
-          return responder(503, 'no disponible');
-        }
-
-        liberar = actual === 'running';
         return responder(202, 'iniciando');
       } finally {
         if (liberar) {
