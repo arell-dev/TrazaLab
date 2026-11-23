@@ -56,7 +56,7 @@ La plantilla IAM del rol GitHub está en iam/politica-github-aws.json; la polít
 
 ## Historial operativo del panel
 
-La mejora en esta rama configura el grupo de CloudWatch Logs de la Lambda del panel con retención de 30 días. `GET /historial` requiere una sesión Cognito del grupo `operadores`. Los operadores consultan hasta 1000 eventos recientes de solicitudes de encendido, transiciones EC2 y disponibilidad observada por HTTPS. El panel agrupa estos eventos por día.
+La mejora del PR #28 configura el grupo de CloudWatch Logs de la Lambda del panel con retención de 30 días. `GET /historial` requiere una sesión Cognito del grupo `operadores`. Los operadores consultan hasta 1000 eventos recientes de solicitudes de encendido, transiciones EC2 y disponibilidad observada por HTTPS. El panel agrupa estos eventos por día.
 
 Cuando SSM confirma el éxito del despliegue, el workflow guarda la versión, el commit, el digest, la fecha y el identificador SSM en el elemento `trazalab-ultimo-despliegue` de la tabla existente. También intenta registrar el evento en el grupo de CloudWatch. El elemento conserva el último despliegue registrado aunque los eventos caduquen a los 30 días. Es una confirmación histórica, sujeta a la fecha mostrada, y no una lectura directa del estado actual de Kubernetes.
 
