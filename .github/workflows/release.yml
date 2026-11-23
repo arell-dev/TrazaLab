@@ -89,8 +89,8 @@ jobs:
               )
               if indice is None:
                   raise SystemExit('La versión debe incrementar un solo componente.')
-              if valores_nuevos[indice] != valores_anteriores[indice] + 1:
-                  raise SystemExit('El componente incrementado debe avanzar exactamente en uno.')
+              if valores_nuevos[indice] <= valores_anteriores[indice]:
+                  raise SystemExit('El primer componente distinto debe avanzar.')
               if any(valor != 0 for valor in valores_nuevos[indice + 1:]):
                   raise SystemExit('Los componentes inferiores al incremento deben reiniciarse a cero.')
               if any(valores_nuevos[posicion] != valores_anteriores[posicion] for posicion in range(indice)):
@@ -122,6 +122,7 @@ jobs:
       AWS_REGION: us-east-2
       AWS_DEFAULT_REGION: us-east-2
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      COORDINADOR_TABLA: trazalab-operacion
       AWS_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
       INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
       DOCUMENT_NAME: ${{ vars.AWS_DEPLOY_DOCUMENT }}
@@ -234,6 +235,28 @@ jobs:
           test "$publicado" = "$digest"
           printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
 
+      - name: Adquirir coordinador compartido
+        id: coordinador
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$INSTANCE_ID" =~ ^i-[a-f0-9]{8,17}$ ]]
+          propietario=$(python3 -c 'import uuid; print(uuid.uuid4())')
+          sesion=$(python3 -c 'import uuid; print(uuid.uuid4())')
+          iniciado=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          item=$(printf '{"pk":{"S":"trazalab-operacion"},"operacion":{"S":"despliegue"},"propietario":{"S":"%s"},"instancia":{"S":"%s"},"sesion":{"S":"%s"},"iniciado":{"S":"%s"}}' \
+            "$propietario" "$INSTANCE_ID" "$sesion" "$iniciado")
+          if ! salida=$(aws dynamodb put-item --table-name "$COORDINADOR_TABLA" --region "$AWS_REGION" --item "$item" --condition-expression 'attribute_not_exists(pk)' --no-cli-pager 2>&1); then
+            if [[ "$salida" == *ConditionalCheckFailedException* ]]; then
+              echo 'Otra operación de TrazaLab mantiene el coordinador.' >&2
+            else
+              echo 'No se pudo confirmar la adquisición del coordinador.' >&2
+            fi
+            exit 1
+          fi
+          printf 'COORDINADOR_PROPIETARIO=%s\n' "$propietario" >> "$GITHUB_ENV"
+          printf 'COORDINADOR_SESION=%s\n' "$sesion" >> "$GITHUB_ENV"
+
       - name: Iniciar instancia y esperar Systems Manager
         shell: bash
         run: |
@@ -267,7 +290,7 @@ jobs:
           manifiestos=$(git ls-files -z deploy/k3s | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d ' ' -f 1)
           [[ "$manifiestos" =~ ^[a-f0-9]{64}$ ]]
           echo 'DESPLIEGUE_SSM_INTENTADO=true' >> "$GITHUB_ENV"
-          comando=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name "$DOCUMENT_NAME" --document-version "$DOCUMENT_VERSION" --parameters "Digest=$DIGEST,Version=$VERSION,ManifestHash=$manifiestos" --timeout-seconds 1800 --query 'Command.CommandId' --output text)
+          comando=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name "$DOCUMENT_NAME" --document-version "$DOCUMENT_VERSION" --parameters "Digest=$DIGEST,Version=$VERSION,ManifestHash=$manifiestos,InstanceId=$INSTANCE_ID" --timeout-seconds 1800 --query 'Command.CommandId' --output text)
           [[ "$comando" =~ ^[a-f0-9-]{36}$ ]]
           printf 'DESPLIEGUE_SSM_ID=%s\n' "$comando" >> "$GITHUB_ENV"
           echo "Comando de despliegue: $comando"
@@ -287,6 +310,18 @@ jobs:
           done
           echo "El despliegue excedió el tiempo de espera; consultar SSM $comando." >&2
           exit 1
+
+      - name: Liberar coordinador tras confirmar SSM
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COORDINADOR_PROPIETARIO" =~ ^[a-f0-9-]{36}$ ]]
+          [[ "$COORDINADOR_SESION" =~ ^[a-f0-9-]{36}$ ]]
+          aws dynamodb delete-item --table-name "$COORDINADOR_TABLA" --region "$AWS_REGION" \
+            --key '{"pk":{"S":"trazalab-operacion"}}' \
+            --condition-expression 'operacion = :operacion AND propietario = :propietario AND instancia = :instancia AND sesion = :sesion' \
+            --expression-attribute-values "{\":operacion\":{\"S\":\"despliegue\"},\":propietario\":{\"S\":\"$COORDINADOR_PROPIETARIO\"},\":instancia\":{\"S\":\"$INSTANCE_ID\"},\":sesion\":{\"S\":\"$COORDINADOR_SESION\"}}" \
+            --no-cli-pager >/dev/null
 
       - name: Informar estado tras un fallo o cancelación
         if: ${{ (failure() || cancelled()) && steps.credenciales.outcome == 'success' }}
@@ -308,7 +343,16 @@ jobs:
               echo 'Se intentó enviar un comando SSM, pero no se confirmó su identificador; revisa Systems Manager antes de actuar.'
             fi
             if [[ "${EC2_ARRANQUE_SOLICITADO:-false}" == true ]]; then
-              echo 'El flujo solicitó encender EC2. Verifica si hay usuarios u operaciones activas antes de detenerla.'
+              echo 'El flujo solicitó encender EC2. Comprueba que no haya actividad de aplicación ni operaciones de despliegue o respaldo antes de detenerla.'
+            fi
+            if [[ -n "${COORDINADOR_PROPIETARIO:-}" && "${EC2_ARRANQUE_SOLICITADO:-false}" != true && "${DESPLIEGUE_SSM_INTENTADO:-false}" != true ]]; then
+              aws dynamodb delete-item --table-name "$COORDINADOR_TABLA" --region "$AWS_REGION" \
+                --key '{"pk":{"S":"trazalab-operacion"}}' \
+                --condition-expression 'operacion = :operacion AND propietario = :propietario AND instancia = :instancia AND sesion = :sesion' \
+                --expression-attribute-values "{\":operacion\":{\"S\":\"despliegue\"},\":propietario\":{\"S\":\"$COORDINADOR_PROPIETARIO\"},\":instancia\":{\"S\":\"$INSTANCE_ID\"},\":sesion\":{\"S\":\"$COORDINADOR_SESION\"}}" \
+                --no-cli-pager >/dev/null || echo 'No se pudo confirmar la liberación del permiso previo a cambios de EC2; requiere conciliación.'
+            else
+              echo 'El permiso se conserva hasta conciliar cualquier inicio o comando SSM pendiente.'
             fi
             echo 'No se confirmó el despliegue. Revisa los registros y la marca pendiente antes de reintentar.'
           } >> "$GITHUB_STEP_SUMMARY"

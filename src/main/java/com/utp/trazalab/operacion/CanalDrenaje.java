@@ -104,6 +104,7 @@ public final class CanalDrenaje implements AutoCloseable {
                     String resultado = switch (comando) {
                         case "INICIAR" -> actividad.iniciarDrenaje(Duration.ofMinutes(30)) ? "DRENANDO\n" : "NO_DISPONIBLE\n";
                         case "ESTADO" -> actividad.drenajeVigente() ? "DRENANDO\n" : "NO_DRENANDO\n";
+                        case "OBSERVAR" -> observarActividad();
                         case "CANCELAR" -> {
                             actividad.cancelarDrenaje();
                             yield "CANCELADO\n";
@@ -125,6 +126,11 @@ public final class CanalDrenaje implements AutoCloseable {
                 }
             }
         }
+    }
+
+    private String observarActividad() {
+        EstadoActividad estado = actividad.estado();
+        return "ESTADO|" + estado.relojValido() + "|" + estado.inactividadNanos() + "|" + estado.solicitudesActivas() + "|" + estado.drenando() + "\n";
     }
 
     @Override

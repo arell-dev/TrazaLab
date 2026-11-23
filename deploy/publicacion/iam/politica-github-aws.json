@@ -48,6 +48,28 @@
       "Resource": "arn:aws:ec2:us-east-2:970909363773:instance/i-08eb755e51c5be97b"
     },
     {
+      "Sid": "CoordinarOperacionesTrazaLab",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-2:970909363773:table/trazalab-operacion",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "dynamodb:LeadingKeys": [
+            "trazalab-operacion"
+          ]
+        },
+        "Null": {
+          "dynamodb:LeadingKeys": "false"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
       "Sid": "EjecutarSoloDocumentoTrazaLab",
       "Effect": "Allow",
       "Action": "ssm:SendCommand",

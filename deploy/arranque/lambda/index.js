@@ -1,6 +1,9 @@
 import { EC2Client, DescribeInstancesCommand, StartInstancesCommand } from '@aws-sdk/client-ec2';
 import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminListGroupsForUserCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { crearControlador } from './controlador.js';
+import { crearCoordinador } from './coordinador.js';
 
 const instancia = process.env.INSTANCIA_ID;
 const grupo = process.env.GRUPO_OPERADORES;
@@ -8,9 +11,11 @@ const pool = process.env.USER_POOL_ID;
 const cliente = process.env.CLIENTE_ID;
 const region = process.env.AWS_REGION;
 const salud = process.env.SALUD_URL;
+const cuenta = process.env.CUENTA_AWS;
+const tablaCoordinador = process.env.COORDINADOR_TABLA;
 
 function validarConfiguracion() {
-  if (!/^i-[a-f0-9]{8,17}$/.test(instancia || '') || !/^[\w-]+$/.test(grupo || '') || !/^[\w-]+$/.test(pool || '') || !/^[a-z0-9]+$/.test(cliente || '')) {
+  if (!/^i-[a-f0-9]{8,17}$/.test(instancia || '') || !/^[\w-]+$/.test(grupo || '') || !/^[\w-]+$/.test(pool || '') || !/^[a-z0-9]+$/.test(cliente || '') || !/^[0-9]{12}$/.test(cuenta || '') || !/^[A-Za-z0-9_.-]{3,255}$/.test(tablaCoordinador || '')) {
     throw new Error('Configuración incompleta');
   }
 
@@ -25,12 +30,16 @@ function validarConfiguracion() {
 const urlSalud = validarConfiguracion();
 const ec2 = new EC2Client({ region });
 const cognito = new CognitoIdentityProviderClient({ region });
+const dynamodb = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
+const coordinador = crearCoordinador({ cliente: dynamodb, tabla: tablaCoordinador });
 
 export const handler = crearControlador({
   configuracion: {
     instancia,
     grupo,
     cliente,
+    cuenta,
+    region,
     emisor: `https://cognito-idp.${region}.amazonaws.com/${pool}`,
     scope: 'trazalab/iniciar',
     salud: urlSalud
@@ -110,5 +119,6 @@ export const handler = crearControlador({
     } catch {
       return false;
     }
-  }
+  },
+  coordinador
 });

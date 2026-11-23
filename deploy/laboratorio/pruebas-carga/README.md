@@ -1,6 +1,6 @@
 # Ensayo de carga aislado
 
-El criterio RE-01 se refiere a **15–20 equipos**, no a usuarios concurrentes. Una prueba con 20 sesiones es un escenario de estrés supuesto; no demuestra el piloto ni la capacidad de EC2.
+El criterio RE-01 se refiere a **15–20 equipos**, no a sesiones concurrentes. Una prueba con 20 sesiones es un escenario de estrés supuesto; no demuestra el piloto ni la capacidad de EC2.
 
 La prueba debe crear su propia aplicación y PostgreSQL con datos y cuentas sintéticos, red privada sin salida y almacenamiento efímero. No debe aceptar URL de destino, usar credenciales existentes ni conectarse a una base real. El entorno productivo no debe recibir solicitudes de prueba.
 

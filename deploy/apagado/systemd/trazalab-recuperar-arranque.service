@@ -1,0 +1,18 @@
+[Unit]
+Description=Recuperación ordenada de TrazaLab al iniciar EC2
+After=network-online.target k3s.service
+Wants=network-online.target
+ConditionPathIsExecutable=/usr/local/sbin/trazalab-recuperar-arranque
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/etc/trazalab/apagado.conf
+ExecStart=/usr/local/sbin/trazalab-recuperar-arranque
+TimeoutStartSec=10min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run

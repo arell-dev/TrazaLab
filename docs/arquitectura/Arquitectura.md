@@ -107,7 +107,7 @@ Para el arranque local y la guía de base de datos, consulta [`README.md`](../..
 |---|---|---|
 | RF-05 | Formulario Thymeleaf → `IncidenciaController` → servicios → JPA → PostgreSQL | Parcial como requisito integral: login implementado y reportante tomado de la sesión; la validación del flujo integral en piloto está pendiente |
 | RNF-02 | `/usuarios/login` → `UsuarioDetailsService` → `UsuarioRepository` → PostgreSQL | Login y autorización por rol implementados; las cuentas de acceso deben estar en la base de datos recuperada |
-| RF-03 | `/mantenimientos` → `MantenimientoController` → `MantenimientoService` → JPA e historial de componentes | Intervenciones y acciones implementadas; el responsable se toma de la cuenta autenticada con rol técnico |
+| RF-03 | `/mantenimientos` → `MantenimientoController` → `MantenimientoService` → JPA e historial de componentes | Intervenciones y acciones implementadas; se atribuyen a la cuenta autenticada con rol técnico |
 | RF-06 | `/reportes` → `ReporteController` → `ReporteService` y `ExcelExporter` → PostgreSQL y CSV/XLSX/PDF | Filtros por periodo, QR y tipo; mínimo de dos fallas clasificadas por equipo |
 | RF-01 / RF-02 | `/api/computadoras/historial?codigoQr=...` → servicio de aplicación → repositorio JPA | Ficha del equipo y cinco incidencias recientes visibles en el registro; cronología web de eventos técnicos implementada; validación integral en piloto pendiente |
 | EXT-01 | `/reportes/exportar/{formato}` → `ReporteController` y exportadores CSV/XLSX/PDF | Descargas de recurrencias implementadas; el listado de incidencias no expone exportación |

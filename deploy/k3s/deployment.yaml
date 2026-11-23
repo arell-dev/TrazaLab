@@ -57,6 +57,15 @@ spec:
                 secretKeyRef:
                   name: trazalab-database
                   key: SPRING_DATASOURCE_PASSWORD
+            - name: TRAZALAB_ACTIVIDAD_HABILITADA
+              value: "true"
+            - name: TRAZALAB_ACTIVIDAD_CANAL_HABILITADO
+              value: "true"
+            - name: TRAZALAB_ACTIVIDAD_SOCKET
+              value: /run/trazalab-control/control.sock
+          volumeMounts:
+            - name: control-apagado
+              mountPath: /run/trazalab-control
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -83,3 +92,8 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
+      volumes:
+        - name: control-apagado
+          hostPath:
+            path: /run/trazalab-control
+            type: Directory

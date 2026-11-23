@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 
-contenido = Path('deploy/respaldo/trazalab-respaldo-verificado.sh').read_text(encoding='utf-8')
+contenido = Path('deploy/respaldo/ec2/trazalab-respaldo-verificado.sh').read_text(encoding='utf-8')
 fragmentos = []
 entorno = dict(os.environ, PYTHONIOENCODING='utf-8')
 for parte in contenido.split("<<'PY'\n")[1:]:

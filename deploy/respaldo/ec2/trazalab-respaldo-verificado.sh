@@ -2,6 +2,17 @@
 set -euo pipefail
 umask 077
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+coordinador=/usr/local/lib/trazalab/coordinador.sh
+
+if [[ ! -f "$coordinador" || -L "$coordinador" || "$(stat -c '%u:%a' "$coordinador")" != 0:644 || ! "${TRAZALAB_INSTANCIA_ID:-}" =~ ^i-[a-f0-9]{8,17}$ ]]; then
+  echo 'Falta la identidad o la biblioteca protegida del coordinador externo.' >&2
+  exit 1
+fi
+source "$coordinador"
+if ! trazalab_coord_verificar_operacion despliegue "$TRAZALAB_INSTANCIA_ID"; then
+  echo 'El respaldo requiere el permiso externo de despliegue que lo contiene.' >&2
+  exit 1
+fi
 export AWS_PAGER=""
 export AWS_SHARED_CREDENTIALS_FILE=/dev/null
 export AWS_CONFIG_FILE=/dev/null

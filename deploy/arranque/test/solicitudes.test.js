@@ -55,6 +55,11 @@ test('distingue el rechazo de autorización de errores temporales', async () => 
     { message: 'Solicitud no disponible' }
   );
 
+  await assert.rejects(
+    consultar(api, '/iniciar', 'POST', usuario, async () => ({ ok: false, status: 409 })),
+    { message: 'Otra operación está en curso' }
+  );
+
   await assert.rejects(consultar(api, '/estado', 'GET', { expired: true }), { message: 'Sesión vencida' });
 });
 

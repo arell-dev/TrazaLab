@@ -47,7 +47,7 @@ class ControlActividadTest {
                     Thread.currentThread().interrupt();
                     throw new IllegalStateException(excepcion);
                 } finally {
-                    control.finalizarSolicitud(false);
+                    control.finalizarSolicitud();
                 }
             });
             assertTrue(iniciada.await(5, TimeUnit.SECONDS));
@@ -65,12 +65,15 @@ class ControlActividadTest {
     }
 
     @Test
-    void actividadAsincronaNoVerificadaImpideDrenaje() {
+    void unaSolicitudSoloFinalizaCuandoSeNotificaSuCierre() {
         AtomicLong reloj = new AtomicLong();
         ControlActividad control = new ControlActividad(reloj::get);
         assertTrue(control.admitirSolicitud());
-        control.finalizarSolicitud(true);
         reloj.set(Duration.ofHours(1).toNanos());
         assertFalse(control.iniciarDrenaje(Duration.ofMinutes(30)));
+        control.finalizarSolicitud();
+        assertFalse(control.iniciarDrenaje(Duration.ofMinutes(30)));
+        reloj.addAndGet(Duration.ofMinutes(30).toNanos());
+        assertTrue(control.iniciarDrenaje(Duration.ofMinutes(30)));
     }
 }

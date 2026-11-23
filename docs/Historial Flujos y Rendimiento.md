@@ -67,7 +67,7 @@ Estas comparaciones son evidencia histórica de la exportación por lotes de inc
 
 | Causa observada | Impacto | Corrección aplicada |
 |---|---|---|
-| El trigger `fn_validar_mantenimiento()` exige que el responsable esté activo y tenga rol de Técnico de Soporte o Técnico de Laboratorio. El usuario demo reportante tenía rol Docente. | PostgreSQL rechazó el primer guardado de mantenimiento; no se debilitó la regla de base de datos. | Se separó la propiedad de identidad técnica demo (`TRAZALAB_DEMO_TECH_EMAIL`), se valida el rol en el servicio y el sembrado opcional crea un técnico demo si no existe. El usuario se sigue fijando en servidor. |
+| El trigger `fn_validar_mantenimiento()` exige que la cuenta técnica esté activa y tenga rol de Técnico de Soporte o Técnico de Laboratorio. La cuenta demo reportante tenía rol Docente. | PostgreSQL rechazó el primer guardado de mantenimiento; no se debilitó la regla de base de datos. | Se separó la propiedad de identidad técnica demo (`TRAZALAB_DEMO_TECH_EMAIL`), se valida el rol en el servicio y el sembrado opcional crea una cuenta técnica demo si no existe. La identidad se sigue determinando en servidor. |
 | El trigger exige asociar una falla válida a todo mantenimiento correctivo y que esa falla pertenezca al mismo equipo. | El primer intento de probar un mantenimiento correctivo sin asociación fue rechazado correctamente por PostgreSQL. | El formulario ofrece fallas clasificadas recientes y el servicio valida la coincidencia de equipo antes de guardar. |
 | El reloj usaba UTC para construir `TIMESTAMP` locales mientras el periodo del reporte se tomaba en Lima. | Cerca de medianoche una falla podía quedar en el día siguiente y excluirse del reporte por fecha. | El bean `Clock` usa `America/Lima`, el huso definido para fechas operativas y JPA. La fecha de incidencia continúa como `Instant`. |
 | La prueba MockMvc añadida llamó métodos que lanzan `Exception` sin declararla; además, esperaba dos resultados aunque los dos casos forman un solo grupo recurrente. | Maven detuvo la ejecución durante `testCompile`; la suite no llegó a ejecutarse en ese intento. | La prueba declara `throws Exception`, conserva la frecuencia de dos casos y espera un grupo («1 resultado»). El panel también pluraliza el contador. La ejecución posterior aprobó 16/16. |
@@ -75,7 +75,7 @@ Estas comparaciones son evidencia histórica de la exportación por lotes de inc
 
 ### Seguimiento de autenticación y sembrado · 16/11/2026
 
-La referencia a `TRAZALAB_DEMO_TECH_EMAIL` en el hallazgo anterior describe la configuración histórica de esa fecha. Actualmente, el login consulta cuentas activas, hash BCrypt y rol en PostgreSQL. Incidencias y mantenimientos toman el usuario de la sesión. Las cuentas de acceso deben existir en la base recuperada. Las pruebas indicadas en esta observación son históricas.
+La referencia a `TRAZALAB_DEMO_TECH_EMAIL` en el hallazgo anterior describe la configuración histórica de esa fecha. Actualmente, el inicio de sesión consulta cuentas activas, hash BCrypt y rol en PostgreSQL. Incidencias y mantenimientos se atribuyen a la cuenta autenticada. Las cuentas de acceso deben existir en la base recuperada. Las pruebas indicadas en esta observación son históricas.
 
 ### Trazabilidad
 

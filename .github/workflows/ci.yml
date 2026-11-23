@@ -45,6 +45,22 @@ jobs:
       - name: Comprobar Docker para Testcontainers
         run: docker info
 
+      - name: Validar Bash y barreras de despliegue
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            bash -n "$script"
+          done < <(git ls-files -z -- '*.sh')
+          docker run --rm --network none --user 0:0 \
+            --volume "$GITHUB_WORKSPACE:/prueba:ro" \
+            --entrypoint bash postgres:16 \
+            /prueba/deploy/publicacion/pruebas/probar-bloqueos-despliegue.sh
+          docker run --rm --network none --user 0:0 \
+            --volume "$GITHUB_WORKSPACE:/prueba:ro" \
+            --entrypoint bash postgres:16 -lc \
+            "tr -d '\\r' < /prueba/deploy/apagado/pruebas/probar-coordinador.sh > /tmp/probar-coordinador.sh && TRAZALAB_APAGADO_RAIZ=/prueba/deploy/apagado bash /tmp/probar-coordinador.sh && tr -d '\\r' < /prueba/deploy/apagado/pruebas/probar-apagado-seguro.sh > /tmp/probar-apagado-seguro.sh && bash /tmp/probar-apagado-seguro.sh"
+
       - name: Compilar y ejecutar pruebas
         run: ./mvnw --batch-mode clean verify
 

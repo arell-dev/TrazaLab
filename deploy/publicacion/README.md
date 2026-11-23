@@ -5,17 +5,17 @@ Los workflows están en .github/workflows/ci.yml y release.yml. La publicación 
 ## Publicar una versión
 
 1. Integra los cambios en main y espera que la CI termine correctamente. Un push a main ejecuta CI, pero no despliega.
-2. Usa la siguiente versión válida. Después de v0.0.1 corresponde v0.0.2; la etiqueta debe apuntar a un commit ya integrado en main.
-3. Desde main, crea y publica la etiqueta Git. Por ejemplo, para v0.0.2:
+2. Usa una versión SemVer mayor que la última Release estable; la etiqueta debe apuntar a un commit ya integrado en main. Para esta publicación se autorizó `v0.0.11` después de `v0.0.1`.
+3. Desde main, crea y publica la etiqueta Git. Para esta publicación:
 
     git switch main
     git pull --ff-only origin main
-    git tag v0.0.2
-    git push origin v0.0.2
+    git tag v0.0.11
+    git push origin v0.0.11
 
 No crees la GitHub Release manualmente. La etiqueta dispara release.yml; primero corre Maven/Testcontainers, construye la imagen Docker y ejecuta el smoke test con PostgreSQL 16. Si todo pasa, publica el digest en ECR, inicia EC2 si está detenida y solicita por SSM el despliegue en K3s. El documento de despliegue comprueba el respaldo y la restauración, el rollout y los endpoints /health, /db-health y /api/health. GitHub crea la Release solo después de confirmar el éxito en AWS.
 
-Las versiones deben seguir vX.Y.Z. Se incrementa un solo componente exactamente en uno y se reinician los componentes inferiores. El workflow valida la etiqueta contra la última GitHub Release estable y el commit debe pertenecer a main.
+Las versiones deben seguir vX.Y.Z, sin ceros iniciales. Se busca el primer componente distinto respecto de la última Release: debe ser mayor; los componentes superiores se conservan y los inferiores se reinician a cero. Se permiten saltos en el componente elegido, por ejemplo `v0.0.1` a `v0.0.11`, luego `v0.0.12`, o `v0.0.1` a `v0.1.0`. La primera publicación sigue siendo `v0.0.1`. El workflow valida la etiqueta contra la última GitHub Release estable y el commit debe pertenecer a main.
 
 ## Si ocurre un error
 
@@ -25,10 +25,38 @@ Las versiones deben seguir vX.Y.Z. Se incrementa un solo componente exactamente 
 - Si SSM recibió el comando, el estado es incierto o existe una marca de despliegue pendiente, no hagas otro reintento todavía. Comprueba SSM, EC2, el Deployment y el digest, PostgreSQL, su PVC y los datos respaldados; reconcilia el estado con el procedimiento de operación antes de decidir.
 - Si hace falta cambiar el código después de etiquetar, no apuntes la etiqueta existente a otro commit. Resuelve primero el estado de AWS y la secuencia de versiones; documenta qué digest corresponde a cada artefacto.
 
+## Validaciones automatizadas
+
+La CI comprueba las reglas de versionado, que la etiqueta apunte a un commit integrado en `main`, que la publicación espere a los jobs `validar` y `verificar`, la cola de publicaciones, el encendido de EC2 y las respuestas de SSM. También valida la sintaxis de los scripts Bash y ejecuta pruebas aisladas de respaldo, huella, concurrencia, interrupción, ECR, rollout y salud. Estas pruebas no modifican AWS ni Kubernetes.
+
+Las plantillas `deploy/arranque/cloudformation/infraestructura.yaml` y `deploy/arranque/cloudformation/alojamiento.yaml` pasaron `cfn-lint` 1.61.0 y `cloudformation.ValidateTemplate` para `us-east-2` el 21/11/2026. La primera requiere `CAPABILITY_IAM` para crear o actualizar el stack. La validación no desplegó recursos ni comprueba parámetros concretos de una futura ejecución.
+
+Para repetir las barreras del despliegue en PowerShell:
+
+```powershell
+$repo = (Resolve-Path -LiteralPath '.').Path
+docker run --rm --network none --user 0:0 `
+  --mount "type=bind,source=$repo,target=/prueba,readonly" `
+  --entrypoint bash postgres:16 `
+  /prueba/deploy/publicacion/pruebas/probar-bloqueos-despliegue.sh
+```
+
+## Coordinación de operaciones
+
+Los actores usan la tabla local trazalab-operacion, definida en arranque/cloudformation/infraestructura.yaml. La escritura condicional permite un solo permiso activo. No hay vencimiento automático: ante estado incierto, el permiso queda retenido para reconciliación manual. No se desplegó la tabla ni la regla EventBridge.
+
+- El panel conserva arranque mientras EC2 está pending; la transición confirmada a running lo libera.
+- GitHub Actions adquiere despliegue antes de iniciar EC2 y lo conserva hasta la confirmación satisfactoria de SSM. Si el inicio o SSM queda incierto, detén los reintentos y reconcilia el estado.
+- El documento SSM verifica el permiso despliegue y pasa el InstanceId autorizado al helper. Antes del respaldo, este valida el PVC, el PV y el montaje; si las réplicas quedaron en cero tras un apagado previo, activa PostgreSQL y después TrazaLab mientras conserva el permiso despliegue.
+- El respaldo se ejecuta dentro de ese mismo permiso y del bloqueo local. No hay un actor de respaldo independiente.
+- El worker adquiere apagado y lo conserva hasta que EventBridge confirma stopped. Un evento solo se acepta después de comprobar cuenta, región, instancia y estado real.
+- Al iniciar EC2, el temporizador local de recuperación intenta restaurar los servicios hasta 30 veces, con un minuto entre intentos. Se detiene al confirmar servicios activos o al requerir conciliación manual. Habilítalo y valida la recuperación antes de considerar habilitar el apagado automático.
+
+La plantilla IAM del rol GitHub está en iam/politica-github-aws.json; la política prevista para el rol de EC2 está en ../apagado/iam/politica-instancia.json. Revísalas junto con la plantilla antes de aplicarlas. El despliegue, la activación del temporizador y una prueba real de encendido y apagado siguen pendientes.
 ## Entorno y estado publicado
 
 TrazaLab corre en K3s con PostgreSQL 16 persistente y Caddy en EC2. El panel CloudFront permanece disponible para solicitar el encendido; no se habilitó el apagado automático. La publicación mantiene la cuenta en el plan Free y no requiere AWS Organizations.
 
 La release v0.0.1 se publicó y desplegó correctamente en el run [44958085145](https://github.com/arell-dev/TrazaLab/actions/runs/44958085145), desde el commit 946145e. Reutilizó el digest ECR sha256:2e80cd6eadebe5a3bd2063354838be30b408d861c1c7eea95f5c7f1d88d7d5b4; el comando SSM 70417665-f7e0-4aba-903f-4ca7fa839c12 terminó en Success. El run comprobó respaldo y restauración PostgreSQL, rollout y los tres endpoints. La inspección posterior confirmó TrazaLab, PostgreSQL y Caddy listos, y la PVC Bound de 10 GiB.
 
-La responsable confirmó que el panel y la aplicación son accesibles desde la red universitaria. Falta que verifique el login y la consulta de datos desde esa red.
+La validación desde la red universitaria comprobó que el panel y la aplicación son accesibles, y que funcionan el inicio de sesión y la consulta de datos. El encendido real desde el panel sigue pendiente de comprobación.
