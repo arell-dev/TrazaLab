@@ -70,6 +70,34 @@
       }
     },
     {
+      "Sid": "GuardarUltimoDespliegueVerificado",
+      "Effect": "Allow",
+      "Action": "dynamodb:PutItem",
+      "Resource": "arn:aws:dynamodb:us-east-2:970909363773:table/trazalab-operacion",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "dynamodb:LeadingKeys": [
+            "trazalab-ultimo-despliegue"
+          ]
+        },
+        "Null": {
+          "dynamodb:LeadingKeys": "false"
+        },
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "RegistrarDespliegueVerificado",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-2:970909363773:log-group:/aws/lambda/trazalab-panel-control-control:log-stream:despliegues-verificados"
+    },
+    {
       "Sid": "EjecutarSoloDocumentoTrazaLab",
       "Effect": "Allow",
       "Action": "ssm:SendCommand",
