@@ -17,14 +17,17 @@
     </aside>
   <main class="panel">
     <div class="consola">
+      <button id="abrir-historial" class="abrir-historial" type="button" aria-controls="panel-historial" aria-expanded="false" hidden><span class="icono-menu" aria-hidden="true"></span> Historial</button>
       <h1>TrazaLab — Consola de inicio</h1>
       <p class="instruccion">Inicia sesión para consultar el estado y encender el sistema.</p>
       <div class="separador" aria-hidden="true">────────────────────────────────────────────────────────</div>
       <p class="etiqueta">Estado: <span id="indicador">Sin conexión</span></p>
       <section id="despliegue" class="despliegue" aria-label="Último despliegue verificado" hidden></section>
-      <h2 id="titulo-eventos" class="titulo-eventos">Historial de operaciones</h2>
-      <ol id="eventos" class="eventos" aria-label="Historial de operaciones"></ol>
-      <p id="mensaje" class="mensaje" role="status" aria-live="polite">Comprobando configuración…</p>
+      <section class="area-eventos" aria-labelledby="titulo-eventos">
+        <h2 id="titulo-eventos" class="titulo-eventos">Historial de operaciones</h2>
+        <ol id="eventos" class="eventos" aria-label="Historial de operaciones"></ol>
+        <p id="mensaje" class="mensaje" role="status" aria-live="polite">Comprobando configuración…</p>
+      </section>
       <div class="acciones" aria-label="Acciones del sistema">
         <button id="ingresar" type="button" hidden>Iniciar sesión</button>
         <button id="encender" type="button" hidden>Encender TrazaLab</button>

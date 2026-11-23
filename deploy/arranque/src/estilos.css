@@ -31,6 +31,10 @@ body {
   background: #151515;
 }
 
+.abrir-historial {
+  display: none;
+}
+
 .panel-historial summary {
   padding: 0.6rem 0.5rem;
   color: #f5f5f5;
@@ -72,6 +76,12 @@ body {
   color: #f2f2f2;
 }
 
+.area-eventos {
+  padding: 1.25rem;
+  border: 1px solid #484848;
+  background: #101410;
+}
+
 .despliegue h2,
 .titulo-eventos {
   margin: 0 0 0.9rem;
@@ -81,13 +91,17 @@ body {
 
 .despliegue dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem 1.5rem;
   margin: 0;
 }
 
 .despliegue dl > div {
   min-width: 0;
+}
+
+.despliegue dl > div:nth-child(n+3) {
+  grid-column: 1 / -1;
 }
 
 .despliegue dt {
@@ -210,9 +224,48 @@ button:disabled {
   }
 
   .panel-historial {
-    padding: 1rem;
-    border-right: 0;
-    border-bottom: 1px solid #484848;
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(18rem, 80vw);
+    overflow-y: auto;
+    padding: 4rem 1rem 1rem;
+    border-right: 1px solid #777;
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+
+  .panel-historial.abierto {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .abrir-historial {
+    position: relative;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .icono-menu {
+    display: inline-block;
+    width: 1rem;
+    height: 0.8rem;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    background: linear-gradient(currentColor, currentColor) center / 100% 2px no-repeat;
+  }
+
+  .despliegue dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .despliegue dl > div:nth-child(n+3) {
+    grid-column: auto;
   }
 }
 
