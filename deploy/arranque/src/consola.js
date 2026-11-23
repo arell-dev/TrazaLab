@@ -6,7 +6,25 @@ const despliegue = document.querySelector('#despliegue');
 const panelHistorial = document.querySelector('#panel-historial');
 const diasHistorial = document.querySelector('#dias');
 const tituloEventos = document.querySelector('#titulo-eventos');
+const abrirHistorial = document.querySelector('#abrir-historial');
 let diaSeleccionado;
+
+function cerrarMenuMovil() {
+  panelHistorial.classList.remove('abierto');
+  abrirHistorial.setAttribute('aria-expanded', 'false');
+}
+
+abrirHistorial.onclick = () => {
+  const abierto = panelHistorial.classList.toggle('abierto');
+  abrirHistorial.setAttribute('aria-expanded', String(abierto));
+};
+
+document.addEventListener('keydown', evento => {
+  if (evento.key === 'Escape' && panelHistorial.classList.contains('abierto')) {
+    cerrarMenuMovil();
+    abrirHistorial.focus();
+  }
+});
 
 export function mostrarHistorial(registros) {
   const dias = new Map();
@@ -31,6 +49,7 @@ export function mostrarHistorial(registros) {
     diaSeleccionado = dias.keys().next().value;
   }
   panelHistorial.hidden = false;
+  abrirHistorial.hidden = false;
   const botones = [];
   function seleccionarDia(dia) {
     diaSeleccionado = dia;
@@ -54,7 +73,10 @@ export function mostrarHistorial(registros) {
     boton.type = 'button';
     boton.dataset.dia = dia;
     boton.textContent = dia;
-    boton.addEventListener('click', () => seleccionarDia(dia));
+    boton.addEventListener('click', () => {
+      seleccionarDia(dia);
+      cerrarMenuMovil();
+    });
     botones.push(boton);
   }
   diasHistorial.replaceChildren(...botones);
@@ -97,6 +119,8 @@ export function ocultarHistorial() {
   eventos.replaceChildren();
   diasHistorial.replaceChildren();
   panelHistorial.hidden = true;
+  abrirHistorial.hidden = true;
+  cerrarMenuMovil();
   diaSeleccionado = undefined;
   tituloEventos.textContent = 'Historial de operaciones';
   despliegue.hidden = true;
