@@ -1,6 +1,7 @@
 import { FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 
 const MARCADOR = 'TRAZALAB_EVENTO ';
+const diaLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
 const MENSAJES = {
   solicitud_aceptada: 'AWS aceptó la solicitud de encendido de la instancia.',
   solicitud_incierta: 'No se pudo confirmar el resultado de la solicitud de encendido.',
@@ -75,7 +76,9 @@ export function crearHistorial({ cliente, grupo, reloj = () => new Date(), escri
               entrada.commit = dato.commit;
               entrada.digest = dato.digest;
             }
-            if (!entrada.tipo.startsWith('salud_') || eventos.at(-1)?.tipo !== entrada.tipo) {
+            const anterior = eventos.at(-1);
+            const mismaSaludDelDia = entrada.tipo.startsWith('salud_') && anterior?.tipo === entrada.tipo && diaLima.format(new Date(anterior.fecha)) === diaLima.format(new Date(entrada.fecha));
+            if (!mismaSaludDelDia) {
               eventos.push(entrada);
             }
           }

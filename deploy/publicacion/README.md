@@ -62,7 +62,7 @@ Cuando SSM confirma el éxito del despliegue, el workflow guarda la versión, el
 
 Si alguno de estos registros falla, el resumen del workflow muestra una advertencia y la publicación continúa con el resultado ya confirmado por SSM. Revisa SSM, el digest y la instancia antes de reconciliar los metadatos; un registro anterior puede estar desactualizado. Si no hay un elemento corroborado, el panel debe mostrar la versión como desconocida.
 
-Antes de dar la mejora por operativa, comprueba que API Gateway aplica la autorización a `GET /historial` y que el rol de la Lambda puede consultar el grupo y leer únicamente la clave de metadatos asignada. Comprueba que el rol de publicación puede escribir esa clave y el flujo `despliegues-verificados`. Esta documentación describe el cambio local, pendiente de publicación y comprobación en AWS.
+El 23/11/2026 se aplicó la plantilla del PR #28 en la pila `trazalab-panel-control`, se configuraron 30 días de retención y se publicó el panel. El rol de la Lambda consulta el grupo y lee únicamente la clave de metadatos asignada. El rol de publicación tiene una política independiente para escribir esa clave y el flujo `despliegues-verificados`. Se corroboró la imagen `v0.0.11` con SSM, ECR y el commit de la etiqueta antes de inicializar el último despliegue verificado. La consulta autenticada del historial y los datos de versión se comprobaron en el panel publicado.
 
 ## Entorno y estado publicado
 

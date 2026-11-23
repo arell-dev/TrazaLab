@@ -42,3 +42,12 @@ test('omite reentregas de EventBridge sin agrupar sucesos diferentes', async () 
   const historial = crearHistorial({ cliente: { send: async () => ({ events: eventos.map(evento => ({ message: `TRAZALAB_EVENTO ${JSON.stringify(evento)}` })) }) }, grupo: '/aws/lambda/panel' });
   assert.equal((await historial.consultar()).length, 2);
 });
+
+test('conserva observaciones de salud de días distintos en Lima', async () => {
+  const eventos = [
+    { fecha: '2026-11-23T05:01:00.000Z', tipo: 'salud_disponible' },
+    { fecha: '2026-11-23T04:59:00.000Z', tipo: 'salud_disponible' }
+  ];
+  const historial = crearHistorial({ cliente: { send: async () => ({ events: eventos.map(evento => ({ message: `TRAZALAB_EVENTO ${JSON.stringify(evento)}` })) }) }, grupo: '/aws/lambda/panel' });
+  assert.equal((await historial.consultar()).length, 2);
+});
