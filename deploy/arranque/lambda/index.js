@@ -1,9 +1,11 @@
 import { EC2Client, DescribeInstancesCommand, StartInstancesCommand } from '@aws-sdk/client-ec2';
 import { CognitoIdentityProviderClient, AdminGetUserCommand, AdminListGroupsForUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { CloudWatchLogsClient } from '@aws-sdk/client-cloudwatch-logs';
 import { crearControlador } from './controlador.js';
 import { crearCoordinador } from './coordinador.js';
+import { crearHistorial } from './historial.js';
 
 const instancia = process.env.INSTANCIA_ID;
 const grupo = process.env.GRUPO_OPERADORES;
@@ -13,9 +15,10 @@ const region = process.env.AWS_REGION;
 const salud = process.env.SALUD_URL;
 const cuenta = process.env.CUENTA_AWS;
 const tablaCoordinador = process.env.COORDINADOR_TABLA;
+const grupoHistorial = process.env.HISTORIAL_GRUPO;
 
 function validarConfiguracion() {
-  if (!/^i-[a-f0-9]{8,17}$/.test(instancia || '') || !/^[\w-]+$/.test(grupo || '') || !/^[\w-]+$/.test(pool || '') || !/^[a-z0-9]+$/.test(cliente || '') || !/^[0-9]{12}$/.test(cuenta || '') || !/^[A-Za-z0-9_.-]{3,255}$/.test(tablaCoordinador || '')) {
+  if (!/^i-[a-f0-9]{8,17}$/.test(instancia || '') || !/^[\w-]+$/.test(grupo || '') || !/^[\w-]+$/.test(pool || '') || !/^[a-z0-9]+$/.test(cliente || '') || !/^[0-9]{12}$/.test(cuenta || '') || !/^[A-Za-z0-9_.-]{3,255}$/.test(tablaCoordinador || '') || !/^\/aws\/lambda\/[A-Za-z0-9_-]+$/.test(grupoHistorial || '')) {
     throw new Error('Configuración incompleta');
   }
 
@@ -32,6 +35,7 @@ const ec2 = new EC2Client({ region });
 const cognito = new CognitoIdentityProviderClient({ region });
 const dynamodb = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
 const coordinador = crearCoordinador({ cliente: dynamodb, tabla: tablaCoordinador });
+const historial = crearHistorial({ cliente: new CloudWatchLogsClient({ region }), grupo: grupoHistorial });
 
 export const handler = crearControlador({
   configuracion: {
@@ -80,6 +84,21 @@ export const handler = crearControlador({
   async iniciarInstancia(id) {
     await ec2.send(new StartInstancesCommand({ InstanceIds: [id] }));
   },
+  async consultarDespliegue() {
+    const respuesta = await dynamodb.send(new GetCommand({
+      TableName: tablaCoordinador,
+      Key: { pk: 'trazalab-ultimo-despliegue' },
+      ConsistentRead: true
+    }));
+
+    const item = respuesta.Item;
+
+    if (!item || typeof item.fecha !== 'string' || Number.isNaN(Date.parse(item.fecha)) || !/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(item.version || '') || !/^[a-f0-9]{40}$/.test(item.commit || '') || !/^sha256:[a-f0-9]{64}$/.test(item.digest || '') || !/^[a-f0-9-]{36}$/.test(item.comandoSsm || '')) {
+      return null;
+    }
+
+    return { fecha: item.fecha, version: item.version, commit: item.commit, digest: item.digest, comandoSsm: item.comandoSsm };
+  },
   async consultarSalud(url) {
     try {
       const respuesta = await fetch(url, { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000) });
@@ -120,5 +139,6 @@ export const handler = crearControlador({
       return false;
     }
   },
-  coordinador
+  coordinador,
+  historial
 });

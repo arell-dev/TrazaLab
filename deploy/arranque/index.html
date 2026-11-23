@@ -8,13 +8,22 @@
   <title>Encendido | TrazaLab</title>
 </head>
 <body>
+  <div class="distribucion">
+    <aside id="panel-historial" class="panel-historial" hidden>
+      <details open>
+        <summary>Historial por día</summary>
+        <nav id="dias" aria-label="Seleccionar día del historial"></nav>
+      </details>
+    </aside>
   <main class="panel">
     <div class="consola">
       <h1>TrazaLab — Consola de inicio</h1>
       <p class="instruccion">Inicia sesión para consultar el estado y encender el sistema.</p>
       <div class="separador" aria-hidden="true">────────────────────────────────────────────────────────</div>
       <p class="etiqueta">Estado: <span id="indicador">Sin conexión</span></p>
-      <ol id="eventos" class="eventos" aria-label="Mensajes de esta sesión"></ol>
+      <section id="despliegue" class="despliegue" aria-label="Último despliegue verificado" hidden></section>
+      <h2 id="titulo-eventos" class="titulo-eventos">Historial de operaciones</h2>
+      <ol id="eventos" class="eventos" aria-label="Historial de operaciones"></ol>
       <p id="mensaje" class="mensaje" role="status" aria-live="polite">Comprobando configuración…</p>
       <div class="acciones" aria-label="Acciones del sistema">
         <button id="ingresar" type="button" hidden>Iniciar sesión</button>
@@ -23,9 +32,10 @@
         <a id="abrir" hidden>Abrir TrazaLab</a>
         <button id="salir" type="button" hidden>Cerrar sesión</button>
       </div>
-      <p class="nota">Los mensajes corresponden a esta sesión.</p>
+      <p id="nota-historial" class="nota">Inicia sesión para consultar el historial de operaciones.</p>
     </div>
   </main>
+  </div>
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>
