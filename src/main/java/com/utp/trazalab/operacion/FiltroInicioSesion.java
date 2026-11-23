@@ -2,6 +2,7 @@ package com.utp.trazalab.operacion;
 
 import java.io.IOException;
 
+import jakarta.servlet.AsyncContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,7 +32,21 @@ public final class FiltroInicioSesion extends OncePerRequestFilter {
         try {
             cadena.doFilter(solicitud, respuesta);
         } finally {
-            actividad.finalizarInicioSesion(solicitud.isAsyncStarted());
+            finalizar(solicitud);
+        }
+    }
+
+    private void finalizar(HttpServletRequest solicitud) {
+        if (!solicitud.isAsyncStarted()) {
+            actividad.finalizarInicioSesion();
+            return;
+        }
+
+        try {
+            AsyncContext contexto = solicitud.getAsyncContext();
+            new SeguimientoSolicitudAsincrona(actividad::finalizarInicioSesion).adjuntar(contexto);
+        } catch (IllegalStateException excepcion) {
+            System.err.println("El login asíncrono no confirmó su contexto; se conserva como activo.");
         }
     }
 }

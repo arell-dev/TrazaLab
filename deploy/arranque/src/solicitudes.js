@@ -34,6 +34,10 @@ export async function consultar(api, ruta, metodo, usuario, solicitar = fetch) {
     throw new Error('Acceso no autorizado');
   }
 
+  if (respuesta.status === 409) {
+    throw new Error('Otra operación está en curso');
+  }
+
   if (!respuesta.ok) {
     throw new Error('Solicitud no disponible');
   }

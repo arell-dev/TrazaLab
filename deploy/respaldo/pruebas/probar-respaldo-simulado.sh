@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-install -d -m 0700 /etc/trazalab /run/trazalab /usr/local/sbin /usr/local/bin /tmp/respaldo-prueba
+install -d -m 0700 /etc/trazalab /run/trazalab /usr/local/lib/trazalab /usr/local/sbin /usr/local/bin /tmp/respaldo-prueba
+tr -d '\r' < /prueba/respaldo/ec2/trazalab-respaldo-verificado.sh > /tmp/respaldo-prueba/trazalab-respaldo-verificado.sh
+tr -d '\r' < /prueba/apagado/ec2/coordinador.sh > /usr/local/lib/trazalab/coordinador.sh
+chmod 0644 /usr/local/lib/trazalab/coordinador.sh
+chmod 0755 /tmp/respaldo-prueba/trazalab-respaldo-verificado.sh
 cat > /etc/trazalab/respaldo.conf <<'CONF'
 AWS_REGION=us-east-2
 AWS_ACCOUNT_ID=123456789012
@@ -18,6 +22,10 @@ MOCK
 cat > /usr/local/bin/aws <<'MOCK'
 #!/bin/bash
 set -e
+if [ "$1 $2" = 'dynamodb get-item' ]; then
+  echo '{"Item":{"pk":{"S":"trazalab-operacion"},"operacion":{"S":"despliegue"},"propietario":{"S":"11111111-1111-4111-8111-111111111111"},"instancia":{"S":"i-0123456789abcdef0"},"sesion":{"S":"22222222-2222-4222-8222-222222222222"}}}'
+  exit
+fi
 if [ "$1 $2" = 'sts get-caller-identity' ]; then echo 123456789012; exit; fi
 if [ "$1 $2" = 's3api get-bucket-versioning' ]; then echo Enabled; exit; fi
 if [ "$1 $2" = 's3api put-object' ]; then
@@ -58,7 +66,8 @@ case "$1" in
 esac
 MOCK
 chmod 0755 /usr/local/sbin/trazalab-verificar-datos /usr/local/bin/findmnt /usr/local/bin/python3 /usr/local/bin/aws /usr/local/bin/kubectl
-if bash /prueba/trazalab-respaldo-verificado.sh > /tmp/respaldo-prueba/salida 2>&1; then
+export TRAZALAB_INSTANCIA_ID=i-0123456789abcdef0
+if bash /tmp/respaldo-prueba/trazalab-respaldo-verificado.sh > /tmp/respaldo-prueba/salida 2>&1; then
   echo 'ERROR: se permitió ejecutar el respaldo sin el bloqueo del llamador.' >&2
   exit 1
 fi
@@ -69,7 +78,7 @@ flock -n 9
 
 for caso in subida integridad restauracion exito; do
   : > /tmp/respaldo-prueba/acciones
-  if MOCK_FALLO="$caso" bash /prueba/trazalab-respaldo-verificado.sh > /tmp/respaldo-prueba/salida 2>&1; then
+  if MOCK_FALLO="$caso" bash /tmp/respaldo-prueba/trazalab-respaldo-verificado.sh > /tmp/respaldo-prueba/salida 2>&1; then
     test "$caso" = exito
   else
     test "$caso" != exito

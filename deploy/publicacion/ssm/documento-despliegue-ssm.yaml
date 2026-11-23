@@ -16,6 +16,11 @@ parameters:
     description: SHA-256 de la lista de manifiestos revisados.
     interpolationType: ENV_VAR
     allowedPattern: '^[a-f0-9]{64}$'
+  InstanceId:
+    type: String
+    description: Identificador de la instancia autorizada para el despliegue.
+    interpolationType: ENV_VAR
+    allowedPattern: '^i-[a-f0-9]{8,17}$'
 mainSteps:
   - action: aws:runShellScript
     name: desplegar
@@ -26,4 +31,4 @@ mainSteps:
     inputs:
       timeoutSeconds: '900'
       runCommand:
-        - 'exec /usr/local/sbin/trazalab-desplegar "$SSM_Digest" "$SSM_Version" "$SSM_ManifestHash"'
+        - 'exec /usr/local/sbin/trazalab-desplegar "$SSM_Digest" "$SSM_Version" "$SSM_ManifestHash" "$SSM_InstanceId"'

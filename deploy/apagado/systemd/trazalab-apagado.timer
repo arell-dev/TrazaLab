@@ -1,0 +1,11 @@
+[Unit]
+Description=Comprobación periódica de inactividad de TrazaLab
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=trazalab-apagado.service
+
+[Install]
+WantedBy=timers.target

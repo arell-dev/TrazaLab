@@ -12,7 +12,7 @@ def ejecutar(*argumentos, entrada=None):
     return subprocess.run(argumentos, input=entrada, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
 
-ayudante = Path(__file__).resolve().parents[1] / "trazalab-respaldo-verificado.sh"
+ayudante = Path(__file__).resolve().parents[1] / "ec2" / "trazalab-respaldo-verificado.sh"
 contenido = ayudante.read_text(encoding="utf-8")
 inicio = contenido.index("python3 - \"$pod\" \"$imagen\" > \"$directorio/pod.json\" <<'PY'")
 generador = contenido[inicio:].split("\n", 1)[1].split("\nPY\n", 1)[0]

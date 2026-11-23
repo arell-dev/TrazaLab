@@ -1,0 +1,19 @@
+[Unit]
+Description=Apagado seguro de TrazaLab por inactividad
+After=network-online.target k3s.service
+Wants=network-online.target
+ConditionPathIsExecutable=/usr/local/sbin/trazalab-apagar-inactivo
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/etc/trazalab/apagado.conf
+ExecStart=/usr/local/sbin/trazalab-apagar-inactivo
+TimeoutStartSec=12min
+KillMode=process
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run /var/lib/trazalab-data

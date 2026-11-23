@@ -1,6 +1,6 @@
 # Protocolo propuesto para medir capacidad en EC2
 
-**Estado: se ejecutó una medición temporal en EC2 el 20 de noviembre de 2026.** La medición caracteriza una ráfaga breve con datos sintéticos; no determina por sí sola la capacidad de un piloto. RE-01 habla de 15–20 equipos, pero no fija usuarios concurrentes, frecuencia, volumen de historial ni umbrales de latencia. Esos valores siguen siendo supuestos, no criterios institucionales aprobados.
+**Estado: se ejecutó una medición temporal en EC2 el 20 de noviembre de 2026.** La medición caracteriza una ráfaga breve con datos sintéticos; no determina por sí sola la capacidad de un piloto. RE-01 habla de 15–20 equipos, pero no fija sesiones concurrentes, frecuencia, volumen de historial ni umbrales de latencia. Esos valores siguen siendo supuestos, no criterios institucionales aprobados.
 
 ## Resultado de la medición temporal
 

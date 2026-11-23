@@ -138,6 +138,18 @@ Resources:
                 Resource: !GetAtt Usuarios.Arn
               - Effect: Allow
                 Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt Coordinador.Arn
+                Condition:
+                  ForAllValues:StringEquals:
+                    dynamodb:LeadingKeys:
+                      - trazalab-operacion
+                  'Null':
+                    dynamodb:LeadingKeys: 'false'
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-control:*'
@@ -166,6 +178,8 @@ Resources:
           USER_POOL_ID: !Ref Usuarios
           CLIENTE_ID: !Ref Cliente
           SALUD_URL: !Ref UrlSalud
+          CUENTA_AWS: !Ref AWS::AccountId
+          COORDINADOR_TABLA: !Ref Coordinador
   Api:
     Type: AWS::ApiGatewayV2::Api
     Metadata:
@@ -239,6 +253,56 @@ Resources:
       FunctionName: !Ref Funcion
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/$default/POST/iniciar'
+  Coordinador:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Exclusión mutua persistente entre encendido, despliegue, respaldo y apagado.
+        must:
+          - No agregar TTL ni liberar bloqueos por antigüedad.
+          - Conservar la tabla durante la eliminación o sustitución de la pila.
+    Properties:
+      TableName: trazalab-operacion
+      BillingMode: PROVISIONED
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+  TransicionInstancia:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Libera permisos solo tras confirmar un estado terminal de EC2.
+      EventPattern:
+        source:
+          - aws.ec2
+        detail-type:
+          - EC2 Instance State-change Notification
+        resources:
+          - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanciaId}'
+        detail:
+          state:
+            - running
+            - stopped
+      Targets:
+        - Arn: !GetAtt Funcion.Arn
+          Id: coordinador-instancia
+          RetryPolicy:
+            MaximumEventAgeInSeconds: 3600
+            MaximumRetryAttempts: 8
+  PermisoEventoInstancia:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Funcion
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt TransicionInstancia.Arn
   Etapa:
     Type: AWS::ApiGatewayV2::Stage
     Properties:

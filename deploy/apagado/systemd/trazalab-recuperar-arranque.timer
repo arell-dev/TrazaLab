@@ -1,0 +1,11 @@
+[Unit]
+Description=Reintento coordinado de recuperación de TrazaLab al iniciar EC2
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Unit=trazalab-recuperar-arranque.service
+
+[Install]
+WantedBy=timers.target

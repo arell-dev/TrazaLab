@@ -8,7 +8,6 @@ public final class ControlActividad {
     private long ultimaActividad;
     private int solicitudesActivas;
     private boolean drenando;
-    private boolean actividadAsincronaNoVerificada;
 
     public ControlActividad() {
         this(System::nanoTime);
@@ -29,8 +28,8 @@ public final class ControlActividad {
         return true;
     }
 
-    public synchronized void finalizarSolicitud(boolean asincrona) {
-        finalizar(asincrona);
+    public synchronized void finalizarSolicitud() {
+        finalizar();
         ultimaActividad = reloj.getAsLong();
     }
 
@@ -43,17 +42,16 @@ public final class ControlActividad {
         return true;
     }
 
-    public synchronized void finalizarInicioSesion(boolean asincrona) {
-        finalizar(asincrona);
+    public synchronized void finalizarInicioSesion() {
+        finalizar();
     }
 
-    private void finalizar(boolean asincrona) {
+    private void finalizar() {
         if (solicitudesActivas <= 0) {
             throw new IllegalStateException("No hay una solicitud activa para finalizar.");
         }
 
         solicitudesActivas--;
-        actividadAsincronaNoVerificada |= asincrona;
     }
 
     public synchronized void registrarInicioSesion() {
@@ -67,7 +65,7 @@ public final class ControlActividad {
 
         long transcurrido = reloj.getAsLong() - ultimaActividad;
 
-        if (drenando || actividadAsincronaNoVerificada || solicitudesActivas != 0 || transcurrido < 0 || transcurrido < inactividad.toNanos()) {
+        if (drenando || solicitudesActivas != 0 || transcurrido < 0 || transcurrido < inactividad.toNanos()) {
             return false;
         }
 
@@ -76,10 +74,18 @@ public final class ControlActividad {
     }
 
     public synchronized boolean drenajeVigente() {
-        return drenando && solicitudesActivas == 0 && !actividadAsincronaNoVerificada;
+        return drenando && solicitudesActivas == 0;
     }
 
     public synchronized void cancelarDrenaje() {
+        if (drenando) {
+            ultimaActividad = reloj.getAsLong();
+        }
         drenando = false;
+    }
+
+    public synchronized EstadoActividad estado() {
+        long transcurrido = reloj.getAsLong() - ultimaActividad;
+        return new EstadoActividad(transcurrido >= 0, transcurrido, solicitudesActivas, drenando);
     }
 }

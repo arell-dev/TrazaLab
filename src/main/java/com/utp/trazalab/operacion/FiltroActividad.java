@@ -2,6 +2,7 @@ package com.utp.trazalab.operacion;
 
 import java.io.IOException;
 
+import jakarta.servlet.AsyncContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,7 +41,21 @@ public final class FiltroActividad extends OncePerRequestFilter {
         try {
             cadena.doFilter(solicitud, respuesta);
         } finally {
-            actividad.finalizarSolicitud(solicitud.isAsyncStarted());
+            finalizar(solicitud, actividad::finalizarSolicitud);
+        }
+    }
+
+    private void finalizar(HttpServletRequest solicitud, Runnable finalizar) {
+        if (!solicitud.isAsyncStarted()) {
+            finalizar.run();
+            return;
+        }
+
+        try {
+            AsyncContext contexto = solicitud.getAsyncContext();
+            new SeguimientoSolicitudAsincrona(finalizar).adjuntar(contexto);
+        } catch (IllegalStateException excepcion) {
+            System.err.println("La solicitud asíncrona no confirmó su contexto; se conserva como activa.");
         }
     }
 }

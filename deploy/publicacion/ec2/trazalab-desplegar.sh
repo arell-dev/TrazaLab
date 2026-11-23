@@ -6,15 +6,29 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 digest=${1:-}
 version=${2:-}
 huella_manifiestos=${3:-}
+instancia=${4:-}
 repositorio='970909363773.dkr.ecr.us-east-2.amazonaws.com/trazalab'
 estado=/var/lib/trazalab-data/despliegues
 respaldo=/usr/local/sbin/trazalab-respaldo-verificado
 huella_aprobada=/etc/trazalab/manifiestos.sha256
+coordinador=/usr/local/lib/trazalab/coordinador.sh
 
 [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
 [[ "$version" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
 [[ "$huella_manifiestos" =~ ^[a-f0-9]{64}$ ]]
+[[ "$instancia" =~ ^i-[a-f0-9]{8,17}$ ]]
 test "$(id -u)" -eq 0
+
+if [[ ! -f "$coordinador" || -L "$coordinador" || "$(stat -c '%u:%a' "$coordinador")" != 0:644 ]]; then
+  echo 'Falta la biblioteca protegida del coordinador externo.' >&2
+  exit 1
+fi
+source "$coordinador"
+if ! trazalab_coord_verificar_operacion despliegue "$instancia"; then
+  echo 'El flujo SSM no posee el permiso externo de despliegue.' >&2
+  exit 1
+fi
+export TRAZALAB_INSTANCIA_ID="$instancia"
 
 install -d -m 0700 -o root -g root /run/trazalab
 exec 9>/run/trazalab/operacion.lock
@@ -24,6 +38,10 @@ if ! flock -n 9; then
 fi
 
 /usr/local/sbin/trazalab-verificar-datos
+if [[ ! -x /usr/local/sbin/trazalab-apagar-inactivo || ! -d /run/trazalab-control || -L /run/trazalab-control || "$(stat -c '%u:%a' /run/trazalab-control)" != 10001:700 ]]; then
+  echo 'Falta la preparación protegida del canal de apagado seguro.' >&2
+  exit 1
+fi
 if [[ ! -f "$huella_aprobada" || -L "$huella_aprobada" ]] || [[ "$(stat -c '%u:%a' "$huella_aprobada")" != 0:600 ]]; then
   echo 'Falta la huella de manifiestos aprobada por el administrador.' >&2
   exit 1
@@ -81,6 +99,36 @@ if [[ "$permisos" != 700 && "$permisos" != 750 && "$permisos" != 755 ]]; then
 fi
 
 echo 'Comprobando respaldo externo y restauración antes de actualizar.'
+if [[ "$(kubectl get pvc trazalab-postgres -o jsonpath='{.status.phase}')" != Bound || "$(kubectl get pv trazalab-postgres -o jsonpath='{.spec.persistentVolumeReclaimPolicy}')" != Retain || "$(kubectl get pv trazalab-postgres -o jsonpath='{.spec.hostPath.path}')" != /var/lib/trazalab-data/postgres || "$(findmnt -n -o TARGET --target /var/lib/trazalab-data)" != /var/lib/trazalab-data ]]; then
+  echo 'El volumen PostgreSQL no esta montado y retenido como se esperaba.' >&2
+  exit 1
+fi
+
+replicas_postgres=$(kubectl get deployment/trazalab-postgres -o jsonpath='{.spec.replicas}')
+replicas_aplicacion=$(kubectl get deployment/trazalab -o jsonpath='{.spec.replicas}')
+if [[ ( "$replicas_postgres" != 0 && "$replicas_postgres" != 1 ) || ( "$replicas_aplicacion" != 0 && "$replicas_aplicacion" != 1 ) ]]; then
+  echo 'Las replicas actuales no coinciden con los estados esperados de PostgreSQL y TrazaLab.' >&2
+  exit 1
+fi
+
+if ! trazalab_coord_verificar_operacion despliegue "$instancia"; then
+  echo 'El permiso de despliegue dejo de ser verificable antes de iniciar los servicios.' >&2
+  exit 1
+fi
+if [[ "$replicas_postgres" == 0 ]]; then
+  kubectl scale deployment/trazalab-postgres --replicas=1 >/dev/null
+fi
+kubectl rollout status deployment/trazalab-postgres --timeout=180s
+
+if [[ "$replicas_aplicacion" == 0 ]]; then
+  if ! trazalab_coord_verificar_operacion despliegue "$instancia"; then
+    echo 'El permiso de despliegue dejo de ser verificable antes de iniciar TrazaLab.' >&2
+    exit 1
+  fi
+  kubectl scale deployment/trazalab --replicas=1 >/dev/null
+fi
+kubectl rollout status deployment/trazalab --timeout=360s
+
 "$respaldo"
 systemctl start trazalab-renovar-ecr-pull.service
 kubectl get secret trazalab-ecr-pull -o name >/dev/null

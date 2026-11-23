@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "3.1173.0",
+    "@aws-sdk/client-dynamodb": "3.1173.0",
     "@aws-sdk/client-ec2": "3.1173.0",
+    "@aws-sdk/lib-dynamodb": "3.1173.0",
     "oidc-client-ts": "3.5.0"
   },
   "devDependencies": {

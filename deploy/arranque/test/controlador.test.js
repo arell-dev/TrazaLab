@@ -8,19 +8,27 @@ const configuracion = {
   cliente: 'cliente',
   emisor: 'https://cognito-idp.us-east-2.amazonaws.com/pool',
   scope: 'trazalab/iniciar',
-  salud: 'https://ejemplo.cloudfront.net/api/health'
+  salud: 'https://ejemplo.cloudfront.net/api/health',
+  cuenta: '970909363773',
+  region: 'us-east-2'
 };
 
 function preparar(ajustes = {}) {
   const llamadas = [];
+  const operaciones = [];
 
   const servicios = {
     configuracion,
     consultarUsuario: async () => ({ enabled: true, sub: 'usuario-1' }),
     listarGrupos: async () => ['operadores'],
-    consultarInstancia: async id => { llamadas.push(['consultar', id]); return 'stopped'; },
+    consultarInstancia: async id => { llamadas.push(['consultar', id]); return llamadas.filter(llamada => llamada[0] === 'consultar').length === 1 ? 'stopped' : 'pending'; },
     iniciarInstancia: async id => { llamadas.push(['iniciar', id]); },
     consultarSalud: async () => true,
+    coordinador: {
+      adquirir: async (operacion, instancia) => { operaciones.push(['adquirir', operacion, instancia]); return 'propietario-1'; },
+      liberar: async (operacion, propietario, instancia) => { operaciones.push(['liberar', operacion, propietario, instancia]); return true; },
+      liberarTrasTransicion: async (operacion, instancia) => { operaciones.push(['transicion', operacion, instancia]); return true; }
+    },
     ...ajustes
   };
 
@@ -42,7 +50,7 @@ function preparar(ajustes = {}) {
     }
   };
 
-  return { controlador: crearControlador(servicios), evento, llamadas };
+  return { controlador: crearControlador(servicios), evento, llamadas, operaciones };
 }
 
 test('rechaza peticiones sin autorización sin consultar la instancia', async () => {
@@ -78,10 +86,101 @@ test('deniega usuarios deshabilitados, ajenos o sin grupo', async () => {
 });
 
 test('enciende solo la instancia configurada y no acepta una elegida por el cliente', async () => {
-  const { controlador, evento, llamadas } = preparar();
+  const { controlador, evento, llamadas, operaciones } = preparar();
   evento.body = JSON.stringify({ instancia: 'i-atacante' });
   assert.equal((await controlador(evento)).statusCode, 202);
-  assert.deepEqual(llamadas, [['consultar', configuracion.instancia], ['iniciar', configuracion.instancia]]);
+  assert.deepEqual(llamadas, [
+    ['consultar', configuracion.instancia],
+    ['iniciar', configuracion.instancia],
+    ['consultar', configuracion.instancia]
+  ]);
+  assert.deepEqual(operaciones, [
+    ['adquirir', 'arranque', configuracion.instancia]
+  ]);
+});
+
+test('conserva el bloqueo de arranque hasta confirmar running', async () => {
+  let consultas = 0;
+  const { controlador, evento, operaciones } = preparar({
+    consultarInstancia: async () => ++consultas === 1 ? 'stopped' : 'pending'
+  });
+
+  assert.equal((await controlador(evento)).statusCode, 202);
+  assert.deepEqual(operaciones, [['adquirir', 'arranque', configuracion.instancia]]);
+});
+
+test('no inicia EC2 cuando otro actor mantiene el coordinador', async () => {
+  const { controlador, evento, llamadas } = preparar({
+    coordinador: {
+      adquirir: async () => null,
+      liberar: async () => { throw new Error('No debía liberar un permiso ajeno.'); },
+      liberarTrasTransicion: async () => false
+    }
+  });
+
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 409);
+  assert.equal(JSON.parse(respuesta.body).estado, 'operación en curso');
+  assert.deepEqual(llamadas, []);
+});
+
+test('conserva el bloqueo si no puede confirmar el estado después de iniciar', async () => {
+  let consultas = 0;
+  const { controlador, evento, operaciones } = preparar({
+    consultarInstancia: async () => ++consultas === 1 ? 'stopped' : 'unknown'
+  });
+
+  assert.equal((await controlador(evento)).statusCode, 503);
+  assert.deepEqual(operaciones, [['adquirir', 'arranque', configuracion.instancia]]);
+});
+
+test('evento detenido libera solo el permiso de apagado tras verificar EC2', async () => {
+  const { controlador, llamadas, operaciones } = preparar({
+    consultarInstancia: async id => { llamadas.push(['consultar', id]); return 'stopped'; }
+  });
+  const evento = {
+    source: 'aws.ec2',
+    'detail-type': 'EC2 Instance State-change Notification',
+    account: configuracion.cuenta,
+    region: configuracion.region,
+    detail: { state: 'stopped', 'instance-id': configuracion.instancia }
+  };
+
+  assert.deepEqual(await controlador(evento), { procesado: true });
+  assert.deepEqual(llamadas, [['consultar', configuracion.instancia]]);
+  assert.deepEqual(operaciones, [['transicion', 'apagado', configuracion.instancia]]);
+});
+
+test('evento running libera solo el permiso de arranque tras verificar EC2', async () => {
+  const { controlador, llamadas, operaciones } = preparar({
+    consultarInstancia: async id => { llamadas.push(['consultar', id]); return 'running'; }
+  });
+  const evento = {
+    source: 'aws.ec2',
+    'detail-type': 'EC2 Instance State-change Notification',
+    account: configuracion.cuenta,
+    region: configuracion.region,
+    detail: { state: 'running', 'instance-id': configuracion.instancia }
+  };
+
+  assert.deepEqual(await controlador(evento), { procesado: true });
+  assert.deepEqual(llamadas, [['consultar', configuracion.instancia]]);
+  assert.deepEqual(operaciones, [['transicion', 'arranque', configuracion.instancia]]);
+});
+
+test('ignora eventos de otra cuenta o instancia', async () => {
+  const { controlador, llamadas, operaciones } = preparar();
+  const evento = {
+    source: 'aws.ec2',
+    'detail-type': 'EC2 Instance State-change Notification',
+    account: '000000000000',
+    region: configuracion.region,
+    detail: { state: 'stopped', 'instance-id': configuracion.instancia }
+  };
+
+  assert.deepEqual(await controlador(evento), { procesado: false });
+  assert.deepEqual(llamadas, []);
+  assert.deepEqual(operaciones, []);
 });
 
 test('no considera disponible una instancia ejecutándose si falla la salud', async () => {
