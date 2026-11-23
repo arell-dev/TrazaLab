@@ -1,5 +1,5 @@
 import { InMemoryWebStorage, UserManager, WebStorageStateStore } from 'oidc-client-ts';
-import { mostrar } from './consola.js';
+import { mostrar, mostrarDespliegue, mostrarErrorHistorial, mostrarHistorial, ocultarHistorial } from './consola.js';
 import { consultar, crearGestorSolicitudes } from './solicitudes.js';
 import './estilos.css';
 
@@ -12,6 +12,7 @@ let usuario;
 let temporizador;
 let inicioEspera;
 const solicitudes = crearGestorSolicitudes();
+const solicitudesHistorial = crearGestorSolicitudes();
 
 function direccionSegura(valor, dominio) {
   const url = new URL(valor);
@@ -62,6 +63,8 @@ function mostrarError(texto, error) {
   encender.hidden = true;
   if (error?.message === 'Sesión vencida') {
     usuario = undefined;
+    solicitudesHistorial.invalidar();
+    ocultarHistorial();
     ingresar.hidden = false;
     verificar.hidden = true;
     salir.hidden = false;
@@ -70,6 +73,8 @@ function mostrarError(texto, error) {
   }
   if (error?.message === 'Acceso no autorizado') {
     usuario = undefined;
+    solicitudesHistorial.invalidar();
+    ocultarHistorial();
     ingresar.hidden = false;
     verificar.hidden = true;
     mostrar('No se pudo autorizar el acceso. Vuelve a iniciar sesión o consulta al responsable de las cuentas.', 'error');
@@ -148,6 +153,8 @@ async function iniciar() {
   salir.addEventListener('click', async () => {
     clearTimeout(temporizador);
     solicitudes.invalidar();
+    solicitudesHistorial.invalidar();
+    ocultarHistorial();
     await manager.removeUser();
     usuario = undefined;
     const url = new URL('/logout', config.cognito);
@@ -155,6 +162,23 @@ async function iniciar() {
     url.searchParams.set('logout_uri', `${location.origin}${location.pathname}`);
     location.assign(url.href);
   });
+
+  async function actualizarHistorial() {
+    const respuesta = await solicitudesHistorial.ejecutar(() => consultar(config.api, '/historial', 'GET', usuario));
+    if (!respuesta.vigente) {
+      return;
+    }
+    if (['Sesión vencida', 'Acceso no autorizado'].includes(respuesta.error?.message)) {
+      mostrarError('No se pudo cargar el historial.', respuesta.error);
+      return;
+    }
+    if (respuesta.error || !Array.isArray(respuesta.valor?.eventos)) {
+      mostrarErrorHistorial();
+      return;
+    }
+    mostrarHistorial(respuesta.valor.eventos);
+    mostrarDespliegue(respuesta.valor.despliegue);
+  }
 
   async function actualizar() {
     clearTimeout(temporizador);
@@ -168,6 +192,10 @@ async function iniciar() {
     }
     const resultado = respuesta.valor;
     estadoVisual(resultado.estado);
+    await actualizarHistorial();
+    if (!usuario) {
+      return;
+    }
     if (resultado.estado === 'iniciando' || resultado.estado === 'comprobando') {
       inicioEspera ||= Date.now();
       if (Date.now() - inicioEspera >= 300000) {

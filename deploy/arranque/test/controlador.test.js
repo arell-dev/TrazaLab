@@ -24,6 +24,7 @@ function preparar(ajustes = {}) {
     consultarInstancia: async id => { llamadas.push(['consultar', id]); return llamadas.filter(llamada => llamada[0] === 'consultar').length === 1 ? 'stopped' : 'pending'; },
     iniciarInstancia: async id => { llamadas.push(['iniciar', id]); },
     consultarSalud: async () => true,
+    consultarDespliegue: async () => null,
     coordinador: {
       adquirir: async (operacion, instancia) => { operaciones.push(['adquirir', operacion, instancia]); return 'propietario-1'; },
       liberar: async (operacion, propietario, instancia) => { operaciones.push(['liberar', operacion, propietario, instancia]); return true; },
@@ -215,4 +216,44 @@ test('errores de AWS no exponen contenido sensible', async () => {
   const respuesta = await controlador(evento);
   assert.equal(respuesta.statusCode, 503);
   assert.equal(respuesta.body.includes('secreto'), false);
+});
+
+test('el historial requiere autorización y conserva el formato acordado', async () => {
+  let consultas = 0;
+  const eventos = [{ fecha: '2026-11-23T04:35:00.000Z', tipo: 'ec2_running', mensaje: 'AWS confirmó que la instancia está encendida.' }];
+  const { controlador, evento } = preparar({ historial: { consultar: async () => { consultas += 1; return eventos; } } });
+  assert.equal((await controlador({ routeKey: 'GET /historial' })).statusCode, 403);
+  assert.equal(consultas, 0);
+  evento.routeKey = 'GET /historial';
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 200);
+  assert.deepEqual(JSON.parse(respuesta.body), { eventos, despliegue: null });
+});
+
+test('un fallo al registrar eventos no altera el resultado del encendido', async () => {
+  const { controlador, evento, operaciones } = preparar({ historial: { registrar: () => { throw new Error('fallo de registro'); } } });
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 202);
+  assert.equal(JSON.parse(respuesta.body).estado, 'iniciando');
+  assert.deepEqual(operaciones, [['adquirir', 'arranque', configuracion.instancia]]);
+});
+
+test('conserva la notificación EC2 tardía sin liberar un permiso con estado distinto', async () => {
+  const registrados = [];
+  const { controlador, operaciones } = preparar({
+    consultarInstancia: async () => 'running',
+    historial: { registrar: (...datos) => registrados.push(datos) }
+  });
+  const evento = {
+    source: 'aws.ec2',
+    'detail-type': 'EC2 Instance State-change Notification',
+    account: configuracion.cuenta,
+    region: configuracion.region,
+    time: '2026-11-23T04:35:00Z',
+    id: '01234567-89ab-cdef-0123-456789abcdef',
+    detail: { state: 'pending', 'instance-id': configuracion.instancia }
+  };
+  assert.deepEqual(await controlador(evento), { procesado: false });
+  assert.deepEqual(registrados, [['ec2_pending', evento.time, evento.id]]);
+  assert.deepEqual(operaciones, []);
 });

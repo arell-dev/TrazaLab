@@ -1,4 +1,12 @@
-export function crearControlador({ configuracion, consultarUsuario, listarGrupos, consultarInstancia, iniciarInstancia, consultarSalud, coordinador }) {
+export function crearControlador({ configuracion, consultarUsuario, listarGrupos, consultarInstancia, iniciarInstancia, consultarSalud, consultarDespliegue, coordinador, historial }) {
+  function registrar(tipo, fecha, identificador) {
+    try {
+      historial?.registrar(tipo, fecha, identificador);
+    } catch {
+      // El resultado de EC2 no depende del registro de eventos.
+    }
+  }
+
   function responder(codigo, estado) {
     return {
       statusCode: codigo,
@@ -51,7 +59,12 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
       return 'no disponible';
     }
 
-    return await consultarSalud(configuracion.salud) ? 'disponible' : 'comprobando';
+    if (await consultarSalud(configuracion.salud)) {
+      registrar('salud_disponible');
+      return 'disponible';
+    }
+    registrar('salud_pendiente');
+    return 'comprobando';
   }
 
   async function gestionarCambioEstado(evento) {
@@ -60,6 +73,10 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
 
     if (evento.region !== configuracion.region || evento.account !== configuracion.cuenta || instancia !== configuracion.instancia) {
       return { procesado: false };
+    }
+
+    if (['pending', 'running', 'stopping', 'stopped'].includes(estado)) {
+      registrar(`ec2_${estado}`, evento.time, evento.id);
     }
 
     const estadoReal = await consultarInstancia(instancia);
@@ -90,6 +107,16 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
         return responder(200, await estadoActual());
       }
 
+      if (evento.routeKey === 'GET /historial') {
+        const respuesta = responder(200, 'disponible');
+        const [eventos, despliegue] = await Promise.all([
+          historial.consultar(),
+          consultarDespliegue().catch(() => null)
+        ]);
+        respuesta.body = JSON.stringify({ eventos, despliegue });
+        return respuesta;
+      }
+
       if (evento.routeKey !== 'POST /iniciar') {
         return responder(404, 'no disponible');
       }
@@ -113,7 +140,9 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
 
         try {
           await iniciarInstancia(configuracion.instancia);
+          registrar('solicitud_aceptada');
         } catch (error) {
+          registrar('solicitud_incierta');
           const actual = await consultarInstancia(configuracion.instancia);
           if (actual === 'pending' || actual === 'running') {
             liberar = actual === 'running';

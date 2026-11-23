@@ -15,6 +15,47 @@ body {
   margin: 0;
 }
 
+.distribucion {
+  display: grid;
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.distribucion:has(.panel-historial[hidden]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.panel-historial {
+  padding: 2rem 1rem;
+  border-right: 1px solid #484848;
+  background: #151515;
+}
+
+.panel-historial summary {
+  padding: 0.6rem 0.5rem;
+  color: #f5f5f5;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.panel-historial nav {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+
+.panel-historial nav button {
+  width: 100%;
+  border-color: transparent;
+  text-align: left;
+}
+
+.panel-historial nav button[aria-current="date"] {
+  border-color: #9acda7;
+  color: #fff;
+  background: #203528;
+}
+
 .panel {
   padding: clamp(1rem, 2vw, 2rem);
 }
@@ -23,10 +64,48 @@ body {
   max-width: 70rem;
 }
 
+.despliegue {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #666;
+  background: #181818;
+  color: #f2f2f2;
+}
+
+.despliegue h2,
+.titulo-eventos {
+  margin: 0 0 0.9rem;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.despliegue dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem 1.5rem;
+  margin: 0;
+}
+
+.despliegue dl > div {
+  min-width: 0;
+}
+
+.despliegue dt {
+  color: #bdbdbd;
+  font-size: 0.8rem;
+}
+
+.despliegue dd {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+  color: #f5f5f5;
+  font-size: 0.9rem;
+}
+
 h1 {
   margin: 0 0 0.35rem;
   color: #f2f2f2;
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   font-weight: 600;
 }
 
@@ -65,7 +144,7 @@ h1 {
 }
 
 .eventos {
-  margin: 1.5rem 0 0;
+  margin: 0 0 1.5rem;
   padding: 0;
   list-style: none;
 }
@@ -82,7 +161,7 @@ h1 {
 
 .evento-hora {
   margin-right: 0.8rem;
-  color: #919191;
+  color: #b5b5b5;
 }
 
 .mensaje {
@@ -120,9 +199,21 @@ button:disabled {
   cursor: wait;
 }
 
-:where(button, a):focus-visible {
+:where(button, a, summary):focus-visible {
   outline: 2px solid #c9a9e4;
   outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .distribucion {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-historial {
+    padding: 1rem;
+    border-right: 0;
+    border-bottom: 1px solid #484848;
+  }
 }
 
 [hidden] {
