@@ -53,6 +53,17 @@ Los actores usan la tabla local trazalab-operacion, definida en arranque/cloudfo
 - Al iniciar EC2, el temporizador local de recuperación intenta restaurar los servicios hasta 30 veces, con un minuto entre intentos. Se detiene al confirmar servicios activos o al requerir conciliación manual. Habilítalo y valida la recuperación antes de considerar habilitar el apagado automático.
 
 La plantilla IAM del rol GitHub está en iam/politica-github-aws.json; la política prevista para el rol de EC2 está en ../apagado/iam/politica-instancia.json. Revísalas junto con la plantilla antes de aplicarlas. El despliegue, la activación del temporizador y una prueba real de encendido y apagado siguen pendientes.
+
+## Historial operativo del panel
+
+La mejora en esta rama configura el grupo de CloudWatch Logs de la Lambda del panel con retención de 30 días. `GET /historial` requiere una sesión Cognito del grupo `operadores`. Los operadores consultan hasta 1000 eventos recientes de solicitudes de encendido, transiciones EC2 y disponibilidad observada por HTTPS. El panel agrupa estos eventos por día.
+
+Cuando SSM confirma el éxito del despliegue, el workflow guarda la versión, el commit, el digest, la fecha y el identificador SSM en el elemento `trazalab-ultimo-despliegue` de la tabla existente. También intenta registrar el evento en el grupo de CloudWatch. El elemento conserva el último despliegue registrado aunque los eventos caduquen a los 30 días. Es una confirmación histórica, sujeta a la fecha mostrada, y no una lectura directa del estado actual de Kubernetes.
+
+Si alguno de estos registros falla, el resumen del workflow muestra una advertencia y la publicación continúa con el resultado ya confirmado por SSM. Revisa SSM, el digest y la instancia antes de reconciliar los metadatos; un registro anterior puede estar desactualizado. Si no hay un elemento corroborado, el panel debe mostrar la versión como desconocida.
+
+Antes de dar la mejora por operativa, comprueba que API Gateway aplica la autorización a `GET /historial` y que el rol de la Lambda puede consultar el grupo y leer únicamente la clave de metadatos asignada. Comprueba que el rol de publicación puede escribir esa clave y el flujo `despliegues-verificados`. Esta documentación describe el cambio local, pendiente de publicación y comprobación en AWS.
+
 ## Entorno y estado publicado
 
 TrazaLab corre en K3s con PostgreSQL 16 persistente y Caddy en EC2. El panel CloudFront permanece disponible para solicitar el encendido; no se habilitó el apagado automático. La publicación mantiene la cuenta en el plan Free y no requiere AWS Organizations.

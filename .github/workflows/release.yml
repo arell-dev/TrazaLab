@@ -311,6 +311,102 @@ jobs:
           echo "El despliegue excedió el tiempo de espera; consultar SSM $comando." >&2
           exit 1
 
+      - name: Guardar último despliegue verificado para el panel
+        id: registro_despliegue
+        shell: bash
+        continue-on-error: true
+        env:
+          COMMIT_DESPLEGADO: ${{ needs.validar.outputs.commit }}
+          DIGEST_DESPLEGADO: ${{ steps.imagen.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$COMMIT_DESPLEGADO" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$DIGEST_DESPLEGADO" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "${DESPLIEGUE_SSM_ID:-}" =~ ^[a-f0-9-]{36}$ ]]
+          directorio=$(mktemp -d)
+          trap 'rm -rf "$directorio"' EXIT
+          python3 - "$directorio/despliegue.json" <<'PY'
+          import datetime
+          import json
+          import os
+          import sys
+
+          fecha = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+          campos = {
+              "pk": "trazalab-ultimo-despliegue",
+              "fecha": fecha,
+              "version": os.environ["VERSION"],
+              "commit": os.environ["COMMIT_DESPLEGADO"],
+              "digest": os.environ["DIGEST_DESPLEGADO"],
+              "comandoSsm": os.environ["DESPLIEGUE_SSM_ID"],
+          }
+          with open(sys.argv[1], "w", encoding="utf-8") as archivo:
+              json.dump({clave: {"S": valor} for clave, valor in campos.items()}, archivo)
+          PY
+          aws dynamodb put-item --table-name "$COORDINADOR_TABLA" --item "file://$directorio/despliegue.json"
+          echo 'El panel dispone de los metadatos del último despliegue confirmado por SSM.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Advertir si no se guardaron los metadatos
+        if: ${{ steps.registro_despliegue.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo '::warning::El despliegue fue confirmado por SSM, pero no se guardaron los metadatos del panel. Revisa el estado real y reconcilia el registro sin repetir el despliegue a ciegas.'
+          echo 'El despliegue fue confirmado por SSM. No se guardaron los metadatos del panel; revisa el estado real antes de reconciliar el registro.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Registrar despliegue verificado en el historial del panel
+        id: historial_despliegue
+        shell: bash
+        continue-on-error: true
+        env:
+          COMMIT_DESPLEGADO: ${{ needs.validar.outputs.commit }}
+          DIGEST_DESPLEGADO: ${{ steps.imagen.outputs.digest }}
+        run: |
+          set -euo pipefail
+          grupo='/aws/lambda/trazalab-panel-control-control'
+          flujo='despliegues-verificados'
+          [[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$COMMIT_DESPLEGADO" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$DIGEST_DESPLEGADO" =~ ^sha256:[a-f0-9]{64}$ ]]
+          [[ "${DESPLIEGUE_SSM_ID:-}" =~ ^[a-f0-9-]{36}$ ]]
+          directorio=$(mktemp -d)
+          trap 'rm -rf "$directorio"' EXIT
+          if ! aws logs create-log-stream --log-group-name "$grupo" --log-stream-name "$flujo" 2>"$directorio/error"; then
+            if ! grep -q 'ResourceAlreadyExistsException' "$directorio/error"; then
+              echo 'No se pudo preparar el historial del panel; el despliegue ya fue confirmado por SSM.' >&2
+              cat "$directorio/error" >&2
+              exit 1
+            fi
+          fi
+          python3 - "$directorio/evento.json" <<'PY'
+          import datetime
+          import json
+          import os
+          import sys
+
+          ahora = datetime.datetime.now(datetime.timezone.utc)
+          evento = {
+              "fecha": ahora.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+              "tipo": "despliegue_verificado",
+              "version": os.environ["VERSION"],
+              "commit": os.environ["COMMIT_DESPLEGADO"],
+              "digest": os.environ["DIGEST_DESPLEGADO"],
+              "comandoSsm": os.environ["DESPLIEGUE_SSM_ID"],
+          }
+          mensaje = "TRAZALAB_EVENTO " + json.dumps(evento, ensure_ascii=False, separators=(",", ":"))
+          with open(sys.argv[1], "w", encoding="utf-8") as archivo:
+              json.dump([{"timestamp": int(ahora.timestamp() * 1000), "message": mensaje}], archivo)
+          PY
+          aws logs put-log-events --log-group-name "$grupo" --log-stream-name "$flujo" --log-events "file://$directorio/evento.json" >/dev/null
+          echo 'El historial del panel registró el despliegue confirmado.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Advertir si no se registró el historial
+        if: ${{ steps.historial_despliegue.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo '::warning::El despliegue fue confirmado por SSM, pero no se registró el evento en el historial del panel.'
+          echo 'El despliegue fue confirmado por SSM, pero el evento no pudo añadirse al historial del panel.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Liberar coordinador tras confirmar SSM
         shell: bash
         run: |
