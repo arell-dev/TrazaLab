@@ -24,13 +24,14 @@ class FiltroActividadTest {
     }
 
     @Test
-    void saludYAnonimoNoExtiendenElPlazo() throws Exception {
+    void saludTemporizadorYAnonimoNoExtiendenElPlazo() throws Exception {
         AtomicLong reloj = new AtomicLong();
         ControlActividad control = new ControlActividad(reloj::get);
         FiltroActividad filtro = new FiltroActividad(control);
         reloj.set(Duration.ofMinutes(29).toNanos());
         SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated("usuario", "", List.of()));
         ejecutar(filtro, "/health");
+        ejecutar(filtro, "/api/temporizador");
         SecurityContextHolder.getContext().setAuthentication(new AnonymousAuthenticationToken("clave", "anonimo", List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))));
         ejecutar(filtro, "/disponibilidad");
         reloj.set(Duration.ofMinutes(30).toNanos());

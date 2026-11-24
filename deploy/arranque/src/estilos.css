@@ -68,6 +68,63 @@ body {
   max-width: 70rem;
 }
 
+.temporizador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 0.8rem 1rem;
+  border-left: 3px solid #99d8a9;
+  background: #101410;
+}
+
+.temporizador[data-estado="actividad"] {
+  border-color: #c9a9e4;
+}
+
+.temporizador[data-estado="preparando"],
+.temporizador[data-estado="vencido"],
+.temporizador[data-estado="error"] {
+  border-color: #edc291;
+}
+
+.temporizador-lectura {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.temporizador h2 {
+  margin: 0;
+  color: #f2f2f2;
+  font-size: 0.9rem;
+}
+
+.cuenta-regresiva {
+  color: #99d8a9;
+  font-size: 1.4rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.temporizador[data-estado="actividad"] .cuenta-regresiva {
+  color: #dec9f0;
+}
+
+.temporizador[data-estado="preparando"] .cuenta-regresiva,
+.temporizador[data-estado="vencido"] .cuenta-regresiva,
+.temporizador[data-estado="error"] .cuenta-regresiva {
+  color: #edc291;
+}
+
+.nota-temporizador {
+  margin: 0;
+  color: #bdbdbd;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
 .despliegue {
   margin: 1.5rem 0;
   padding: 1rem 1.25rem;
@@ -262,6 +319,15 @@ button:disabled {
 
   .despliegue dl {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .temporizador {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nota-temporizador {
+    text-align: left;
   }
 
   .despliegue dl > div:nth-child(n+3) {

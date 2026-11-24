@@ -7,6 +7,13 @@ const panelHistorial = document.querySelector('#panel-historial');
 const diasHistorial = document.querySelector('#dias');
 const tituloEventos = document.querySelector('#titulo-eventos');
 const abrirHistorial = document.querySelector('#abrir-historial');
+const temporizador = document.querySelector('#temporizador');
+const cuentaRegresiva = document.querySelector('#cuenta-regresiva');
+const cuentaRegresivaPendiente = document.querySelector('#cuenta-regresiva-pendiente');
+const notaTemporizador = document.querySelector('#nota-temporizador');
+const formatoDuracion = typeof Intl.DurationFormat === 'function'
+  ? new Intl.DurationFormat('es-PE', { style: 'digital', minutes: '2-digit', seconds: '2-digit' })
+  : undefined;
 let diaSeleccionado;
 
 function cerrarMenuMovil() {
@@ -113,6 +120,42 @@ export function mostrarDespliegue(datos) {
 
 export function mostrarErrorHistorial() {
   nota.textContent = 'No se pudo cargar el historial de operaciones. Puedes actualizar el estado.';
+}
+
+export function mostrarTemporizador(segundosRestantes, mensaje, estado = 'contando') {
+  temporizador.hidden = false;
+  temporizador.dataset.estado = estado;
+  if (notaTemporizador.textContent !== mensaje) {
+    notaTemporizador.textContent = mensaje;
+  }
+
+  const tieneLectura = Number.isSafeInteger(segundosRestantes) && segundosRestantes >= 0;
+  cuentaRegresiva.hidden = !tieneLectura;
+  cuentaRegresivaPendiente.hidden = tieneLectura;
+  if (!tieneLectura) {
+    return;
+  }
+
+  const minutos = Math.floor(segundosRestantes / 60);
+  const segundos = segundosRestantes % 60;
+  cuentaRegresiva.dateTime = `PT${minutos}M${segundos}S`;
+  if (formatoDuracion) {
+    const partes = formatoDuracion.formatToParts({ minutes: minutos, seconds: segundos });
+    const minutosFormateados = partes.find((parte) => parte.unit === 'minute')?.value;
+    const segundosFormateados = partes.find((parte) => parte.unit === 'second')?.value;
+    cuentaRegresiva.textContent = `${minutosFormateados}:${segundosFormateados}`;
+    return;
+  }
+
+  cuentaRegresiva.textContent = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+}
+
+export function ocultarTemporizador() {
+  temporizador.hidden = true;
+  temporizador.removeAttribute('data-estado');
+  cuentaRegresiva.hidden = true;
+  cuentaRegresivaPendiente.hidden = false;
+  notaTemporizador.textContent = 'Se reinicia con actividad autenticada en TrazaLab.';
 }
 
 export function ocultarHistorial() {

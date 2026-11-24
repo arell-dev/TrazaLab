@@ -1,4 +1,4 @@
-export function crearControlador({ configuracion, consultarUsuario, listarGrupos, consultarInstancia, iniciarInstancia, consultarSalud, consultarDespliegue, coordinador, historial }) {
+export function crearControlador({ configuracion, consultarUsuario, listarGrupos, consultarInstancia, iniciarInstancia, consultarSalud, consultarTemporizador, consultarDespliegue, coordinador, historial }) {
   function registrar(tipo, fecha, identificador) {
     try {
       historial?.registrar(tipo, fecha, identificador);
@@ -7,7 +7,7 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
     }
   }
 
-  function responder(codigo, estado) {
+  function responder(codigo, contenido) {
     return {
       statusCode: codigo,
       headers: {
@@ -15,7 +15,7 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
         'cache-control': 'no-store',
         'x-content-type-options': 'nosniff'
       },
-      body: JSON.stringify({ estado })
+      body: JSON.stringify(typeof contenido === 'string' ? { estado: contenido } : contenido)
     };
   }
 
@@ -105,6 +105,21 @@ export function crearControlador({ configuracion, consultarUsuario, listarGrupos
 
       if (evento.routeKey === 'GET /estado') {
         return responder(200, await estadoActual());
+      }
+
+      if (evento.routeKey === 'GET /temporizador') {
+        const temporizador = await consultarTemporizador?.(configuracion.salud);
+        const lecturaValida = temporizador && temporizador.umbralSegundos === 1800
+          && Number.isSafeInteger(temporizador.segundosRestantes) && temporizador.segundosRestantes >= 0 && temporizador.segundosRestantes <= temporizador.umbralSegundos
+          && Number.isSafeInteger(temporizador.segundosInactivo) && temporizador.segundosInactivo >= 0
+          && Number.isSafeInteger(temporizador.inactividadNanos) && temporizador.inactividadNanos >= 0
+          && typeof temporizador.solicitudActiva === 'boolean' && typeof temporizador.drenando === 'boolean';
+
+        if (!lecturaValida) {
+          return responder(503, 'temporizador no disponible');
+        }
+
+        return responder(200, { estado: 'disponible', temporizador });
       }
 
       if (evento.routeKey === 'GET /historial') {

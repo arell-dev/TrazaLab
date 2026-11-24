@@ -26,7 +26,7 @@ public final class FiltroActividad extends OncePerRequestFilter {
         Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
         String ruta = solicitud.getServletPath();
 
-        boolean publica = ruta.equals("/health") || ruta.equals("/db-health") || ruta.equals("/api/health") || ruta.equals("/favicon.ico") || ruta.startsWith("/css/") || ruta.startsWith("/js/") || ruta.startsWith("/images/") || ruta.startsWith("/webjars/");
+        boolean publica = ruta.equals("/health") || ruta.equals("/db-health") || ruta.equals("/api/health") || ruta.equals("/api/temporizador") || ruta.equals("/favicon.ico") || ruta.startsWith("/css/") || ruta.startsWith("/js/") || ruta.startsWith("/images/") || ruta.startsWith("/webjars/");
 
         if (publica || autenticacion == null || !autenticacion.isAuthenticated() || confianza.isAnonymous(autenticacion)) {
             cadena.doFilter(solicitud, respuesta);

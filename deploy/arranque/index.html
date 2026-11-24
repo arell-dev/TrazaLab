@@ -22,6 +22,14 @@
       <p class="instruccion">Inicia sesión para consultar el estado y encender el sistema.</p>
       <div class="separador" aria-hidden="true">────────────────────────────────────────────────────────</div>
       <p class="etiqueta">Estado: <span id="indicador">Sin conexión</span></p>
+      <section id="temporizador" class="temporizador" aria-labelledby="titulo-temporizador" hidden>
+        <div class="temporizador-lectura">
+          <h2 id="titulo-temporizador">Apagado automático</h2>
+          <span id="cuenta-regresiva-pendiente" class="cuenta-regresiva">--:--</span>
+          <time id="cuenta-regresiva" class="cuenta-regresiva" datetime="PT0S" hidden>00:00</time>
+        </div>
+        <p id="nota-temporizador" class="nota-temporizador" aria-live="polite">Se reinicia con actividad autenticada en TrazaLab.</p>
+      </section>
       <section id="despliegue" class="despliegue" aria-label="Último despliegue verificado" hidden></section>
       <section class="area-eventos" aria-labelledby="titulo-eventos">
         <h2 id="titulo-eventos" class="titulo-eventos">Historial de operaciones</h2>
