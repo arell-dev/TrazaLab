@@ -22,6 +22,35 @@ permissions:
   contents: read
 
 jobs:
+  panel-arranque:
+    name: Pruebas y compilación del panel de arranque
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: deploy/arranque
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: deploy/arranque/package-lock.json
+
+      - name: Instalar dependencias del panel
+        run: npm ci
+
+      - name: Ejecutar pruebas del panel
+        run: npm test
+
+      - name: Compilar el panel
+        run: npm run build
+
   maven-verify:
     name: Maven y pruebas de integración
     runs-on: ubuntu-latest
@@ -234,6 +263,7 @@ jobs:
     name: Habilitar imagen verificada para publicación
     if: ${{ inputs.guardar_imagen }}
     needs:
+      - panel-arranque
       - maven-verify
       - imagen-docker
       - smoke-postgres
