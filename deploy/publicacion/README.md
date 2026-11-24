@@ -43,16 +43,16 @@ docker run --rm --network none --user 0:0 `
 
 ## Coordinación de operaciones
 
-Los actores usan la tabla local trazalab-operacion, definida en arranque/cloudformation/infraestructura.yaml. La escritura condicional permite un solo permiso activo. No hay vencimiento automático: ante estado incierto, el permiso queda retenido para reconciliación manual. No se desplegó la tabla ni la regla EventBridge.
+Los actores usan la tabla `trazalab-operacion`, definida en `arranque/cloudformation/infraestructura.yaml` y desplegada en AWS. La escritura condicional permite un solo permiso activo. No hay vencimiento automático: ante estado incierto, el permiso queda retenido para reconciliación manual. La regla EventBridge de transiciones EC2 también está desplegada y habilitada.
 
 - El panel conserva arranque mientras EC2 está pending; la transición confirmada a running lo libera.
 - GitHub Actions adquiere despliegue antes de iniciar EC2 y lo conserva hasta la confirmación satisfactoria de SSM. Si el inicio o SSM queda incierto, detén los reintentos y reconcilia el estado.
 - El documento SSM verifica el permiso despliegue y pasa el InstanceId autorizado al helper. Antes del respaldo, este valida el PVC, el PV y el montaje; si las réplicas quedaron en cero tras un apagado previo, activa PostgreSQL y después TrazaLab mientras conserva el permiso despliegue.
 - El respaldo se ejecuta dentro de ese mismo permiso y del bloqueo local. No hay un actor de respaldo independiente.
 - El worker adquiere apagado y lo conserva hasta que EventBridge confirma stopped. Un evento solo se acepta después de comprobar cuenta, región, instancia y estado real.
-- Al iniciar EC2, el temporizador local de recuperación intenta restaurar los servicios hasta 30 veces, con un minuto entre intentos. Se detiene al confirmar servicios activos o al requerir conciliación manual. Habilítalo y valida la recuperación antes de considerar habilitar el apagado automático.
+- Al iniciar EC2, el temporizador local de recuperación intenta restaurar los servicios hasta 30 veces, con un minuto entre intentos. Se detiene al confirmar servicios activos o al requerir conciliación manual. En la instancia activa, la recuperación se verificó antes de habilitar el apagado automático.
 
-La plantilla IAM del rol GitHub está en iam/politica-github-aws.json; la política prevista para el rol de EC2 está en ../apagado/iam/politica-instancia.json. Revísalas junto con la plantilla antes de aplicarlas. El despliegue, la activación del temporizador y una prueba real de encendido y apagado siguen pendientes.
+La plantilla IAM del rol GitHub está en `iam/politica-github-aws.json`; la política del rol EC2 está en `../apagado/iam/politica-instancia.json`. El 23/11/2026 el temporizador de inactividad se habilitó en EC2 y se comprobó un apagado automático, seguido de una recuperación de PostgreSQL y TrazaLab. El reinicio de esa prueba se solicitó mediante la API de AWS, sin validar el inicio desde el panel en esa sesión.
 
 ## Historial operativo del panel
 

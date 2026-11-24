@@ -21,9 +21,13 @@ El panel puede mostrar los estados que reciba de la API. No demuestra por sí so
 
 El cifrado y versionado del bucket no sustituyen una política de limpieza de versiones antiguas. Antes de eliminar una pila o bucket retenido, revisar sus objetos, los registros, las dependencias de Cognito/CORS y los costos.
 
-## Apagado seguro en código local
+## Apagado seguro
 
-La única implementación está en deploy/apagado/; incluye recuperación de PostgreSQL y TrazaLab al iniciar EC2 y apagado ordenado por inactividad. No está desplegada ni habilitada. La pila de control declara localmente la tabla DynamoDB y la regla EventBridge; no se han creado ni actualizado recursos de AWS. La parada de EC2 sigue siendo manual. Revisa el coste, permisos y recuperación de datos antes de cualquier activación.
+La consola muestra el tiempo restante hasta el umbral de 30 minutos de inactividad. Sincroniza mediante `GET /temporizador`, protegido por Cognito y el grupo de operadores, que lee `GET /api/temporizador` en el backend. La ruta de backend expone solo el reloj y el estado agregado de actividad, sin consultar PostgreSQL ni renovar el plazo. La consulta del panel tampoco agrega eventos al historial. La consola sincroniza cada minuto y cada diez segundos mientras hay solicitudes activas. Si el reloj deja de responder, muestra `--:--` hasta obtener una lectura válida. El worker revisa el apagado cada cinco minutos. Llegar a `00:00` indica que se alcanzó el umbral.
+
+Para publicar el contador, primero despliega el backend con `GET /api/temporizador`. Comprueba que la respuesta HTTPS del backend incluya las cabeceras de reloj y `Cache-Control: no-store`. Después actualiza el paquete de Lambda y la ruta JWT de la pila de control, y verifica `GET /temporizador` con una sesión de operador. Publica los recursos estáticos del panel después de verificar ese contrato.
+
+El módulo de `deploy/apagado/` está instalado en EC2. La tabla DynamoDB y la regla EventBridge están desplegadas. El temporizador `trazalab-apagado.timer` quedó habilitado el 23/11/2026. La instalación inicial mantiene los temporizadores deshabilitados hasta validar la recuperación de PostgreSQL, TrazaLab y el volumen persistente.
 ## Estado comprobado el 20 de noviembre de 2026
 
 La pila de alojamiento y la de control se crearon en `us-east-2`. El panel se publica en `https://d2ltkzmo83k169.cloudfront.net/`, independientemente de la instancia. Se comprobó el inicio de sesión de un operador, la solicitud de encendido y las respuestas de la API; sin credenciales, la consulta y el encendido devolvieron HTTP 401. La aplicación respondió a la comprobación de salud por HTTPS después del arranque.
@@ -31,3 +35,21 @@ La pila de alojamiento y la de control se crearon en `us-east-2`. El panel se pu
 La instancia se detuvo al terminar la prueba y AWS confirmó el estado `stopped`. El apagado por inactividad y el despliegue automático por etiquetas siguen pendientes. El panel muestra estados recibidos de su API, no registros internos completos ni evidencia de compilación de GitHub Actions. Los buckets, la IP elástica y los registros pueden seguir generando cargos.
 
 Ese mismo día se publicó el ajuste del panel para descartar respuestas antiguas, tratar rechazos de autorización y mantener el cierre de sesión al vencer el token. Tras recargar se comprobaron el inicio de sesión, la consulta del estado detenido y el cierre de sesión. Los casos de expiración y errores se probaron con Cognito y API simulados; falta la validación de esos flujos desde la universidad. Se conservaron la versión anterior del índice y sus recursos para recuperación.
+
+## Corrección del encendido desde EC2 (23 de noviembre de 2026)
+
+Durante la prueba de parada y recuperación, el panel mostró un error aunque CloudTrail registró que AWS aceptó `StartInstances`; después, EC2 pasó a `running` y el panel confirmó `Disponible`. La lectura inmediata del estado después de solicitar el encendido podía adelantarse a la transición de EC2.
+
+El commit firmado `768cc50` elimina esa lectura inmediata: la Lambda responde `202 iniciando` al aceptar AWS y mantiene el bloqueo hasta que EventBridge confirma `running`. La CI `45106488368` terminó correctamente; las 22 pruebas del panel y `npm.cmd run build` pasaron. El paquete `panel/control-pr27-ccf703e-start-race-768cc50.zip` se desplegó mediante el cambio CloudFormation `panel-start-race-768cc50`, que terminó `UPDATE_COMPLETE`; la función reportó `LastUpdateStatus=Successful`. La consulta posterior del panel mostró TrazaLab disponible.
+
+La respuesta tardía también está cubierta por la prueba automatizada que mantiene `stopped` en la lectura simulada tras aceptar el inicio. Este ajuste no publicó una nueva versión de la aplicación TrazaLab.
+
+En una prueba posterior el 23/11/2026, el temporizador de inactividad con el umbral original de 30 minutos inició el apagado a las 04:34 UTC. EC2 confirmó `stopped` y el panel autenticado mostró que podía solicitarse el encendido. La solicitud desde el panel a las 04:35 mostró `iniciando`; EC2 pasó a `running` y el panel mostró `Disponible` después de recuperar la aplicación y la base. El coordinador quedó libre. La verificación posterior se hizo desde el navegador automatizado; el acceso desde la red universitaria se había confirmado previamente.
+
+El comando controlado SSM `87f55a9d-5d69-4ecc-b2a2-7da542ed2bdc` mantuvo un permiso de despliegue durante una espera y lo dejó retenido al terminar. Tras confirmar el estado final del comando, la ausencia de marcador pendiente, los deployments listos y el montaje del volumen mediante SSM `d1f8dd14-3ccc-4f18-a140-3550bf545738`, se liberó el permiso con condición de propietario y sesión. El coordinador quedó vacío. La prueba no reprodujo una pérdida real de conectividad SSM.
+
+## Corrección del apagado automático (23 de noviembre de 2026)
+
+La instancia seguía en ejecución porque `trazalab-apagado.timer` estaba deshabilitado. El comando SSM `383fe971-1b6c-4d29-bc01-be339376a332` registró la eliminación del enlace de activación del temporizador durante la recuperación anterior. Tras habilitarlo con SSM `8ec5a87c-bfe5-4229-a3a8-d7960aab7caf`, AWS confirmó que EC2 pasó automáticamente a `stopped` y el coordinador quedó vacío.
+
+La recuperación siguiente se inició por API de AWS porque el panel estaba sin sesión autenticada. El temporizador de arranque restauró PostgreSQL y TrazaLab, ambos `1/1`, con PVC `Bound`, política `Retain` y volumen montado. El temporizador de apagado continúa habilitado y activo con el umbral de 30 minutos. Las comprobaciones posteriores al reinicio confirmaron que se ejecuta cada cinco minutos y espera a que venza el umbral.

@@ -2,7 +2,7 @@
 
 ## Estado
 
-El módulo funcional se integró en `main` mediante el PR #27 el 23/11/2026, en el commit `ccf703ef6964f560aa6567ab25844937783a94ae`. La CI del PR y la CI de `main` pasaron; se ejecutaron pruebas automatizadas locales y simulaciones aisladas. Todavía no está instalado ni habilitado en EC2. La tabla DynamoDB, la regla de EventBridge y los permisos nuevos tampoco se han desplegado. Los temporizadores se instalan deshabilitados; la siguiente versión autorizada es `v0.0.11`, aún pendiente de publicación.
+El módulo funcional se integró en `main` mediante el PR #27 el 23/11/2026, en el commit `ccf703ef6964f560aa6567ab25844937783a94ae`. La CI del PR y la CI de `main` pasaron; también se ejecutaron pruebas automatizadas locales y simulaciones aisladas. En AWS están desplegadas la tabla DynamoDB y la regla EventBridge. El worker está instalado en EC2 y `trazalab-apagado.timer` se habilitó el 23/11/2026. Una prueba real confirmó apagado automático y recuperación de PostgreSQL y TrazaLab. Los temporizadores siguen instalándose deshabilitados para permitir la validación antes de activarlos en un entorno nuevo.
 
 ## Construcción e historial
 
