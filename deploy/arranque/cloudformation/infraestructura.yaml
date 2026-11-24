@@ -70,7 +70,7 @@ Resources:
       UserPoolId: !Ref Usuarios
       Scopes:
         - ScopeName: iniciar
-          ScopeDescription: Consultar y solicitar encendido
+          ScopeDescription: Consultar estado y temporizador, y solicitar encendido
   Cliente:
     Type: AWS::Cognito::UserPoolClient
     DependsOn: Scopes
@@ -197,7 +197,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Api
     Metadata:
       com.aws.cloudformation.Context:
-        why: Expone dos rutas protegidas para el panel web.
+        why: Expone las rutas protegidas que el panel necesita para consultar el estado, el temporizador y el encendido.
         must:
           - Cada ruta debe usar el autorizador JWT y scope configurados.
     Properties:
@@ -242,6 +242,16 @@ Resources:
       AuthorizationScopes:
         - trazalab/iniciar
       Target: !Sub 'integrations/${Integracion}'
+  Temporizador:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref Api
+      RouteKey: 'GET /temporizador'
+      AuthorizationType: JWT
+      AuthorizerId: !Ref Autorizador
+      AuthorizationScopes:
+        - trazalab/iniciar
+      Target: !Sub 'integrations/${Integracion}'
   Encendido:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -269,6 +279,13 @@ Resources:
       FunctionName: !Ref Funcion
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/$default/GET/estado'
+  PermisoApiTemporizador:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Funcion
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/$default/GET/temporizador'
   PermisoApiEncendido:
     Type: AWS::Lambda::Permission
     Properties:

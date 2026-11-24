@@ -20,7 +20,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(autorizacion -> autorizacion
                         .requestMatchers("/usuarios/login", "/login", "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/health", "/db-health", "/api/health").permitAll()
+                        .requestMatchers("/health", "/db-health", "/api/health", "/api/temporizador").permitAll()
                         .requestMatchers("/usuarios/**").hasAuthority("ROLE_Administrador")
                         .requestMatchers("/mantenimientos/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio")
                         .requestMatchers("/reportes/**").hasAnyAuthority("ROLE_Administrador", "ROLE_Técnico de Soporte", "ROLE_Técnico de Laboratorio", "ROLE_Responsable")

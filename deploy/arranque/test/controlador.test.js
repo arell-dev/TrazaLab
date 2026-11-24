@@ -61,6 +61,45 @@ test('rechaza peticiones sin autorización sin consultar la instancia', async ()
   assert.deepEqual(llamadas, []);
 });
 
+test('entrega el reloj a operadores sin consultar EC2 ni escribir historial', async () => {
+  const temporizador = {
+    segundosRestantes: 1770,
+    segundosInactivo: 30,
+    inactividadNanos: 30000000000,
+    solicitudActiva: false,
+    drenando: false,
+    umbralSegundos: 1800
+  };
+  const efectos = [];
+  const { controlador, evento, llamadas } = preparar({
+    consultarTemporizador: async (url) => {
+      efectos.push(url);
+      return temporizador;
+    },
+    historial: { registrar: () => efectos.push('registrar') }
+  });
+  evento.routeKey = 'GET /temporizador';
+
+  assert.equal((await controlador({ routeKey: evento.routeKey })).statusCode, 403);
+  assert.deepEqual(efectos, []);
+
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 200);
+  assert.equal(respuesta.headers['cache-control'], 'no-store');
+  assert.deepEqual(JSON.parse(respuesta.body), { estado: 'disponible', temporizador });
+  assert.deepEqual(efectos, [configuracion.salud]);
+  assert.deepEqual(llamadas, []);
+});
+
+test('devuelve un estado explícito cuando el reloj no está disponible', async () => {
+  const { controlador, evento } = preparar({ consultarTemporizador: async () => null });
+  evento.routeKey = 'GET /temporizador';
+
+  const respuesta = await controlador(evento);
+  assert.equal(respuesta.statusCode, 503);
+  assert.deepEqual(JSON.parse(respuesta.body), { estado: 'temporizador no disponible' });
+});
+
 test('rechaza token ID y emisor o cliente incorrectos', async () => {
   for (const [propiedad, valor] of [['token_use', 'id'], ['iss', 'otro'], ['client_id', 'otro'], ['scope', 'openid']]) {
 

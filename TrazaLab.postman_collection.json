@@ -16,9 +16,37 @@
     {
       "key": "sesion",
       "value": ""
+    },
+    {
+      "key": "controlApiUrl",
+      "value": "https://api-id.execute-api.us-east-2.amazonaws.com"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
     }
   ],
   "item": [
+    {
+      "name": "Temporizador de la consola (protegido)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": "{{controlApiUrl}}/temporizador"
+      }
+    },
+    {
+      "name": "Reloj de inactividad del servidor",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/temporizador"
+      }
+    },
     {
       "name": "Salud de la aplicación",
       "request": {

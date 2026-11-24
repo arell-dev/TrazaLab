@@ -37,6 +37,69 @@ const dynamodb = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
 const coordinador = crearCoordinador({ cliente: dynamodb, tabla: tablaCoordinador });
 const historial = crearHistorial({ cliente: new CloudWatchLogsClient({ region }), grupo: grupoHistorial });
 
+async function leerEstadoSalud(url) {
+  try {
+    const respuesta = await fetch(url, { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000) });
+
+    if (!respuesta.ok || !(respuesta.headers.get('content-type') || '').includes('application/json')) {
+      return null;
+    }
+
+    const lector = respuesta.body?.getReader();
+
+    if (!lector) {
+      return null;
+    }
+
+    const decodificador = new TextDecoder();
+    let texto = '';
+    let total = 0;
+
+    while (true) {
+      const bloque = await lector.read();
+
+      if (bloque.done) {
+        break;
+      }
+
+      total += bloque.value.byteLength;
+
+      if (total > 8192) {
+        await lector.cancel();
+        return null;
+      }
+
+      texto += decodificador.decode(bloque.value, { stream: true });
+    }
+    texto += decodificador.decode();
+
+    const cuerpo = JSON.parse(texto);
+    if (!cuerpo || typeof cuerpo !== 'object') {
+      return null;
+    }
+
+    return {
+      disponible: cuerpo.estado === 'disponible',
+      relojValido: respuesta.headers.get('x-trazalab-clock-valid'),
+      inactividadNanos: respuesta.headers.get('x-trazalab-idle-nanos'),
+      solicitudActiva: respuesta.headers.get('x-trazalab-request-active'),
+      drenando: respuesta.headers.get('x-trazalab-draining'),
+      umbralSegundos: respuesta.headers.get('x-trazalab-timeout-seconds')
+    };
+  } catch {
+    return null;
+  }
+}
+
+function convertirEnteroNoNegativo(valor) {
+  if (!/^\d+$/.test(valor || '')) {
+    return null;
+  }
+
+  const numero = Number(valor);
+  return Number.isSafeInteger(numero) ? numero : null;
+}
+
 export const handler = crearControlador({
   configuracion: {
     instancia,
@@ -100,44 +163,32 @@ export const handler = crearControlador({
     return { fecha: item.fecha, version: item.version, commit: item.commit, digest: item.digest, comandoSsm: item.comandoSsm };
   },
   async consultarSalud(url) {
-    try {
-      const respuesta = await fetch(url, { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000) });
+    return (await leerEstadoSalud(url))?.disponible === true;
+  },
+  async consultarTemporizador(url) {
+    const direccion = new URL(url);
+    direccion.pathname = '/api/temporizador';
+    const estado = await leerEstadoSalud(direccion);
 
-      if (!respuesta.ok || !(respuesta.headers.get('content-type') || '').includes('application/json')) {
-        return false;
-      }
-
-      const lector = respuesta.body?.getReader();
-
-      if (!lector) {
-        return false;
-      }
-
-      const decodificador = new TextDecoder();
-      let texto = '';
-      let total = 0;
-
-      while (true) {
-        const bloque = await lector.read();
-
-        if (bloque.done) {
-          break;
-        }
-
-        total += bloque.value.byteLength;
-
-        if (total > 8192) {
-          await lector.cancel();
-          return false;
-        }
-
-        texto += decodificador.decode(bloque.value, { stream: true });
-      }
-      texto += decodificador.decode();
-      return JSON.parse(texto).estado === 'disponible';
-    } catch {
-      return false;
+    if (!estado?.disponible || estado.relojValido !== 'true' || !['true', 'false'].includes(estado.solicitudActiva) || !['true', 'false'].includes(estado.drenando)) {
+      return null;
     }
+
+    const inactividadNanos = convertirEnteroNoNegativo(estado.inactividadNanos);
+    const umbralSegundos = convertirEnteroNoNegativo(estado.umbralSegundos);
+
+    if (inactividadNanos === null || umbralSegundos !== 1800) {
+      return null;
+    }
+
+    return {
+      segundosRestantes: Math.max(0, Math.ceil(umbralSegundos - inactividadNanos / 1000000000)),
+      segundosInactivo: Math.floor(inactividadNanos / 1000000000),
+      inactividadNanos,
+      solicitudActiva: estado.solicitudActiva === 'true',
+      drenando: estado.drenando === 'true',
+      umbralSegundos
+    };
   },
   coordinador,
   historial
